@@ -273,16 +273,39 @@ WriteMatchFile <- function(match_table, path, keep_unstained = NULL) {
 #' @param match_file Path to the CSV written by [WriteMatchFile()].
 #' @param fsc The forward scatter channel used for the pregate.
 #' @param ssc The side scatter channel used for the pregate.
-#' @param method How the stained population is summarised. `"mode"` is the
-#'   flowStats default and is more stable on a bead control than `"median"`.
-#' @param pregate Gate the control population before the matrix is computed.
+#' @param method How the stained population is summarised. The default here is
+#'   `"median"`, which is not the flowStats default of `"mode"`. See the note
+#'   below, because the choice changes the result by more than 100 percentage
+#'   points on a real dataset.
+#' @param pregate Gate the control population before the matrix is computed. Keep
+#'   this `TRUE`. With it off, the OMIP-39 controls produce 12 spillover values
+#'   above 100 percent instead of none.
 #' @return A numeric spillover matrix.
+#'
+#' @section Why the default is median and not mode:
+#' `flowStats::spillover_ng()` defaults to `method = "mode"`. That works on bead
+#' controls, where nearly every event is positive. It fails on cell controls for a
+#' marker that only a minority of cells carry, because the mode then lands on the
+#' negative population and the ratio it produces is meaningless.
+#'
+#' Measured on the OMIP-39 single stains, which are cells, against the matrix the
+#' instrument stored for the same experiment:
+#'
+#' | method | correlation with stored | median difference | values above 100 percent |
+#' | ------ | ----------------------- | ----------------- | ------------------------ |
+#' | mode   | 0.619                   | 0.97 points       | 2                        |
+#' | median | 0.975                   | 0.54 points       | 0                        |
+#'
+#' The two impossible values under `"mode"` came from NKG2C, positive on 7.0
+#' percent of events, and NKG2A, positive on 17.2 percent. Run
+#' [CheckControlQuality()] before you compute a matrix, so a control of that kind
+#' is visible first.
 #' @export
 ComputeSpilloverFromControls <- function(flow_set,
                                          match_file,
                                          fsc = "FSC-A",
                                          ssc = "SSC-A",
-                                         method = "mode",
+                                         method = "median",
                                          pregate = TRUE) {
   if (!file.exists(match_file)) {
     stop("The match file does not exist: ", match_file)
@@ -406,4 +429,100 @@ CompareSpilloverMatrices <- function(computed, stored, top = 20) {
   rownames(result) <- NULL
 
   utils::head(result, top)
+}
+
+#' Check whether each single stained control can support a spillover estimate
+#'
+#' A spillover value is a ratio between the signal a fluorochrome puts into its
+#' own detector and the signal it puts into another one. Both terms need a
+#' positive population to measure. A bead control is almost entirely positive and
+#' always supports the estimate. A cell control does not, because a marker that
+#' sits on a minority of cells leaves most events negative.
+#'
+#' This is the check that explains the failure recorded in
+#' [ComputeSpilloverFromControls()]. NKG2C is positive on 7.0 percent of the
+#' OMIP-39 control events and NKG2A on 17.2 percent, and those two controls are
+#' exactly the pair that produced spillover above 100 percent under the flowStats
+#' default. Run this first and the problem is visible before the matrix is built.
+#'
+#' @param flow_set A `flowSet` of compensation controls.
+#' @param match_table The output of [MatchControlsToChannels()].
+#' @param quantile_cut The quantile of the unstained control that sets the
+#'   positive threshold. The default of 0.999 is deliberately strict, so a dim
+#'   spread in the negative population is not counted as positive.
+#' @param min_positive_percent Below this percentage of positive events, the
+#'   control is reported as weak.
+#' @return A `data.frame` with one row per stained control, holding `filename`,
+#'   `stain`, `channel`, `positive_percent`, `positive_events`,
+#'   `brightest_channel`, `primary_is_brightest` and `verdict`. `verdict` is
+#'   `"ok"`, `"weak"` when the positive fraction is below the threshold, or
+#'   `"wrong channel"` when another detector reads the positive events more
+#'   brightly than the assigned one.
+#' @export
+CheckControlQuality <- function(flow_set,
+                                match_table,
+                                quantile_cut = 0.999,
+                                min_positive_percent = 20) {
+  unstained_files <- match_table$filename[match_table$channel == "unstained" &
+                                            !is.na(match_table$channel)]
+  if (length(unstained_files) == 0) {
+    stop("The match table names no unstained control, so no threshold can be set.")
+  }
+
+  unstained <- flowCore::exprs(flow_set[[unstained_files[1]]])
+  fluorescence <- FluorescenceChannels(flow_set[[1]])
+
+  stained <- match_table[!is.na(match_table$channel) &
+                           match_table$channel != "unstained", ]
+  if (nrow(stained) == 0) {
+    stop("The match table holds no stained control.")
+  }
+
+  rows <- lapply(seq_len(nrow(stained)), function(i) {
+    values <- flowCore::exprs(flow_set[[stained$filename[i]]])
+    primary <- stained$channel[i]
+
+    threshold <- stats::quantile(unstained[, primary], quantile_cut)
+    is_positive <- values[, primary] > threshold
+    positive_events <- sum(is_positive)
+    positive_percent <- 100 * mean(is_positive)
+
+    if (positive_events > 50) {
+      medians <- vapply(
+        fluorescence,
+        function(channel) stats::median(values[is_positive, channel]),
+        numeric(1)
+      )
+      brightest <- names(which.max(medians))
+    } else {
+      brightest <- NA_character_
+    }
+
+    primary_is_brightest <- !is.na(brightest) && brightest == primary
+
+    verdict <- if (is.na(brightest)) {
+      "weak"
+    } else if (!primary_is_brightest) {
+      "wrong channel"
+    } else if (positive_percent < min_positive_percent) {
+      "weak"
+    } else {
+      "ok"
+    }
+
+    data.frame(
+      filename = stained$filename[i],
+      stain = stained$stain[i],
+      channel = primary,
+      positive_percent = positive_percent,
+      positive_events = positive_events,
+      brightest_channel = brightest,
+      primary_is_brightest = primary_is_brightest,
+      verdict = verdict,
+      stringsAsFactors = FALSE
+    )
+  })
+
+  result <- do.call(rbind, rows)
+  result[order(result$positive_percent), ]
 }

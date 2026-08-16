@@ -88,13 +88,27 @@ Log("Match passes used:",
 match_file <- file.path(kOutputDir, "spillover_match.csv")
 WriteMatchFile(match_table, match_file)
 
+Log("Checking whether each control can support a spillover estimate")
+control_quality <- CheckControlQuality(control_set, match_table)
+write.csv(control_quality, file.path(kOutputDir, "control_quality.csv"),
+          row.names = FALSE)
+print(control_quality[, c("stain", "positive_percent", "primary_is_brightest",
+                          "verdict")], right = FALSE)
+Log("Controls judged weak:",
+    sum(control_quality$verdict == "weak"), "of", nrow(control_quality))
+
 Log("Computing the spillover matrix from the controls")
+# method = "median", not the flowStats default of "mode". These are cell
+# controls, and several markers sit on a minority of cells, so the mode lands on
+# the negative population. Measured against the stored matrix, mode gives a
+# correlation of 0.619 and two spillover values above 100 percent, while median
+# gives 0.975 and none. See ?ComputeSpilloverFromControls.
 computed_spillover <- ComputeSpilloverFromControls(
   control_set,
   match_file = match_file,
   fsc = "FSC-A",
   ssc = "SSC-A",
-  method = "mode",
+  method = "median",
   pregate = TRUE
 )
 write.csv(computed_spillover,
