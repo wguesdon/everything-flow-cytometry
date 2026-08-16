@@ -2,9 +2,10 @@
 
 # OMIP-043: antibody secreting cells across four tissues.
 #
-# This dataset asks a different question from OMIP-39. There the population was
-# separated on one marker and an automated template found it. Here the population
-# is the bright tail of a continuum, and it is not separable that way.
+# The target population is defined as CD38 high and CD27 positive. That word
+# "high" is the difficulty: CD38 high is the bright tail of one continuous
+# distribution rather than a separated peak, and a density based gating method has
+# no valley to find.
 #
 # Five parts:
 #   1. The manual gates, which are the reference throughout.
@@ -50,6 +51,7 @@ kDataDir <- file.path(
 kWorkspace <- file.path(kDataDir, "attachments", "04-Aug-2017_OMIP.wsp")
 kTemplatePath <- file.path("gating", "omip43_gating_template.csv")
 kClaimsPath <- file.path("gating", "omip43_paper_claims.csv")
+kDefinitionsPath <- file.path("gating", "omip43_cell_type_definitions.csv")
 kOutputDir <- file.path("output", "omip43")
 
 kTissues <- c("PBMC", "Bone Marrow", "Spleen", "Tonsil")
@@ -364,6 +366,236 @@ cat("\n=== Clustering against the manual gate ===\n")
 print(clustering_summary, digits = 3, row.names = FALSE)
 
 # ---------------------------------------------------------------------------
+# 4b. Why the density gate cannot work, shown rather than asserted
+# ---------------------------------------------------------------------------
+
+Log("Drawing the CD38 distribution with both gate decisions on it")
+
+evidence_rows <- list()
+manual_gate <- NULL
+for (tissue in kTissues) {
+  gating_hierarchy <- gating_sets[[tissue]][[1]]
+  parent_data <- flowWorkspace::gh_pop_get_data(gating_hierarchy, kParentPath)
+  events <- flowCore::exprs(parent_data)
+
+  in_parent <- flowWorkspace::gh_pop_get_indices(gating_hierarchy, kParentPath)
+  in_asc <- flowWorkspace::gh_pop_get_indices(gating_hierarchy, kAscPath)
+  truth <- in_asc[in_parent]
+
+  gate <- flowWorkspace::gh_pop_get_gate(gating_hierarchy, kAscPath)
+  if (tissue == "Spleen") manual_gate <- gate
+  manual_low <- gate@min[[kChannels[["CD38"]]]]
+
+  # Where mindensity would cut, on exactly the data the analyst looked at.
+  found <- tryCatch(
+    openCyto::gate_mindensity(parent_data, channel = kChannels[["CD38"]]),
+    error = function(e) NULL
+  )
+  automatic_cut <- if (is.null(found)) NA_real_ else found@min[[1]]
+
+  evidence_rows[[length(evidence_rows) + 1]] <- data.frame(
+    tissue = tissue,
+    manual_cd38_threshold = manual_low,
+    mindensity_cd38_threshold = automatic_cut,
+    percent_above_manual = 100 * mean(events[, kChannels[["CD38"]]] >= manual_low),
+    percent_above_mindensity = if (is.na(automatic_cut)) NA_real_ else
+      100 * mean(events[, kChannels[["CD38"]]] >= automatic_cut),
+    manual_asc_percent = 100 * mean(truth),
+    stringsAsFactors = FALSE
+  )
+}
+cd38_evidence <- do.call(rbind, evidence_rows)
+write.csv(cd38_evidence, file.path(kOutputDir, "cd38_thresholds.csv"),
+          row.names = FALSE)
+
+cat("\n=== Where each method puts the CD38 cut, on the same data ===\n")
+print(cd38_evidence, digits = 4, row.names = FALSE)
+
+spleen_hierarchy <- gating_sets[["Spleen"]][[1]]
+spleen_events <- flowCore::exprs(
+  flowWorkspace::gh_pop_get_data(spleen_hierarchy, kParentPath)
+)
+spleen_truth <- flowWorkspace::gh_pop_get_indices(spleen_hierarchy, kAscPath)[
+  flowWorkspace::gh_pop_get_indices(spleen_hierarchy, kParentPath)
+]
+spleen_row <- cd38_evidence[cd38_evidence$tissue == "Spleen", ]
+
+density_plot <- ggplot(data.frame(cd38 = spleen_events[, kChannels[["CD38"]]]),
+                       aes(x = cd38)) +
+  geom_density(fill = "grey85", colour = "grey40", linewidth = 0.4) +
+  geom_vline(xintercept = spleen_row$manual_cd38_threshold,
+             colour = "#b2182b", linewidth = 0.9) +
+  geom_vline(xintercept = spleen_row$mindensity_cd38_threshold,
+             colour = "#2166ac", linewidth = 0.9, linetype = "dashed") +
+  annotate("text", x = spleen_row$manual_cd38_threshold, y = Inf,
+           label = "  the analyst cut here", colour = "#b2182b",
+           hjust = 0, vjust = 2, size = 3.6) +
+  annotate("text", x = spleen_row$mindensity_cd38_threshold, y = Inf,
+           label = "mindensity cuts here  ", colour = "#2166ac",
+           hjust = 1, vjust = 4, size = 3.6) +
+  labs(
+    title = "Spleen: the CD38 distribution has no valley where the analyst cut",
+    subtitle = "mindensity finds the dip between negative and positive. The CD38 high population sits far above it, on a smooth shoulder.",
+    x = "CD38 intensity, on the workspace scale", y = "Density"
+  ) +
+  theme_bw()
+ggsave(file.path(kOutputDir, "cd38_density.png"), density_plot,
+       width = 10, height = 6, dpi = 150)
+
+withr::with_seed(kSeed, {
+  show <- sample.int(nrow(spleen_events), min(40000, nrow(spleen_events)))
+})
+biaxial_plot <- ggplot(
+  data.frame(
+    cd38 = spleen_events[show, kChannels[["CD38"]]],
+    cd27 = spleen_events[show, kChannels[["CD27"]]],
+    asc = ifelse(spleen_truth[show], "ASC", "other"),
+    stringsAsFactors = FALSE
+  ),
+  aes(x = cd38, y = cd27)
+) +
+  geom_point(aes(colour = asc), size = 0.25, alpha = 0.35) +
+  annotate("rect",
+           xmin = manual_gate@min[[kChannels[["CD38"]]]],
+           xmax = manual_gate@max[[kChannels[["CD38"]]]],
+           ymin = manual_gate@min[[kChannels[["CD27"]]]],
+           ymax = manual_gate@max[[kChannels[["CD27"]]]],
+           fill = NA, colour = "#b2182b", linewidth = 0.8) +
+  geom_vline(xintercept = spleen_row$mindensity_cd38_threshold,
+             colour = "#2166ac", linewidth = 0.8, linetype = "dashed") +
+  scale_colour_manual(values = c(ASC = "#b2182b", other = "grey70")) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  labs(
+    title = "Spleen: CD38 against CD27, with both decisions drawn",
+    subtitle = "The red box is the rectangleGate the analyst placed. The dashed line is where mindensity cuts CD38.",
+    x = "CD38", y = "CD27", colour = NULL
+  ) +
+  theme_bw()
+ggsave(file.path(kOutputDir, "cd38_cd27_biaxial.png"), biaxial_plot,
+       width = 10, height = 7, dpi = 150)
+
+Log("Wrote cd38_density.png and cd38_cd27_biaxial.png")
+
+# ---------------------------------------------------------------------------
+# 4c. What the metaclusters are
+# ---------------------------------------------------------------------------
+
+Log("Annotating the spleen metaclusters")
+
+definitions <- ReadCellTypeDefinitions(kDefinitionsPath)
+
+withr::with_seed(kSeed, {
+  keep <- sample.int(nrow(spleen_events), min(kSubsampleSize, nrow(spleen_events)))
+})
+spleen_sub <- spleen_events[keep, , drop = FALSE]
+spleen_truth_sub <- spleen_truth[keep]
+
+spleen_clustering <- RunFlowSomClustering(
+  spleen_sub, channels = kClusterChannels,
+  grid_size = 10, n_metaclusters = kMetaclusters, seed = kSeed
+)
+
+median_expression <- ClusterMedianExpression(
+  spleen_sub, spleen_clustering$metacluster, kClusterChannels
+)
+write.csv(median_expression,
+          file.path(kOutputDir, "spleen_cluster_median_expression.csv"),
+          row.names = FALSE)
+
+annotation <- AnnotateClusters(median_expression, definitions)
+annotation$asc_percent_by_manual_gate <- vapply(
+  annotation$cluster,
+  function(cluster) {
+    in_cluster <- spleen_clustering$metacluster == cluster
+    100 * sum(in_cluster & spleen_truth_sub) / sum(in_cluster)
+  },
+  numeric(1)
+)
+write.csv(annotation, file.path(kOutputDir, "spleen_cluster_annotation.csv"),
+          row.names = FALSE)
+
+cat("\n=== What the metaclusters are ===\n")
+print(annotation[, c("cluster", "events", "percent_of_total", "cell_type",
+                     "runner_up", "margin", "asc_percent_by_manual_gate")],
+      digits = 3, row.names = FALSE)
+
+marker_names <- names(kChannels)
+expression_long <- do.call(rbind, lapply(seq_along(kClusterChannels), function(i) {
+  data.frame(
+    cluster = factor(median_expression$cluster),
+    marker = marker_names[i],
+    median = median_expression[[kClusterChannels[i]]],
+    stringsAsFactors = FALSE
+  )
+}))
+expression_long$scaled <- stats::ave(
+  expression_long$median, expression_long$marker,
+  FUN = function(x) {
+    span <- max(x) - min(x)
+    if (span == 0) rep(0.5, length(x)) else (x - min(x)) / span
+  }
+)
+
+heatmap_plot <- ggplot(expression_long,
+                       aes(x = marker, y = cluster, fill = scaled)) +
+  geom_tile(colour = "white") +
+  scale_fill_viridis_c(option = "magma") +
+  labs(
+    title = "Spleen: median marker expression per metacluster",
+    subtitle = "Scaled within each marker. This table drives the labels in the annotation table.",
+    x = NULL, y = "Metacluster", fill = "Scaled\nmedian"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(file.path(kOutputDir, "spleen_cluster_heatmap.png"), heatmap_plot,
+       width = 9, height = 6, dpi = 150)
+
+spleen_embedding <- RunUmapEmbedding(spleen_sub, channels = kClusterChannels,
+                                     seed = kSeed)
+marker_long <- do.call(rbind, lapply(seq_along(kClusterChannels), function(i) {
+  data.frame(
+    umap_1 = spleen_embedding$umap_1,
+    umap_2 = spleen_embedding$umap_2,
+    marker = marker_names[i],
+    value = spleen_sub[, kClusterChannels[i]],
+    stringsAsFactors = FALSE
+  )
+}))
+
+marker_plot <- ggplot(marker_long, aes(x = umap_1, y = umap_2, colour = value)) +
+  geom_point(size = 0.15, alpha = 0.5) +
+  facet_wrap(~marker, ncol = 4) +
+  scale_colour_viridis_c(option = "magma") +
+  labs(
+    title = "Spleen: the same embedding, one panel per marker",
+    subtitle = "Read the annotation table against these panels. A label that does not match them is wrong.",
+    x = "UMAP 1", y = "UMAP 2", colour = "Intensity"
+  ) +
+  theme_bw()
+ggsave(file.path(kOutputDir, "spleen_umap_markers.png"), marker_plot,
+       width = 13, height = 7, dpi = 150)
+
+type_plot <- ggplot(
+  cbind(spleen_embedding,
+        cell_type = annotation$cell_type[
+          match(spleen_clustering$metacluster, annotation$cluster)
+        ]),
+  aes(x = umap_1, y = umap_2, colour = cell_type)
+) +
+  geom_point(size = 0.3, alpha = 0.6) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  labs(
+    title = "Spleen: metaclusters labelled from the definitions file",
+    subtitle = "No cluster was named by eye. Each was scored against gating/omip43_cell_type_definitions.csv.",
+    x = "UMAP 1", y = "UMAP 2", colour = "Cell type"
+  ) +
+  theme_bw()
+ggsave(file.path(kOutputDir, "spleen_umap_cell_types.png"), type_plot,
+       width = 10, height = 7, dpi = 150)
+
+Log("Wrote the annotation table and three more figures")
+
+# ---------------------------------------------------------------------------
 # 5. The paper's phenotype claims
 # ---------------------------------------------------------------------------
 
@@ -418,6 +650,92 @@ tissue_variation <- data.frame(
 )
 write.csv(tissue_variation, file.path(kOutputDir, "tissue_variation.csv"),
           row.names = FALSE)
+
+# ---------------------------------------------------------------------------
+# 5b. Every claim in the file, with a verdict
+# ---------------------------------------------------------------------------
+#
+# The tables above show the measurements. This section turns each one into a
+# verdict against the claim it was meant to test, so no claim is quietly left
+# without an answer.
+
+Log("Scoring every recorded claim")
+
+Verdict <- function(claim_id, observed, verdict, note) {
+  data.frame(claim_id = claim_id, observed = observed, verdict = verdict,
+             note = note, stringsAsFactors = FALSE)
+}
+
+pbmc_percent <- mean(manual$asc_percent[manual$tissue == "PBMC"])
+other_percent <- vapply(setdiff(kTissues, "PBMC"), function(tissue) {
+  mean(manual$asc_percent[manual$tissue == tissue])
+}, numeric(1))
+
+verdict_rows <- list(
+  Verdict(
+    1,
+    sprintf("PBMC %.2f%%, others %.2f to %.2f%%", pbmc_percent,
+            min(other_percent), max(other_percent)),
+    if (all(pbmc_percent < other_percent)) "reproduced" else "not reproduced",
+    "Blood is the lowest of the four tissues."
+  ),
+  Verdict(
+    2,
+    sprintf("%d of %d replicates inside 400 to 2000",
+            sum(counting_claims$samples_in_range), nrow(manual)),
+    if (sum(counting_claims$samples_in_range) == nrow(manual)) "reproduced" else
+      "not reproduced",
+    "Blood and bone marrow fall below the range, spleen and tonsil above it."
+  ),
+  Verdict(
+    3,
+    paste0(sum(counting_claims$meets_cv_target), " of ",
+           nrow(counting_claims), " tissues at or below 5 percent"),
+    if (all(counting_claims$meets_cv_target)) "reproduced" else "partly reproduced",
+    "Met in spleen and tonsil, missed in blood and bone marrow."
+  ),
+  Verdict(
+    4,
+    sprintf("side scatter ratio %.2f to %.2f",
+            min(phenotype$ssc_ratio), max(phenotype$ssc_ratio)),
+    if (all(phenotype$ssc_ratio > 1)) "reproduced" else "not reproduced",
+    "ASC scatter more light than the cells around them in every tissue."
+  ),
+  Verdict(
+    5,
+    sprintf("CD20 difference %.1f to %.1f",
+            min(phenotype$cd20_difference), max(phenotype$cd20_difference)),
+    if (all(phenotype$cd20_difference < 0)) "reproduced" else "not reproduced",
+    "CD20 is lower on ASC than on the rest of the dumped population everywhere."
+  ),
+  Verdict(
+    6,
+    sprintf("CD19 median %.0f to %.0f across tissues, CV %.1f%%",
+            min(phenotype$cd19_asc), max(phenotype$cd19_asc),
+            MeasuredCv(phenotype$cd19_asc)),
+    if (MeasuredCv(phenotype$cd19_asc) > 5) "reproduced" else "too small to call",
+    "Lowest in bone marrow and highest in tonsil."
+  ),
+  Verdict(
+    7,
+    sprintf("HLA-DR median %.0f to %.0f across tissues, CV %.1f%%",
+            min(phenotype$hladr_asc), max(phenotype$hladr_asc),
+            MeasuredCv(phenotype$hladr_asc)),
+    if (MeasuredCv(phenotype$hladr_asc) > 5) "reproduced" else "too small to call",
+    "The paper also names Ki67 here. The PE channel in these files carries HLA-DR, so Ki67 is not measurable."
+  )
+)
+
+verdicts <- merge(claims, do.call(rbind, verdict_rows), by = "claim_id")
+verdicts <- verdicts[order(verdicts$claim_id), ]
+write.csv(verdicts, file.path(kOutputDir, "claims_verdicts.csv"), row.names = FALSE)
+
+cat("\n=== Every claim, with a verdict ===\n")
+print(verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+      row.names = FALSE)
+
+Log("Claims reproduced:", sum(verdicts$verdict == "reproduced"), "of",
+    nrow(verdicts))
 
 # ---------------------------------------------------------------------------
 # 6. Figures

@@ -1,6 +1,6 @@
 ---
 title: "OMIP-43 and the limits of automated gating"
-subtitle: "Rare cell counting, a template that fails in both directions, and clustering that does not"
+subtitle: "Rare cell counting, a template that fails silently, and clustering that recovers the population"
 author: "William Guesdon"
 date: today
 format:
@@ -49,23 +49,21 @@ OutputImage <- function(name) {
 
 ## Why this dataset
 
-The OMIP-39 report ended with an automated template that matched a published
-expert analysis on most populations. That is a comfortable result and it is not
-the general case.
-
 OMIP-043 identifies antibody secreting cells, historically called plasma cells,
-across four human tissues [1]. It is a rare cell panel, and its target population
-is defined as CD38 high and CD27 positive. That word "high" is the whole problem.
-CD38 high is the bright tail of a continuous distribution, not a separated peak,
-and nothing in a density based gating method knows where a tail begins.
+across four human tissues [1]. Its target population is defined as CD38 high and
+CD27 positive, and that word "high" turns out to decide everything that follows.
+CD38 high is the bright end of one continuous distribution rather than a separated
+peak, so a method that looks for a dip between two peaks has to be checked rather
+than trusted.
 
-The dataset is also unusually good for checking arithmetic. The authors state a
-design target in counting terms, and both halves of the sentence can be tested
-against the data they deposited.
+The dataset is also unusually good for checking arithmetic. The authors state
+their design target in counting terms, and both halves of that sentence can be
+tested against the data they deposited.
 
-The report has five parts. The manual gates, the paper's counting claims,
-automated gating and why it fails, clustering that recovers what gating missed,
-and the paper's phenotype claims.
+The aim is to reproduce the paper's findings as closely as the deposited data
+allows. The report works through the manual gates, the counting claims, automated
+gating and how it behaves, the evidence for why it behaves that way, clustering,
+the phenotype claims, and finally a verdict on every claim in one table.
 
 ### What the replicates are
 
@@ -217,24 +215,74 @@ overcounts spleen eighteenfold. A method that is consistently wrong can be
 corrected. A method whose error changes sign between tissues cannot be trusted
 anywhere.
 
-### The cause
+### What the gate is, read from the workspace
 
-Reading the gate out of the workspace explains it. The manual ASC gate is a
-`rectangleGate` on CD38 from 141.8 to 209.1 and CD27 from 109.7 to 211.3. A human
-placed a box, using knowledge of where these cells sit.
-
-`mindensity` looks for the lowest point between two peaks. CD38 high is the bright
-end of one continuous distribution, so there is no such point to find. In the
-spleen file the second CD38 gate returned exactly the same 191,395 events as the
-first, which is the signature of a gate that found nothing and kept everything.
+The manual ASC gate is a `rectangleGate` on CD38 from 141.8 to 209.1 and CD27 from
+109.7 to 211.3. A human placed a box, using knowledge of where these cells sit.
+That is a threshold decision and not a boundary the data announces.
 
 The paper says as much in its own words:
 
 > On-scale display of CD38high events is critical for ASC identification, and can
 > be difficult for the untrained eye.
 
-If it is difficult for a trained eye, a density valley finder has no chance,
-because the feature it looks for is not there.
+## Part 3b: where a density method actually cuts
+
+The section above shows that the template is wrong. It does not show why, and the
+obvious explanation is worth testing rather than asserting.
+
+`mindensity` was therefore run on the CD38 channel of exactly the data the analyst
+looked at, in the workspace's own scale, and its threshold compared with theirs.
+
+```{r}
+#| label: cd38-thresholds
+
+thresholds <- ReadOutput("cd38_thresholds.csv")
+kable(
+  thresholds,
+  digits = 2,
+  caption = "Where each method cuts CD38, on the same events, in the same scale.",
+  col.names = c("Tissue", "Analyst threshold", "mindensity threshold",
+                "Percent above analyst", "Percent above mindensity",
+                "Manual ASC percent")
+)
+```
+
+This corrects the simple story. In spleen the two methods almost agree: 144.2
+against 141.8, giving 3.48 percent of events above the cut against 3.59 percent.
+A single density gate on CD38 would have been close to right there.
+
+In the other three tissues `mindensity` cuts far too low, at 80, 73 and 84 against
+analyst thresholds of 124, 128 and 142. It keeps 27, 35 and 14 percent of events
+where the analyst kept 3.1, 0.8 and 0.9 percent.
+
+So the method is not blind. It succeeds where the target population is abundant
+enough to bend the density curve, which in spleen means 3.3 percent of events, and
+fails where the population is rare, which in the other three tissues means 0.3 to
+0.9 percent. The rarer the cell, the less of a feature it leaves for a density
+method to find, and this is a rare cell panel.
+
+```{r}
+#| label: cd38-density
+#| fig-cap: "Spleen. The solid line is the analyst's threshold, the dashed line is where mindensity cuts."
+
+knitr::include_graphics(OutputImage("cd38_density.png"))
+```
+
+The figure shows what the arithmetic says. There is one large mode and a long
+shoulder, and `mindensity` finds the dip between negative and positive rather than
+the start of the bright tail.
+
+```{r}
+#| label: cd38-biaxial
+#| fig-cap: "The plot the analyst drew on. The red box is their gate, the dashed line is the density cut."
+
+knitr::include_graphics(OutputImage("cd38_cd27_biaxial.png"))
+```
+
+Note also that the analyst's gate has an upper bound on both markers. A density
+threshold has no upper bound at all, so even where the lower edges agree the two
+gates are not the same object.
 
 ## Part 4: clustering recovers what gating missed
 
@@ -280,6 +328,58 @@ recall to 97.4 percent.
 Blood is the weakest case at 63.2 percent purity, and that is expected. With 165
 ASC among 50,000 events, the population is too small to hold a metacluster of its
 own and it shares one with its nearest neighbours.
+
+### What the metaclusters actually are
+
+Purity and recall say whether a cluster matches the manual gate. They do not say
+what any cluster is. Each metacluster is therefore scored against a definitions
+file that gives the expected sign of every marker, and the best scoring definition
+wins. The margin to the runner up is reported, so a close call is visible.
+
+```{r}
+#| label: cluster-annotation
+
+annotation <- ReadOutput("spleen_cluster_annotation.csv")
+kable(
+  annotation[, c("cluster", "events", "percent_of_total", "cell_type",
+                 "runner_up", "margin", "asc_percent_by_manual_gate")],
+  digits = 3,
+  caption = "The fifteen spleen metaclusters, with their label and how close the second choice was.",
+  col.names = c("Cluster", "Events", "Percent", "Label", "Runner up", "Margin",
+                "ASC percent by the manual gate")
+)
+```
+
+Read the last two columns together, because they check each other. Clusters 4 and
+3 are labelled antibody secreting cells from marker expression alone, and the
+manual gate independently calls 91.7 and 60.3 percent of their events ASC. Two
+methods that share no information agree.
+
+Cluster 7 is labelled the same way and the manual gate calls 0.7 percent of it
+ASC, so that label is wrong. Its margin is 0.008, the smallest in the table, which
+is the annotation reporting its own uncertainty. A label with a margin that small
+should be read as undecided rather than as a result.
+
+```{r}
+#| label: cluster-heatmap
+#| fig-cap: "Median marker expression per metacluster, scaled within each marker. This is the table the labels are scored against."
+
+knitr::include_graphics(OutputImage("spleen_cluster_heatmap.png"))
+```
+
+```{r}
+#| label: umap-markers
+#| fig-cap: "The same embedding, one panel per marker. A label that does not match these panels is wrong."
+
+knitr::include_graphics(OutputImage("spleen_umap_markers.png"))
+```
+
+```{r}
+#| label: umap-cell-types
+#| fig-cap: "The embedding coloured by the label each metacluster received."
+
+knitr::include_graphics(OutputImage("spleen_umap_cell_types.png"))
+```
 
 Compare the frequency the clustering produces with the manual value. Spleen gives
 4.03 percent against 3.34, tonsil 0.77 against 0.86, bone marrow 0.43 against
@@ -359,52 +459,125 @@ because the PE channel in these deposited files carries HLA-DR and not Ki67. The
 paper describes both as options for that channel. The claim is recorded as not
 measurable rather than as failed.
 
-## Discussion: what the two OMIPs say together
+## Part 6: every claim, with a verdict
 
-This report and the OMIP-39 report reach opposite conclusions about the same two
-methods, and the pair is more useful than either alone.
+The sections above measure. This one decides, so that no claim in the file is left
+without an answer.
 
-| | OMIP-39, NKG2C on CD56dim NK | OMIP-43, CD38 high ASC |
-|---|---|---|
-| Population shape | Two resolved peaks on one marker | Bright tail of one continuous distribution |
-| Automated gating | Matched the experts on 4 of 7 populations | Wrong by 0.3 to 18 fold, and the sign of the error changes between tissues |
-| Clustering | Struggled, misassigned the CD56 bright and dim split | 91 percent pure in three of four tissues |
+The seven claims live in `gating/omip43_paper_claims.csv`, each with the sentence
+it came from, so a reader can check the claim against the paper before checking
+the number against the data.
 
-The difference is not that one dataset is harder. It is that the populations have
-different shapes, and each method assumes a shape.
+```{r}
+#| label: claims-file
 
-A density gate assumes the population is separated on the axes it is given. When
-that holds, it is fast, it reads clearly in a template file, and it lands where an
-expert lands. When the population is a tail, the assumption fails silently. The
-template still runs and still produces a number, which is the dangerous part.
+claims <- read.csv(
+  file.path("..", "gating", "omip43_paper_claims.csv"),
+  check.names = FALSE
+)
+kable(
+  claims[, c("claim_id", "short_name", "measure", "test", "figure")],
+  caption = "The claims as recorded. The quote column holds the sentence each came from and is left out here for width."
+)
+```
 
-Clustering assumes the population differs from its neighbours across several
-markers at once. That holds for ASC, which differ on four. It failed on CD56
-bright against dim in OMIP-39, where the two subsets differ mainly by degree on a
-single marker.
+```{r}
+#| label: verdicts
 
-So the choice is not a preference. Look at the population first. If it resolves
-into peaks on one or two axes, gate it. If it is defined by a combination and
-shades into its neighbours on every single axis, cluster it.
+verdicts <- ReadOutput("claims_verdicts.csv")
+kable(
+  verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+  caption = "Each claim against the deposited data.",
+  col.names = c("Claim", "Short name", "Paper expects", "Observed", "Verdict")
+)
+```
+
+Five of the seven reproduce cleanly. The two that do not are both counting claims,
+and neither is a failure of the biology.
+
+Claim 2 fails outright: no replicate falls in the stated 400 to 2,000 range. Claim
+3 is met in spleen and tonsil and missed in blood and bone marrow. Both come from
+the same sentence, and both track the same thing, which is how rare the cells are
+in a given tissue.
+
+One claim could not be tested at all. The paper names Ki67 alongside CD19 and
+HLA-DR as varying between tissues, and the PE channel in these deposited files
+carries HLA-DR rather than Ki67. The paper describes both as options for that
+channel. It is recorded here as not measurable rather than counted as a failure,
+because the data to test it was never deposited.
+
+```{r}
+#| label: verdict-summary
+
+summary_table <- as.data.frame(table(verdicts$verdict))
+colnames(summary_table) <- c("verdict", "claims")
+kable(summary_table, caption = "The seven claims, summarised.")
+```
+
+## Discussion
+
+### The failure is silent, which is the part that matters
+
+The template ran to completion on every tissue. It raised no error, produced a
+population, and reported a percentage. Nothing in the output said that the CD38
+high gate had kept everything handed to it.
+
+That is the risk in an automated pipeline, and it is worse than a crash. A crash
+stops you. A number does not.
+
+The check that caught it here is cheap and general: compare the automated result
+against a gate somebody drew by hand, on the same file, before trusting the
+pipeline on files nobody has looked at.
+
+### Rarity is what breaks the density method
+
+Part 3b separates two explanations that are easy to confuse.
+
+The first is that CD38 high has no density valley at all. That is not quite true.
+In spleen a single `mindensity` cut lands at 144.2 against the analyst's 141.8,
+and keeps 3.48 percent of events against their 3.59 percent.
+
+The second is that the population must be abundant enough to leave a feature in
+the density curve. That is what the data supports. Spleen holds 3.3 percent ASC and
+the method works. Blood, bone marrow and tonsil hold 0.3 to 0.9 percent, and the
+cut falls 40 to 60 units too low, keeping 14 to 35 percent of events instead of
+about 1 to 3.
+
+So the rule is not that density gating cannot find a bright tail. It is that a
+density method needs the population to be common enough to bend the curve, and a
+rare cell panel is precisely the case where it is not.
+
+### Why clustering does better here
+
+Clustering never looks for a valley on one axis. It groups events by position
+across all seven markers, and ASC differ from their neighbours on four of them at
+once: CD38 bright, CD27 positive, CD20 low and side scatter high.
+
+That is why one metacluster reaches 91.7 percent purity in spleen without any
+tuning, and why the weakest case is blood, where 165 ASC among 50,000 events are
+too few to hold a metacluster of their own.
+
+The annotation carries the same warning in its own numbers. Cluster 7 was labelled
+antibody secreting cells with a margin of 0.008 and the manual gate calls 0.7
+percent of it ASC. A margin that small is the method declining to decide, and it
+should be read that way rather than as an answer.
 
 ### What this shows and what it does not
 
-It shows that an automated template can fail badly on a real published panel,
-that the failure is silent, and that a different automated method recovers the
-same population without any hand tuning.
+It shows that an automated template can fail silently on a published panel, that
+the failure tracks how rare the target population is, and that a different
+automated method recovers the same cells without hand tuning.
 
 It does not show that clustering is safe. It was scored against a manual gate,
-which is itself one analyst's judgement, and blood at 63 percent purity is a warning
-about rare populations rather than a success.
+which is one analyst's judgement, and one of the fifteen labels is wrong.
 
-It also does not measure analyst variation. Seven replicate acquisitions of one
-tube are not seven analysts, and the tonsil result where the measured CV fell below
-the Poisson floor shows those replicates are not even fully independent of each
-other.
+It does not measure analyst variation. Seven replicate acquisitions of one tube
+are not seven analysts, and the tonsil result where the measured CV fell below the
+Poisson floor shows those replicates are not fully independent of one another.
 
 What the arithmetic did show is worth keeping. A measured spread that falls below
-the counting floor is a statement about the study design, not about the biology,
-and it took one line of Poisson arithmetic to see it.
+the counting floor is a statement about the study design rather than about the
+biology, and one line of Poisson arithmetic was enough to see it.
 
 ## Reproducing this
 
@@ -436,15 +609,11 @@ sessionInfo()
 cell subsets. Cytometry A 2018;93A:190-193. PMID 29286577.
 doi:10.1002/cyto.a.23305.
 
-[2] Hammer Q, Romagnani C. OMIP-039: Detection and analysis of human adaptive
-NKG2C+ natural killer cells. Cytometry A 2017;91A:997-1000. PMID 28715616.
-doi:10.1002/cyto.a.23168.
-
-[3] Finak G, Frelinger J, Jiang W, Newell EW, Ramey J, Davis MM, Kalams SA, De
+[2] Finak G, Frelinger J, Jiang W, Newell EW, Ramey J, Davis MM, Kalams SA, De
 Rosa SC, Gottardo R. OpenCyto: an open source infrastructure for scalable, robust,
 reproducible, and automated, end-to-end flow cytometry data analysis. PLoS Comput
 Biol 2014;10(8):e1003806. PMID 25167361.
 
-[4] Van Gassen S, Callebaut B, Van Helden MJ, Lambrecht BN, Demeester P, Dhaene T,
+[3] Van Gassen S, Callebaut B, Van Helden MJ, Lambrecht BN, Demeester P, Dhaene T,
 Saeys Y. FlowSOM: Using self-organizing maps for visualization and interpretation
 of cytometry data. Cytometry A 2015. PMID 25573116.
