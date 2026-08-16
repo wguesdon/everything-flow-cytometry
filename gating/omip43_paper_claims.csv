@@ -1,0 +1,8 @@
+claim_id,short_name,measure,test,expected,quote,figure
+1,ASC are rarest in blood,asc_percent_of_dumped,tissue_order,"PBMC lowest of the four tissues","ASCs occur at very low frequencies in peripheral blood, and while they are somewhat more abundant in tonsil, spleen, and bone marrow, in all cases they are considered rare cells",Background
+2,Events collected in the ASC gate,asc_events,range,"between 400 and 2000 per sample","We targeted a 5% coefficient of variation (CV), which resulted in regularly collecting 400-2,000 events in the ASC gate",Background
+3,Poisson CV of the ASC count,poisson_cv_percent,at_most,"5 percent","We targeted a 5% coefficient of variation (CV)",Background
+4,ASC sit outside a low side scatter gate,ssc_ratio,greater_than,"ASC side scatter above non-ASC side scatter","ASC contain more cytoplasm due to their active production of antibody, and thus do not cluster with a typical low-side scatter lymphocyte gate",1A
+5,CD20 is downregulated on ASC,cd20_ratio,less_than,"ASC CD20 below non-ASC CD20","Mature B cells express the phosphoglycoproteins CD19 and CD20, and on differentiation to ASCs, CD20 is downregulated",Background
+6,CD19 varies between tissues on ASC,cd19_positive_percent,tissue_variation,"the CD19 positive fraction of ASC differs between tissues","The ratio of CD19+ to CD19- on ASC varies by tissue niche",1B
+7,HLA-DR varies between tissues on ASC,hladr_positive_percent,tissue_variation,"the HLA-DR positive fraction of ASC differs between tissues","Note particularly the tissue-specific variation of CD19, Ki67, and HLA-DR among CD38high ASC",1B
