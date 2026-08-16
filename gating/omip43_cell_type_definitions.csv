@@ -1,6 +1,5 @@
-cell_type,Comp-APC-A,Comp-BV421-A,Comp-PerCP-Cy5-5-A,Comp-BV786-A,Comp-BUV395-A,Comp-FITC-A,Comp-PE-A,note
-Antibody secreting cells,,neg,neg,pos,high,pos,,"The target population. CD38 highest in the panel, CD27 positive, CD20 downregulated, cytoplasmic immunoglobulin positive."
-Naive B cells,pos,pos,pos,neg,neg,neg,pos,"IgD positive and CD27 negative. No detectable surface immunoglobulin in the FITC channel."
-Memory B cells,pos,pos,neg,pos,,pos,pos,"CD27 positive and IgD negative. All three isotypes detectable in the FITC channel."
-Transitional or activated B,pos,pos,pos,pos,pos,,pos,"CD27 and IgD both positive. A smaller population between the two above."
-Non B cells,neg,neg,neg,,neg,neg,,"CD19 and CD20 both negative. What the dump gate did not remove."
+cell_type,Comp-APC-A,Comp-BV421-A,Comp-PerCP-Cy5-5-A,Comp-BV786-A,Comp-BUV395-A,note
+Antibody secreting cells,,neg,neg,pos,high,"CD38 highest in the panel, CD27 positive, CD20 downregulated on differentiation. CD19 is left out on purpose, because the paper's own point is that it varies between tissues on these cells."
+Naive B cells,pos,pos,pos,neg,neg,"CD19 and CD20 positive, IgD positive, CD27 negative. The pre class switched compartment."
+Memory B cells,pos,pos,neg,pos,neg,"CD19 and CD20 positive, CD27 positive, IgD negative. Class switched."
+Non B cells,neg,neg,,,,"CD19 and CD20 both negative. What the dump gate did not remove."

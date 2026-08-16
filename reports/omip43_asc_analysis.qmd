@@ -329,12 +329,58 @@ Blood is the weakest case at 63.2 percent purity, and that is expected. With 165
 ASC among 50,000 events, the population is too small to hold a metacluster of its
 own and it shares one with its nearest neighbours.
 
-### What the metaclusters actually are
+### How each metacluster was labelled
 
 Purity and recall say whether a cluster matches the manual gate. They do not say
-what any cluster is. Each metacluster is therefore scored against a definitions
-file that gives the expected sign of every marker, and the best scoring definition
-wins. The margin to the runner up is reported, so a close call is visible.
+what any cluster is. FlowSOM returns fifteen numbered groups and nothing else.
+
+No cluster was named by eye. The rule is in a file and it runs in four steps.
+
+**Step 1. Write down what each cell type looks like.** The definitions file gives
+the expected sign of each marker for each type, as `pos`, `neg`, `high`, or blank
+when the marker does not take part.
+
+```{r}
+#| label: definitions
+
+definitions <- read.csv(
+  file.path("..", "gating", "omip43_cell_type_definitions.csv"),
+  check.names = FALSE
+)
+kable(
+  definitions,
+  caption = "The definitions the labels are scored against. A blank means the marker is not used for that type."
+)
+```
+
+**Step 2. Take the median of every marker in every cluster, and scale it.** Each
+marker is rescaled to run from 0 to 1 across the fifteen clusters, so a bright
+marker and a dim one carry equal weight. The score reads this table and not the
+raw medians.
+
+```{r}
+#| label: scaled-expression
+
+scaled <- ReadOutput("spleen_cluster_scaled_expression.csv")
+kable(
+  scaled,
+  digits = 3,
+  caption = "Median expression per cluster, scaled from 0 to 1 within each marker. This is the table the score reads."
+)
+```
+
+**Step 3. Score every cluster against every definition.** For each marker the
+definition names, add the scaled value where it expects `pos`, add twice the
+scaled value where it expects `high`, and add one minus the scaled value where it
+expects `neg`. Divide by the total weight.
+
+The division matters. An earlier version summed instead, which rewards a
+definition for naming more markers rather than for fitting better, and the label
+with the longest marker list then wins clusters it has no business winning.
+
+**Step 4. Take the best score, and record how close the second was.** That gap is
+the margin, and it is the part of the output that says how much to trust the
+label.
 
 ```{r}
 #| label: cluster-annotation
@@ -344,42 +390,56 @@ kable(
   annotation[, c("cluster", "events", "percent_of_total", "cell_type",
                  "runner_up", "margin", "asc_percent_by_manual_gate")],
   digits = 3,
-  caption = "The fifteen spleen metaclusters, with their label and how close the second choice was.",
+  caption = "The fifteen metaclusters, their label, the runner up, and the gap between them.",
   col.names = c("Cluster", "Events", "Percent", "Label", "Runner up", "Margin",
                 "ASC percent by the manual gate")
 )
 ```
 
-Read the last two columns together, because they check each other. Clusters 4 and
-3 are labelled antibody secreting cells from marker expression alone, and the
-manual gate independently calls 91.7 and 60.3 percent of their events ASC. Two
-methods that share no information agree.
+### Whether the labels are any good
 
-Cluster 7 is labelled the same way and the manual gate calls 0.7 percent of it
-ASC, so that label is wrong. Its margin is 0.008, the smallest in the table, which
-is the annotation reporting its own uncertainty. A label with a margin that small
-should be read as undecided rather than as a result.
+The last two columns check each other, and they were produced without sharing any
+information. The label comes from marker expression against a definitions file.
+The final column comes from a gate an analyst drew in FlowJo.
 
-```{r}
-#| label: cluster-heatmap
-#| fig-cap: "Median marker expression per metacluster, scaled within each marker. This is the table the labels are scored against."
+Cluster 4 is labelled antibody secreting cells with a margin of 0.409, and the
+manual gate calls 91.7 percent of its events ASC. Cluster 3 gets the same label
+with a margin of 0.136, and the gate agrees on 60.3 percent. Two independent
+routes to the same conclusion.
 
-knitr::include_graphics(OutputImage("spleen_cluster_heatmap.png"))
-```
+Read the scaled table for cluster 4 and the label is obvious without any
+arithmetic: CD38 at 1.00, CD27 at 1.00, CD20 at 0.02. Highest CD38 in the panel,
+CD27 positive, CD20 switched off. That is the paper's definition of an ASC.
 
-```{r}
-#| label: umap-markers
-#| fig-cap: "The same embedding, one panel per marker. A label that does not match these panels is wrong."
+Five of the fifteen labels carry a margin below 0.1, and those should be read as
+undecided rather than as answers.
 
-knitr::include_graphics(OutputImage("spleen_umap_markers.png"))
-```
+Two of them are informative. Cluster 12 has CD19 at 0.93 and CD20 at 0.90 with IgD
+at 0.06 and CD27 at 0.12, so it is a B cell that is neither IgD positive nor CD27
+positive. Cluster 14 has both IgD at 0.78 and CD27 at 0.64, so it is positive for
+both. Neither state is in the definitions file, and the low margins are the method
+reporting that rather than hiding it.
 
-```{r}
-#| label: umap-cell-types
-#| fig-cap: "The embedding coloured by the label each metacluster received."
+Cluster 7 is the one clear error. It is labelled antibody secreting cells and the
+manual gate calls 0.7 percent of it ASC. Its margin is 0.045. The label is wrong
+and the margin says so.
 
-knitr::include_graphics(OutputImage("spleen_umap_cell_types.png"))
-```
+### What had to be corrected
+
+The first version of the definitions file required memory B cells to be positive
+for cytoplasmic immunoglobulin and for HLA-DR. On this panel the FITC channel
+carries cytoplasmic Ig, which is high on ASC and low elsewhere, and HLA-DR varies.
+Those two requirements pulled the memory B score down far enough that cluster 13,
+which is 16.7 percent of the file with CD19 at 0.96, CD20 at 0.77, CD27 at 0.74
+and IgD at 0.14, was labelled non-B by a margin of 0.007.
+
+The definitions were cut back to the markers that actually define these subsets:
+CD19, CD20, IgD, CD27 and CD38. Cluster 13 is now labelled memory B cells with a
+margin of 0.240.
+
+That correction is worth recording rather than quietly applying. The method did
+not fail there; the definitions did, and the margin of 0.007 flagged it before
+anyone looked at the biology.
 
 Compare the frequency the clustering produces with the manual value. Spleen gives
 4.03 percent against 3.34, tonsil 0.77 against 0.86, bone marrow 0.43 against

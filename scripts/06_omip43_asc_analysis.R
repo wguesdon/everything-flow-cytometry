@@ -502,6 +502,21 @@ write.csv(median_expression,
           file.path(kOutputDir, "spleen_cluster_median_expression.csv"),
           row.names = FALSE)
 
+# The score reads a scaled version of the median table, not the raw medians, so
+# the scaled table is written out too. Without it a reader cannot check a label.
+ScaleColumn <- function(x) {
+  span <- max(x) - min(x)
+  if (span == 0) rep(0.5, length(x)) else (x - min(x)) / span
+}
+scaled_expression <- median_expression[, c("cluster", "events", "percent_of_total")]
+for (i in seq_along(kClusterChannels)) {
+  scaled_expression[[names(kChannels)[i]]] <-
+    round(ScaleColumn(median_expression[[kClusterChannels[i]]]), 3)
+}
+write.csv(scaled_expression,
+          file.path(kOutputDir, "spleen_cluster_scaled_expression.csv"),
+          row.names = FALSE)
+
 annotation <- AnnotateClusters(median_expression, definitions)
 annotation$asc_percent_by_manual_gate <- vapply(
   annotation$cluster,
