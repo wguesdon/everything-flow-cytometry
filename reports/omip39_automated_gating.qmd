@@ -1,0 +1,376 @@
+---
+title: "OMIP-39 as a positive control"
+subtitle: "Computed compensation, automated gating, and a comparison against the published manual gates"
+author: "William Guesdon"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: show
+    code-tools: true
+    embed-resources: true
+    theme: cosmo
+    fig-width: 9
+    fig-height: 6
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(knitr)
+})
+
+kOutputDir <- file.path("..", "output", "omip39")
+
+ReadOutput <- function(name) {
+  path <- file.path(kOutputDir, name)
+  if (!file.exists(path)) {
+    stop(
+      "The analysis output is missing: ", path, "\n",
+      "Run scripts/02_omip39_compensation_and_gating.R and ",
+      "scripts/03_compensation_method_sweep.R first."
+    )
+  }
+  read.csv(path, check.names = FALSE)
+}
+
+OutputImage <- function(name) {
+  file.path(kOutputDir, name)
+}
+```
+
+## Why this dataset
+
+The PBMC report showed that an automated template gates a whole experiment from
+one text file. It did not show whether the template lands where an expert lands,
+because there was nothing to compare against.
+
+OMIP-39 fixes that. It is a published panel for human adaptive NKG2C+ natural
+killer cells [1], and its FlowRepository deposit ships the FlowJo workspace the
+authors used. The manual result therefore does not come from this project. The
+same donor file is gated twice, once by the authors in FlowJo and once here by an
+openCyto template, and the two frequencies sit side by side.
+
+The deposit also ships twelve single stained controls, so compensation can be
+computed from scratch rather than taken from the file. That turned out to be the
+part with the finding in it.
+
+```{r}
+#| label: dataset
+
+match_table <- ReadOutput("control_match_table.csv")
+kable(
+  match_table[, c("stain", "channel", "marker", "matched_by")],
+  caption = "The twelve compensation controls, each matched to the channel it stains."
+)
+```
+
+## Part 1: compensation
+
+### Matching controls to channels
+
+Every control file carries one stain, and that stain names one detector in the
+panel. FlowJo makes a person do this matching in its interface. Here it is derived
+from the marker names that the FCS files already carry.
+
+The matching runs four passes, and each one exists because a real file broke the
+pass before it.
+
+```{r}
+#| label: match-passes
+
+passes <- as.data.frame(table(match_table$matched_by))
+colnames(passes) <- c("pass", "controls")
+kable(passes, caption = "How many controls each matching pass resolved.")
+```
+
+Read the passes as a ladder of tolerance. `exact` compares the two strings
+character for character. `normalised` ignores case and punctuation. `collapsed`
+removes every separator, which is what resolves `CD2 PerCP-Cy55` on the control
+against `CD2 PerCPCy55` in the panel. `antibody` matches on the antibody name
+alone and ignores the fluorochrome, which is what resolves `Zombie auqa CD14 CD19`
+against `Zombie aqua CD14 CD19`. That last pair is a typo in the panel, and the
+matcher reports which pass it used, so a weaker match is visible rather than
+silent.
+
+### Whether each control can support an estimate
+
+A spillover value is a ratio between the signal a fluorochrome puts into its own
+detector and the signal it puts into another one. Both terms need a positive
+population to measure.
+
+A bead control is almost entirely positive. A cell control is not, because a
+marker that sits on a minority of cells leaves most events negative.
+
+```{r}
+#| label: control-quality
+
+quality <- ReadOutput("control_quality.csv")
+kable(
+  quality[, c("stain", "positive_percent", "primary_is_brightest", "verdict")],
+  digits = 2,
+  caption = "Percentage of positive events per control, against a threshold set at the 99.9th percentile of the unstained control.",
+  col.names = c("Control", "Positive, percent", "Brightest on its own detector", "Verdict")
+)
+```
+
+Two things come out of this table.
+
+Every control reads brightest on the detector it was matched to, so the matching
+above is correct. The channel assignment is not the problem anywhere in this
+dataset.
+
+Four controls are positive on under 20 percent of their events. NKp30 is positive
+on 3.5 percent and NKG2C on 7.0 percent. Those are real biology, since NKG2C marks
+a small adaptive NK subset and that subset is the point of the paper. They are
+still poor compensation controls.
+
+### The finding: mode against median
+
+`flowStats::spillover_ng()` defaults to `method = "mode"`. On a bead control the
+mode is the positive peak, because nearly every event is positive. On a cell
+control for a rare marker the mode is the negative peak, and the ratio it produces
+does not describe spillover at all.
+
+This was not obvious from the code. It appeared as a spillover value of 164
+percent, which is not physical for that pair, so the cause had to be found.
+
+The measurement below runs the computation under every combination of the three
+relevant arguments and scores each result against the matrix the instrument stored
+for this experiment. The stored matrix is a fair reference. It was built from these
+same controls, by the acquisition software, with an operator checking it.
+
+```{r}
+#| label: method-sweep
+
+sweep <- ReadOutput("method_sweep.csv")
+kable(
+  sweep,
+  digits = 3,
+  caption = "Every configuration, scored against the stored matrix. Differences are in percentage points.",
+  col.names = c("method", "pregate", "normFilter", "channels",
+                "max difference", "median difference", "values above 100 percent",
+                "correlation", "status")
+)
+```
+
+Read the first and third rows against each other. Both pregate and both filter, and
+only the summary statistic differs. The mode gives a correlation of 0.619 with the
+stored matrix and produces two impossible values. The median gives 0.975 and
+produces none.
+
+The two impossible values under the mode came from NKG2C and NKG2A, which the
+quality table above flags as positive on 7.0 percent and 17.2 percent of events.
+The failure and the diagnostic point at the same two controls.
+
+Three configurations returned no usable estimate at all, and the table records that
+rather than dropping the row.
+
+So the analysis uses `method = "median"`, and
+`ComputeSpilloverFromControls()` carries that as its default with this measurement
+in its documentation. The rule to take away is narrower than "use median": use the
+mode when the controls are beads, and check the positive fraction before you trust
+either.
+
+### The computed matrix
+
+```{r}
+#| label: spillover-heatmap
+#| fig-cap: "Spillover computed from the twelve single stained controls. The diagonal is dropped, because it is 1 everywhere and would set the colour scale."
+
+knitr::include_graphics(OutputImage("spillover_heatmap.png"))
+```
+
+```{r}
+#| label: spillover-top
+
+top <- ReadOutput("spillover_computed_top10.csv")
+top$percent <- round(100 * top$spill, 2)
+kable(
+  top[, c("from", "to", "percent")],
+  caption = "The ten largest computed spillover values.",
+  col.names = c("From detector", "Into detector", "Spillover, percent")
+)
+```
+
+### Computed against stored
+
+```{r}
+#| label: matrix-comparison
+
+matrix_comparison <- ReadOutput("spillover_computed_vs_stored.csv")
+kable(
+  head(matrix_comparison, 10),
+  digits = 2,
+  caption = "The ten pairs where the computed matrix disagrees most with the stored one. All values are percentages.",
+  col.names = c("From", "Into", "Computed", "Stored", "Difference, points")
+)
+```
+
+The two matrices agree closely in the middle and disagree at the top. The largest
+gap is BV510 into the violet 450/50 detector. Both agree that this is the largest
+spillover in the panel, and they disagree on its size.
+
+That residual is worth naming rather than smoothing over. It is not resolved here,
+and a real experiment would settle it by looking at that one pair on a plot before
+choosing a matrix.
+
+## Part 2: automated gating
+
+The template mirrors the hierarchy the authors published.
+
+```{r}
+#| label: template
+
+template <- read.csv(
+  file.path("..", "gating", "omip39_gating_template.csv"),
+  check.names = FALSE
+)
+kable(
+  template[, c("alias", "pop", "parent", "dims", "gating_method", "gating_args")],
+  caption = "The gating template. Each row is one population."
+)
+```
+
+The four quadrant populations are built differently from the way the analyst built
+them. FlowJo drew one quadrant gate, which sets both cut points at once. The
+template fits two one dimensional gates, on CD56 and on CD3 separately, and then
+combines them with a boolean. The populations are defined the same way and the
+cut points are found independently, so a difference between the two results can
+come from that alone.
+
+```{r}
+#| label: automated-tree
+#| fig-cap: "The hierarchy the template produced."
+
+knitr::include_graphics(OutputImage("automated_tree.png"))
+```
+
+## Part 3: the comparison
+
+The published workspace holds 163 populations. Most are boolean combinations of
+six markers below the CD56dim branch. This comparison covers the seven named
+parent populations, which is where a difference means something. The mapping
+between the two naming schemes is a judgement, so it lives in a file.
+
+```{r}
+#| label: population-map
+
+population_map <- read.csv(
+  file.path("..", "gating", "omip39_population_map.csv"),
+  check.names = FALSE
+)
+kable(
+  population_map,
+  caption = "How a manual population name maps to a template alias, and why."
+)
+```
+
+```{r}
+#| label: comparison
+
+comparison <- ReadOutput("comparison.csv")
+kable(
+  comparison[, c("manual", "automated", "manual_percent", "automated_percent",
+                 "difference", "verdict")],
+  digits = 2,
+  caption = "Manual against automated, percent of parent, on one donor file.",
+  col.names = c("Manual", "Automated", "Manual, percent", "Automated, percent",
+                "Difference, points", "Verdict")
+)
+```
+
+```{r}
+#| label: comparison-scatter
+#| fig-cap: "Each population once. The dashed line is exact agreement."
+
+knitr::include_graphics(OutputImage("comparison_scatter.png"))
+```
+
+### Where they agree and where they do not
+
+Four of the seven populations agree within five percentage points. That tolerance
+is a judgement made before the numbers were read, and it is not a published
+standard.
+
+The disagreement is not spread evenly. It starts at the singlet gate, where the
+analyst kept 96.5 percent of viable events and the template kept 86.7 percent.
+`openCyto::singletGate` fits a regression of FSC-H on FSC-A and cuts at a fixed
+distance from it, while the analyst drew a polygon by eye and drew it wider.
+
+Everything below inherits that. The template throws away roughly a tenth more
+events at the singlet step, and the populations it counts afterwards are counted
+out of a smaller and slightly different parent.
+
+The lymphocyte gate then differs by 5.7 points in the same direction. By the CD56
+against CD3 split the two methods are close again on the small populations, at 2.5
+points and 1.4 points, and further apart on the largest one at 6.0 points.
+
+### What this shows and what it does not
+
+It shows that an automated template reaches the same answer as a published expert
+analysis on most populations of a real panel, and it names the one gate that
+drives the difference.
+
+It does not show that either method is right. There is no ground truth here, only
+two analyses of the same file.
+
+It also cannot say anything about analyst to analyst variation, which is the number
+the literature reports. That needs the same files gated by many people. Maecker and
+colleagues did exactly that with 15 laboratories and measured a mean CV of 20.5
+percent under local gating against 4 percent under central gating [2]. One donor
+file and two analyses cannot reproduce that design.
+
+What one file can show is the direction. Whatever the template does, it does the
+same thing every time it runs, and the reason it made each cut is in a CSV that a
+reviewer can read.
+
+## Reproducing this
+
+```bash
+# Pull this dataset only, not the 103 GB archive
+./sync.sh pull datasets/flowrepository/OMIP-39
+
+# Build the container. Every package version is pinned and asserted at build time.
+./containers/build.sh
+
+# The analysis, then the method measurement
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  Rscript scripts/02_omip39_compensation_and_gating.R
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  Rscript scripts/03_compensation_method_sweep.R
+
+# This report
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  quarto render reports/omip39_automated_gating.qmd
+```
+
+```{r}
+#| label: session-info
+
+sessionInfo()
+```
+
+## References
+
+[1] Hammer Q, Romagnani C. OMIP-039: Detection and analysis of human adaptive
+NKG2C+ natural killer cells. Cytometry A 2017;997-1000. PMID 28715616.
+doi:10.1002/cyto.a.23168.
+
+[2] Maecker HT, McCoy JP Jr, for the FOCIS Human Immunophenotyping Consortium. A
+model for harmonizing flow cytometry in clinical trials. Nat Immunol
+2010;11(11):975-978. PMID 20959798.
+
+[3] Finak G, Frelinger J, Jiang W, Newell EW, Ramey J, Davis MM, Kalams SA, De
+Rosa SC, Gottardo R. OpenCyto: an open source infrastructure for scalable, robust,
+reproducible, and automated, end-to-end flow cytometry data analysis. PLoS Comput
+Biol 2014;10(8):e1003806. PMID 25167361. doi:10.1371/journal.pcbi.1003806.
