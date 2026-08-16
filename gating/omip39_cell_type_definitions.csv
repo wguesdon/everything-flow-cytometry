@@ -1,0 +1,7 @@
+cell_type,CD3 PECy5,CD56 PEDazzle594,NKG2C PE,NKG2A PE-Vio770,CD57 pure + aIgM BV605,ILT2 APC,Siglec-7 APCVio770,CD2 PerCPCy55,CD7 BV786,note
+T cells,pos,neg,,,,,,,,"CD3 positive and CD56 negative. The largest lymphocyte population in blood."
+NKT-like cells,pos,pos,,,,,,,,"CD3 and CD56 both positive. The paper excludes these before the NK analysis."
+CD56bright NK,neg,high,,pos,,,,,,"CD3 negative with the highest CD56. NKG2A is typically positive on this subset."
+CD56dim NKG2C+ NK,neg,pos,pos,neg,pos,pos,neg,pos,,"The adaptive population. The paper's prototypic phenotype is NKG2A- NKp30- Siglec-7- ILT2+ CD57+ CD2+."
+CD56dim NKG2C- NK,neg,pos,neg,pos,,,pos,,,"Conventional CD56dim NK cells. NKG2A and Siglec-7 higher than in the adaptive subset."
+Other lymphocytes,neg,neg,,,,,,,,"CD3 and CD56 both negative. B cells are largely removed by the CD19 dump gate."

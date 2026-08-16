@@ -1,8 +1,16 @@
 # Literature
 
-Every citation on this page was checked against a retrieved record on 2026-08-13. The sources were
-Europe PMC, PubMed, Crossref, Semantic Scholar and the PMC full text. A claim that failed verification
-is not on this page.
+Every citation on this page was checked against a retrieved record. The sources were Europe PMC,
+PubMed, Crossref, Semantic Scholar and the PMC full text. A claim that failed verification is not on
+this page.
+
+| Section | Date of the check |
+|---|---|
+| Every section down to "Benchmarks" | 2026-08-13 |
+| "Papers behind the packages" | 2026-08-16 |
+
+`docs/packages.md` lists the software. The last section of this page gives the paper for each package
+in that list. Read `scripts/verify_package_papers.sh` to repeat the check.
 
 ## Start here
 
@@ -143,4 +151,67 @@ knows the difference.
 - Weber LM, Robinson MD. Comparison of clustering methods for high-dimensional single-cell flow and
   mass cytometry data. Cytometry A 2016;89:1084-96. PMID 27992111.
 - Van Gassen S, et al. FlowSOM: Using self-organizing maps for visualization and interpretation of
-  cytometry data. Cytometry A 2015. PMID 25573116.
+  cytometry data. Cytometry A 2015. PMID 25573116. The full record is in the next section, because
+  FlowSOM is also a package in `docs/packages.md`.
+
+## Papers behind the packages
+
+Cite the paper below when you use the package in `docs/packages.md`. Every record here was retrieved
+from Europe PMC on 2026-08-16. `scripts/verify_package_papers.sh` runs the same queries again.
+
+The `Open access` column states what the Europe PMC record reports. A paper marked `No` can still
+have a free author copy, so check the publisher page before you pay for it.
+
+### R packages
+
+| Package | Reference | Open access |
+|---|---|---|
+| flowCore | Hahne F, LeMeur N, Brinkman RR, Ellis B, Haaland P, Sarkar D, Spidlen J, Strain E, Gentleman R. flowCore: a Bioconductor package for high throughput flow cytometry. BMC Bioinformatics 2009;10:106. PMID 19358741. PMC2684747. doi 10.1186/1471-2105-10-106 | Yes |
+| CytoML | Finak G, Jiang W, Gottardo R. CytoML for cross-platform cytometry data sharing. Cytometry A 2018;93(12):1189-1196. PMID 30551257. PMC6443375 | Yes |
+| ggcyto | Van P, Jiang W, Gottardo R, Finak G. ggCyto: next generation open-source visualization software for cytometry. Bioinformatics 2018;34(22):3951-3953. PMID 29868771. PMC6223365 | Yes |
+| PeacoQC | Emmaneel A, Quintelier K, Sichien D, Rybakowska P, Marañón C, Alarcón-Riquelme ME, Van Isterdael G, Van Gassen S, Saeys Y. PeacoQC: Peak-based selection of high quality cytometry data. Cytometry A 2022;101(4):325-338. PMID 34549881. PMC9293479 | Yes |
+| flowAI | Monaco G, Chen H, Poidinger M, Chen J, de Magalhães JP, Larbi A. flowAI: automatic and interactive anomaly discerning tools for flow cytometry data. Bioinformatics 2016;32(16):2473-2480. PMID 27153628 | No |
+| CytoNorm | Van Gassen S, Gaudilliere B, Angst MS, Saeys Y, Aghaeepour N. CytoNorm: A Normalization Algorithm for Cytometry Data. Cytometry A 2020;97(3):268-278. PMID 31633883. PMC7078957 | Yes |
+| CytoNorm 2.0 | Quintelier KLA, Willemsen M, Bosteels V, Aerts JGJV, Saeys Y, Van Gassen S. CytoNorm 2.0: A flexible normalization framework for cytometry data without requiring dedicated controls. Cytometry A 2025;107(2):69-87. PMID 39871681 | No |
+| openCyto | Finak G, Frelinger J, Jiang W, Newell EW, Ramey J, Davis MM, Kalams SA, De Rosa SC, Gottardo R. OpenCyto: an open source infrastructure for scalable, robust, reproducible, and automated, end-to-end flow cytometry data analysis. PLoS Comput Biol 2014;10(8):e1003806. PMID 25167361. PMC4148203 | Yes |
+| flowDensity | Malek M, Taghiyar MJ, Chong L, Finak G, Gottardo R, Brinkman RR. flowDensity: reproducing manual gating of flow cytometry data by automated density-based cell population identification. Bioinformatics 2015;31(4):606-607. PMID 25378466. PMC4325545 | No, but PMC holds the full text |
+| flowClust | Lo K, Hahne F, Brinkman RR, Gottardo R. flowClust: a Bioconductor package for automated gating of flow cytometry data. BMC Bioinformatics 2009;10:145. PMID 19442304. PMC2701419 | Yes |
+| FlowSOM | Van Gassen S, Callebaut B, Van Helden MJ, Lambrecht BN, Demeester P, Dhaene T, Saeys Y. FlowSOM: Using self-organizing maps for visualization and interpretation of cytometry data. Cytometry A 2015;87(7):636-645. PMID 25573116. doi 10.1002/cyto.a.22625 | No |
+| diffcyt | Weber LM, Nowicka M, Soneson C, Robinson MD. diffcyt: Differential discovery in high-dimensional cytometry via high-resolution clustering. Commun Biol 2019;2:183. PMID 31098416. PMC6517415 | Yes |
+| CATALYST | Chevrier S, Crowell HL, Zanotelli VRT, Engler S, Robinson MD, Bodenmiller B. Compensation of Signal Spillover in Suspension and Imaging Mass Cytometry. Cell Syst 2018;6(5):612-620.e5. PMID 29605184. PMC5981006 | Yes |
+| CATALYST | Crowell HL, Chevrier S, Jacobs A, Sivapatham S, Tumor Profiler Consortium, Bodenmiller B, Robinson MD. An R-based reproducible and user-friendly preprocessing pipeline for CyTOF data. F1000Res 2020;9:1263. PMID 36072920. PMC9411975. doi 10.12688/f1000research.26073.2 | Yes |
+| cydar | Lun ATL, Richard AC, Marioni JC. Testing for differential abundance in mass cytometry data. Nat Methods 2017;14(7):707-709. PMID 28504682. PMC6155493 | Yes |
+| HDCytoData | Weber LM, Soneson C. HDCytoData: Collection of high-dimensional cytometry benchmark datasets in Bioconductor object formats. F1000Res 2019;8:1459. PMID 31857895. PMC6904983 | Yes |
+
+CATALYST has two papers. Cite Chevrier 2018 for the spillover compensation method. Cite Crowell 2020
+for the preprocessing pipeline and the differential analysis workflow.
+
+CytoNorm also has two papers. Cite Van Gassen 2020 when your batches carry a dedicated control sample.
+Cite Quintelier 2025 when they do not.
+
+### Python packages
+
+| Package | Reference | Open access |
+|---|---|---|
+| FlowKit | White S, Quinn J, Enzor J, Staats J, Mosier SM, Almarode J, Denny TN, Weinhold KJ, Ferrari G, Chan C. FlowKit: A Python Toolkit for Integrated Manual and Automated Cytometry Analysis Workflows. Front Immunol 2021;12:768541. PMID 34804056. PMC8602902 | Yes |
+| FlowSOM (Python) | Couckuyt A, Rombaut B, Saeys Y, Van Gassen S. Efficient cytometry analysis with FlowSOM in Python boosts interoperability with other single-cell tools. Bioinformatics 2024;40(4):btae179. PMID 38632080. PMC11052654 | Yes |
+| Pytometry | Büttner M, Hempel F, Ryborz T, Theis FJ, Schultze JL. Pytometry: Flow and mass cytometry analytics in Python. bioRxiv 2022. doi 10.1101/2022.10.10.511546. Europe PMC id PPR557097 | Yes, as a preprint |
+| cytoflow | Teague L. Cytoflow: User-Friendly Python Software for Computational Flow Cytometry. Cytometry A 2026. PMID 42596036. doi 10.1002/cyto.a.70058 | No |
+| scanpy | Wolf FA, Angerer P, Theis FJ. SCANPY: large-scale single-cell gene expression data analysis. Genome Biol 2018;19(1):15. PMID 29409532. PMC5802054 | Yes |
+
+Two entries need care. Pytometry has a bioRxiv preprint and no journal article, and a search of Europe
+PMC and Crossref on 2026-08-16 found no published version. The cytoflow record carries no volume and
+no page numbers yet, because the journal published it in 2026. An earlier cytoflow preprint exists at
+doi 10.1101/2022.07.22.501078, and its author string differs from the journal record.
+
+### Packages with no paper
+
+A search of Europe PMC on 2026-08-16 returned no article that describes these packages. Cite the
+package and its version, or cite the paper in the third column.
+
+| Package | Language | Cite this instead |
+|---|---|---|
+| flowWorkspace | R | Finak 2018 for CytoML, or Finak 2014 for openCyto. Both use the GatingSet object that flowWorkspace defines. |
+| flowStats | R | Nothing. Cite the Bioconductor package and its version. |
+| readfcs | Python | Nothing. Cite the PyPI package and its version. |
+| FlowRepositoryR | R | Spidlen J, et al. FlowRepository: a resource of annotated flow cytometry datasets. Cytometry A 2012. PMID 22887982. The package is removed and the repository paper stays valid. |
