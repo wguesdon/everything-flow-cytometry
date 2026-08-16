@@ -38,6 +38,7 @@ Render one with `quarto render reports/<name>.qmd` after you run the script it n
 | `reports/yu2021_spectral_mait.qmd` | FR-FCM-Z3WR, Cytek Aurora | Whether a published spectral finding reproduces from the deposited files |
 | `reports/z282_harmonisation.qmd` | FR-FCM-Z282, 13 operators | How much of the spread in a flow result comes from the analyst, and what centralising the analysis fixes |
 | `reports/oetjen2018_bone_marrow.qmd` | FR-FCM-ZYQ9 and FR-FCM-ZYQB | Human bone marrow by flow cytometry and by mass cytometry, and a viability channel that runs backwards |
+| `reports/vanderbeke2021_covid.qmd` | FR-FCM-Z2KP, 49 COVID-19 samples | How close an automated rule gets to a deposited workspace that gates every sample |
 
 The spectral report covers the only Cytek Aurora dataset in the archive. It holds 83 files, 35 markers
 and 23 million events, and eight of the paper's ten flow claims reproduce from it.
@@ -56,7 +57,7 @@ The repository is at an early stage. The table below states what is ready and wh
 | `docs/datasets.md` | Ready. Every repository count was checked on 2026-08-13. |
 | `data/` and `sync.sh` | Ready. About 103 GB of FCS files and reference code, held in S3. |
 | `examples/` | Empty. It needs the analysis scripts and a container. |
-| `reports/` | Six reports render and their scripts run in the container. Every prose paragraph is written as bullet points. |
+| `reports/` | Seven reports render and their scripts run in the container. Every prose paragraph is written as bullet points. |
 | Agent skills | Not started. They come after the example code runs. |
 
 ## Contents
