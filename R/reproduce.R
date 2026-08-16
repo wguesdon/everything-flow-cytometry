@@ -61,14 +61,21 @@ ReadPaperClaims <- function(path) {
 ParseBooleanPopulation <- function(population_name, markers) {
   leaf <- basename(as.character(population_name))
 
+  # Fixed string matching, not a regular expression. A marker name can hold a
+  # hyphen, as `Siglec-7` does, and escaping that reliably for every marker is
+  # more fragile than searching for the two literal strings.
   signs <- vapply(markers, function(marker) {
-    pattern <- paste0(gsub("([.\\+*?\\[\\]^$(){}|\\\\-])", "\\\\\\1", marker),
-                      "([+-])")
-    found <- regmatches(leaf, regexpr(pattern, leaf))
-    if (length(found) == 0) {
-      return(NA)
+    has_positive <- grepl(paste0(marker, "+"), leaf, fixed = TRUE)
+    has_negative <- grepl(paste0(marker, "-"), leaf, fixed = TRUE)
+
+    if (has_positive && !has_negative) {
+      return(TRUE)
     }
-    substr(found, nchar(found), nchar(found)) == "+"
+    if (has_negative && !has_positive) {
+      return(FALSE)
+    }
+    # Neither sign, or both, which means the name does not resolve this marker.
+    NA
   }, logical(1))
 
   stats::setNames(signs, markers)
