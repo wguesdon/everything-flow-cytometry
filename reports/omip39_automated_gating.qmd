@@ -518,24 +518,113 @@ The three columns disagree most where the population is smallest, which is also
 where the biology of this paper sits. That is worth stating plainly rather than
 presenting the agreement on T cells as if it settled the matter.
 
+## Discussion: where the three routes disagree, and why
+
+The table above is easy to read as three roughly similar answers. It is more
+useful read as three specific disagreements, each with a different cause.
+
+### The NK compartment is not where they disagree
+
+Ask first how many NK cells there are, before asking how to divide them.
+
+```{r}
+#| label: nk-total
+
+nk_total <- ReadOutput("nk_compartment_total.csv")
+kable(
+  nk_total,
+  digits = 2,
+  caption = "CD56+ CD3- cells as a percentage of the lymphocyte gate.",
+  col.names = c("Route", "NK cells, percent of lymphocytes")
+)
+```
+
+Automated gating and clustering land within 0.13 percentage points of each other,
+5.79 against 5.92, having reached that number by completely different means. One
+fitted a boundary on two markers, the other grouped events in eight dimensions and
+never saw a gate. Agreement between two methods that share no machinery is worth
+more than agreement between two runs of the same one.
+
+Manual gating puts the number 2.5 points higher, at 8.25.
+
+### Disagreement 1: the CD3 cut point moves cells between compartments
+
+The automated template calls 93.3 percent of lymphocytes CD3 positive. The manual
+analysis assigns 85.1 percent to CD56- CD3+ and 3.6 percent to CD56+ CD3+, so it
+calls 88.8 percent CD3 positive.
+
+A CD3 gate set 4.5 percentage points lower does not lose cells; it moves them. They
+leave the NK compartment and arrive in the T cell compartment, which is exactly the
+pattern in the table. T cells rise from 85.1 to 91.1, NKT-like cells fall from 3.6
+to 2.2, and NK cells fall from 8.25 to 5.79.
+
+`mindensity` puts its cut at the lowest density point between two peaks. On CD3 in
+this file the negative and positive populations are not cleanly separated, so that
+point sits inside the shoulder of the positive distribution. The consequence is
+that the largest population absorbs part of the smallest, which is the direction
+that matters least for the T cell number and most for the NK number.
+
+### Disagreement 2: the bright and dim split is unreliable in both automated routes
+
+This is the largest disagreement in the report and neither automated route handles
+it well.
+
+| Route | CD56bright, percent of NK cells |
+|---|---|
+| Manual | no gate; the authors gate CD56dim directly |
+| Automated gating | 1.9, which is 0.112 of 5.79 |
+| Clustering | 51.7, which is 3.058 of 5.92 |
+
+CD56bright NK cells are usually a small minority of blood NK cells. A value near 2
+percent is low and a value above 50 percent is not credible. The two automated
+routes fail in opposite directions on the same split.
+
+The automated gate fails because CD56bright and CD56dim are one continuous
+distribution rather than two separated peaks, so a density based cut has no clear
+minimum to find. The clustering fails for a related reason: the definitions file
+scores CD56 with a doubled weight for `high`, and any metacluster with above
+average CD56 attracts that label whether or not it is genuinely bright.
+
+This is why the CD56dim subsets look as though clustering lost them. It did not.
+The events are in the CD56bright label instead, and the compartment total is intact.
+
+### What follows for the paper's conclusions
+
+None of the above changes the answer to the question the paper asks. The claims in
+Part 4 are about the ratio between two branches of the CD56dim population, and
+every route that produced those branches at all gave the same directions with
+comparable magnitudes.
+
+A cut point that moves the boundary between two populations changes both of their
+frequencies. It does not reverse the sign of a difference measured within one of
+them. That is why the six directional claims survive a gating strategy that
+disagrees with the authors by 2.5 percentage points on the NK compartment.
+
 ### What this shows and what it does not
 
-It shows that an automated template reaches the same answer as a published expert
-analysis on most populations of a real panel, and it names the one gate that
-drives the difference.
+It shows that an automated template reaches the same conclusions as a published
+expert analysis on a real panel, and it names the specific gates where the two
+disagree and by how much.
 
-It does not show that either method is right. There is no ground truth here, only
-two analyses of the same file.
+It does not show that any of the three methods is right. There is no ground truth
+here, only three analyses of one file. Where two agree and one differs, that is not
+a vote.
 
-It also cannot say anything about analyst to analyst variation, which is the number
-the literature reports. That needs the same files gated by many people. Maecker and
+It cannot say anything about analyst to analyst variation, which is the number the
+literature reports. That needs the same files gated by many people. Maecker and
 colleagues did exactly that with 15 laboratories and measured a mean CV of 20.5
 percent under local gating against 4 percent under central gating [2]. One donor
-file and two analyses cannot reproduce that design.
+file cannot reproduce that design.
 
-What one file can show is the direction. Whatever the template does, it does the
-same thing every time it runs, and the reason it made each cut is in a CSV that a
-reviewer can read.
+What one file can show is where the fragility sits. It is not in the compensation,
+which two independent methods agreed on to 0.54 percentage points once the right
+summary statistic was used. It is not in the directional claims, which survived
+every route. It is in two cut points on continuous distributions, CD3 and CD56,
+where a small change in a boundary moves a large number of cells.
+
+A gate on a bimodal marker is robust. A gate on a continuum is a decision, and it
+should be recorded as one. In this repository it is: it sits in a CSV that a
+reviewer can read and a version control system can diff.
 
 ## Reproducing this
 

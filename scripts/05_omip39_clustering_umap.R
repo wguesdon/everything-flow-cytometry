@@ -290,26 +290,34 @@ PercentOfLymphocytes <- function(stats, ends_with, lymphocyte_path) {
   100 * stats$count[hit[1]] / lymphocyte_count
 }
 
+# CD56bright is included even though the manual workspace has no gate for it. The
+# clustering assigns events to it, so leaving the row out would hide where those
+# events went and make the clustering look as though it lost them.
 comparison <- data.frame(
-  cell_type = c("T cells", "NKT-like cells", "CD56dim NKG2C+ NK",
-                "CD56dim NKG2C- NK", "Other lymphocytes"),
-  manual_path = c("/CD56- CD3+", "/CD56+CD3+", "/CD56dim NKG2C+",
-                  "/CD56dim NKG2C-", "/CD56- CD3-"),
-  automated_path = c("/CD56negCD3pos", "/CD56posCD3pos", "/NKG2Cpos",
-                     "/NKG2Cneg", "/CD56negCD3neg"),
+  cell_type = c("T cells", "NKT-like cells", "CD56bright NK",
+                "CD56dim NKG2C+ NK", "CD56dim NKG2C- NK", "Other lymphocytes"),
+  manual_path = c("/CD56- CD3+", "/CD56+CD3+", NA,
+                  "/CD56dim NKG2C+", "/CD56dim NKG2C-", "/CD56- CD3-"),
+  automated_path = c("/CD56negCD3pos", "/CD56posCD3pos", "/CD56bright",
+                     "/NKG2Cpos", "/NKG2Cneg", "/CD56negCD3neg"),
   stringsAsFactors = FALSE
 )
 
+SafePercent <- function(path, stats, lymphocyte_path) {
+  if (is.na(path)) return(NA_real_)
+  PercentOfLymphocytes(stats, path, lymphocyte_path)
+}
+
 comparison$manual_percent <- vapply(
   comparison$manual_path,
-  PercentOfLymphocytes,
+  SafePercent,
   numeric(1),
   stats = manual_stats,
   lymphocyte_path = "/Lymphocytes"
 )
 comparison$automated_percent <- vapply(
   comparison$automated_path,
-  PercentOfLymphocytes,
+  SafePercent,
   numeric(1),
   stats = automated_stats,
   lymphocyte_path = "/Lymphocytes"
@@ -317,6 +325,26 @@ comparison$automated_percent <- vapply(
 comparison$clustering_percent <- cell_types$percent_of_total[
   match(comparison$cell_type, cell_types$cell_type)
 ]
+
+# The three routes are compared again on the NK compartment as a whole. How the
+# NK cells are split between bright and dim is a separate question from how many
+# NK cells there are, and the two disagree very differently.
+nk_rows <- comparison$cell_type %in%
+  c("CD56bright NK", "CD56dim NKG2C+ NK", "CD56dim NKG2C- NK")
+nk_total <- data.frame(
+  route = c("manual", "automated", "clustering"),
+  nk_percent = c(
+    PercentOfLymphocytes(manual_stats, "/CD56+ CD3-", "/Lymphocytes"),
+    PercentOfLymphocytes(automated_stats, "/CD56posCD3neg", "/Lymphocytes"),
+    sum(comparison$clustering_percent[nk_rows], na.rm = TRUE)
+  ),
+  stringsAsFactors = FALSE
+)
+write.csv(nk_total, file.path(kOutputDir, "nk_compartment_total.csv"),
+          row.names = FALSE)
+
+cat("\n=== The NK compartment as a whole, percent of lymphocytes ===\n")
+print(nk_total, digits = 3)
 
 write.csv(comparison, file.path(kOutputDir, "three_way_comparison.csv"),
           row.names = FALSE)
