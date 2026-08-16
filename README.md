@@ -25,6 +25,21 @@ Start with these two documents. They are the reference part of the repository.
 The two documents point at each other. Read `docs/packages.md` to choose a tool. Read
 [the last section of `docs/literature.md`](docs/literature.md#papers-behind-the-packages) to cite it.
 
+## Reports
+
+Each report runs an analysis on a public dataset and writes down what worked and what did not.
+Render one with `quarto render reports/<name>.qmd` after you run the script it names.
+
+| Report | Dataset | What it asks |
+|---|---|---|
+| `reports/automated_gating_pbmc.qmd` | FlowJo tutorial data | Whether one template can gate a whole experiment from a text file |
+| `reports/omip39_automated_gating.qmd` | OMIP-039, FR-FCM-ZYY6 | Whether an automated template lands where the published manual gates land |
+| `reports/omip43_asc_analysis.qmd` | OMIP-043 | Where automated gating fails on a rare population, and whether clustering recovers it |
+| `reports/yu2021_spectral_mait.qmd` | FR-FCM-Z3WR, Cytek Aurora | Whether a published spectral finding reproduces from the deposited files |
+
+The last one is the only spectral dataset. It holds 83 files, 35 markers and 23 million events, and
+nine of the paper's ten flow claims reproduce from it.
+
 ## Status
 
 The repository is at an early stage. The table below states what is ready and what is not.
@@ -36,6 +51,7 @@ The repository is at an early stage. The table below states what is ready and wh
 | `docs/datasets.md` | Ready. Every repository count was checked on 2026-08-13. |
 | `data/` and `sync.sh` | Ready. About 103 GB of FCS files and reference code, held in S3. |
 | `examples/` | Empty. It needs the analysis scripts and a container. |
+| `reports/` | Four reports render and their scripts run in the container. The spectral one covers the only Cytek Aurora dataset in the archive. |
 | Agent skills | Not started. They come after the example code runs. |
 
 ## Contents
@@ -51,6 +67,9 @@ The repository is at an early stage. The table below states what is ready and wh
 | `scripts/import_from_wd1.sh` | Copy the archive from the WD1 external drive |
 | `scripts/make_data_catalog.sh` | Rewrite `docs/data_catalog.md` from the local `data/` folder |
 | `scripts/verify_package_papers.sh` | Retrieve the paper for each package from Europe PMC, so the citations stay checkable |
+| `scripts/find_spectral_datasets.py` | Read every FCS header in `data/` and report which files came from a spectral analyser |
+| `gating/` | The gating templates, the cut points and the paper claims, each one a CSV a reviewer can read |
+| `reports/` | The rendered analyses, listed above |
 
 ## The data
 
