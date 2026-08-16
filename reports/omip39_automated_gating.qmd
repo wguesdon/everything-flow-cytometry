@@ -1,6 +1,6 @@
 ---
 title: "OMIP-39 as a positive control"
-subtitle: "Computed compensation, automated gating, and a comparison against the published manual gates"
+subtitle: "Computed compensation, three routes to the same populations, and the paper reproduced from its own data"
 author: "William Guesdon"
 date: today
 format:
@@ -36,8 +36,7 @@ ReadOutput <- function(name) {
   if (!file.exists(path)) {
     stop(
       "The analysis output is missing: ", path, "\n",
-      "Run scripts/02_omip39_compensation_and_gating.R and ",
-      "scripts/03_compensation_method_sweep.R first."
+      "Run every script from 02 to 05 first. See the section 'Reproducing this'."
     )
   }
   read.csv(path, check.names = FALSE)
@@ -63,6 +62,11 @@ openCyto template, and the two frequencies sit side by side.
 The deposit also ships twelve single stained controls, so compensation can be
 computed from scratch rather than taken from the file. That turned out to be the
 part with the finding in it.
+
+The report has five parts. Compensation computed from the controls, automated
+gating from a template, that template compared against the published manual gates,
+the paper's own claims tested against the deposited data, and clustering as a third
+route to the same populations.
 
 ```{r}
 #| label: dataset
@@ -315,6 +319,205 @@ The lymphocyte gate then differs by 5.7 points in the same direction. By the CD5
 against CD3 split the two methods are close again on the small populations, at 2.5
 points and 1.4 points, and further apart on the largest one at 6.0 points.
 
+## Part 4: reproducing the paper
+
+The comparison above asks whether two analyses of one file agree. It does not ask
+whether the paper's conclusions hold. That is a different question and the
+deposited data can answer it.
+
+OMIP-039 makes seven directional claims about how CD56dim NKG2C+ NK cells differ
+from CD56dim NKG2C- NK cells, and it states one composite phenotype as prototypic
+for adaptive NK cells. Each claim is recorded in a file with the sentence it came
+from, so a reader can check the claim against the paper before checking the number
+against the data.
+
+```{r}
+#| label: claims-file
+
+claims <- read.csv(
+  file.path("..", "gating", "omip39_paper_claims.csv"),
+  check.names = FALSE
+)
+kable(
+  claims[, c("claim_id", "marker", "measure", "direction", "figure")],
+  caption = "The claims, as recorded. The quote column holds the sentence each one came from and is omitted here for width."
+)
+```
+
+Each claim is tested twice, by two routes that share no gating decision.
+
+### Route 1: the authors' own gates
+
+The deposited workspace holds 64 boolean populations under each NKG2C branch,
+which is Figure 1C. A boolean set partitions its parent, so the frequency of one
+marker is the sum of the counts where that marker is positive. Deriving the
+frequencies that way uses only the gates the authors drew and adds nothing.
+
+```{r}
+#| label: claims-manual
+
+claims_manual <- ReadOutput("claims_manual.csv")
+kable(
+  claims_manual[, c("marker", "direction", "test_percent", "reference_percent",
+                    "difference_points", "verdict")],
+  digits = 2,
+  caption = "The paper's claims, tested against its own gates.",
+  col.names = c("Marker", "Paper expects", "NKG2C+ percent", "NKG2C- percent",
+                "Difference, points", "Verdict")
+)
+```
+
+All six frequency claims hold, and the differences are large. NKG2A falls by 41.8
+percentage points and ILT2 rises by 21.7.
+
+### Figure 1C, the prototypic adaptive phenotype
+
+```{r}
+#| label: phenotype
+
+phenotype <- ReadOutput("adaptive_phenotype_manual.csv")
+kable(
+  phenotype,
+  digits = 2,
+  caption = "The population NKG2A- NKp30- Siglec-7- ILT2+ CD57+ CD2+, in each NKG2C branch.",
+  col.names = c("Branch", "Population", "Events", "Parent events",
+                "Percent of parent")
+)
+```
+
+```{r}
+#| label: phenotype-enrichment
+#| echo: false
+
+enrichment <- phenotype$percent_of_parent[1] / phenotype$percent_of_parent[2]
+cat(sprintf(
+  "The prototypic phenotype is %.1f times as frequent in NKG2C+ as in NKG2C-.\n",
+  enrichment
+))
+```
+
+That ratio is the central claim of the paper, computed from the data the authors
+deposited alongside it.
+
+### Route 2: the automated template
+
+```{r}
+#| label: claims-automated
+
+claims_automated <- ReadOutput("claims_automated.csv")
+kable(
+  claims_automated[, c("marker", "direction", "test_percent", "reference_percent",
+                       "difference_points", "verdict")],
+  digits = 2,
+  caption = "The same claims, tested against gates the template fitted from scratch.",
+  col.names = c("Marker", "Paper expects", "NKG2C+ percent", "NKG2C- percent",
+                "Difference, points", "Verdict")
+)
+```
+
+Five of the six reproduce, with the same directions and comparable magnitudes.
+
+The sixth does not, and the reason is a broken gate rather than a failed claim.
+The automated NKp30 gate calls 100 percent of events positive in both branches, so
+`mindensity` put its cut below the whole distribution. The claim is reported as
+"too small to call" rather than dropped, because a silent omission would read as
+agreement. That gate needs a bounded search range and it has not been fixed.
+
+```{r}
+#| label: claims-plot
+#| fig-cap: "Both routes. A bar is the difference in percent positive between the two NKG2C branches."
+
+knitr::include_graphics(OutputImage("claims_plot.png"))
+```
+
+## Part 5: clustering, a third route
+
+Gating asks how many cells fall inside a boundary. Clustering asks how many groups
+are in the data and what each one expresses. The second question needs no
+hierarchy, so a population nobody thought to gate can still appear.
+
+Debris, dead cells and doublets are removed by gating first, and the clustering
+runs on the lymphocyte gate only. A cluster of debris is not a finding, and it
+stretches the embedding so everything else is squeezed into a corner.
+
+```{r}
+#| label: umap-cell-types
+#| fig-cap: "UMAP of the lymphocyte gate, coloured by the annotated cell type."
+
+knitr::include_graphics(OutputImage("umap_cell_types.png"))
+```
+
+### How a cluster gets a name
+
+No cluster is named by eye. Each metacluster is scored against a definitions file
+that gives the expected sign of each marker, and the best scoring definition wins.
+The margin to the runner up is reported, so a close call is visible.
+
+```{r}
+#| label: cluster-annotation
+
+annotation <- ReadOutput("cluster_annotation.csv")
+kable(
+  annotation[, c("cluster", "events", "percent_of_total", "cell_type",
+                 "runner_up", "margin")],
+  digits = 3,
+  caption = "Each metacluster, its label, and how close the second choice was.",
+  col.names = c("Metacluster", "Events", "Percent of gate", "Label",
+                "Runner up", "Margin")
+)
+```
+
+The score is a weighted mean over the markers a definition names, not a sum. That
+distinction is not cosmetic. Under a sum, a definition is rewarded simply for
+naming more markers: the adaptive NK definition names eight and the T cell
+definition names two, so the adaptive label won every cluster, including the one
+holding 88 percent of the file. The mean removes that.
+
+```{r}
+#| label: cluster-heatmap
+#| fig-cap: "Median marker expression per metacluster, scaled within each marker. This table drives the annotation."
+
+knitr::include_graphics(OutputImage("cluster_heatmap.png"))
+```
+
+```{r}
+#| label: umap-markers
+#| fig-cap: "The same embedding, coloured by each lineage marker. Read the labels against these panels."
+
+knitr::include_graphics(OutputImage("umap_markers.png"))
+```
+
+### Three routes, one file
+
+```{r}
+#| label: three-way
+
+three_way <- ReadOutput("three_way_comparison.csv")
+kable(
+  three_way[, c("cell_type", "manual_percent", "automated_percent",
+                "clustering_percent")],
+  digits = 2,
+  caption = "Every number is a percentage of the lymphocyte gate, so the three columns are comparable.",
+  col.names = c("Cell type", "Manual gating", "Automated gating", "Clustering")
+)
+```
+
+```{r}
+#| label: three-way-plot
+#| fig-cap: "The same table as a figure."
+
+knitr::include_graphics(OutputImage("three_way_comparison.png"))
+```
+
+Clustering tracks automated gating closely on the largest population and
+undercounts the small NK subsets. That is the expected failure mode: a rare
+population is absorbed into a neighbouring metacluster, because the number of
+metaclusters is chosen in advance and 12 is a guess.
+
+The three columns disagree most where the population is smallest, which is also
+where the biology of this paper sits. That is worth stating plainly rather than
+presenting the agreement on T cells as if it settled the matter.
+
 ### What this shows and what it does not
 
 It shows that an automated template reaches the same answer as a published expert
@@ -343,11 +546,14 @@ reviewer can read.
 # Build the container. Every package version is pinned and asserted at build time.
 ./containers/build.sh
 
-# The analysis, then the method measurement
-podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
-  Rscript scripts/02_omip39_compensation_and_gating.R
-podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
-  Rscript scripts/03_compensation_method_sweep.R
+# The four analysis steps, in order
+for step in 02_omip39_compensation_and_gating \
+            03_compensation_method_sweep \
+            04_omip39_reproduce_paper \
+            05_omip39_clustering_umap; do
+  podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+    Rscript "scripts/${step}.R"
+done
 
 # This report
 podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
