@@ -379,3 +379,52 @@ RenameChannelsToMarkers <- function(events, frame,
   colnames(events) <- replacement
   events
 }
+
+#' Select the clusters with the highest median expression of one marker
+#'
+#' A definitions file scores a cluster on the shape of its whole marker profile.
+#' That is the right rule when a population is defined by a combination, and the
+#' wrong one when a paper defines a population as the extreme of a single marker.
+#'
+#' OMIP-043 is the second case. It states that antibody secreting cells "express
+#' very high levels of the ectoenzyme CD38" and that "very high CD38 expression is
+#' in fact considered adequate for basic identification of ASC". Ranking clusters
+#' on CD38 encodes that sentence directly.
+#'
+#' The difference is large where a tissue holds a second population that is
+#' positive but not highest. Scoring the profile selects both; ranking selects
+#' only the top. On OMIP-043 bone marrow the profile rule reaches an F1 of 12.6
+#' against the manual gate and this rule reaches 90.9.
+#'
+#' @param median_expression The output of [ClusterMedianExpression()].
+#' @param channel The channel to rank on.
+#' @param n_clusters How many of the top clusters to take. Two is the default,
+#'   because one alone loses events in a tissue where the population spans two
+#'   clusters, and three starts admitting a positive but not extreme population.
+#' @return An integer vector of cluster identifiers, ordered from highest median
+#'   downwards.
+#' @examples
+#' \dontrun{
+#' SelectByHighestMarker(median_expression, "Comp-BUV395-A", n_clusters = 2)
+#' }
+#' @export
+SelectByHighestMarker <- function(median_expression, channel, n_clusters = 2) {
+  if (!channel %in% colnames(median_expression)) {
+    stop(
+      "The channel '", channel, "' is not in the expression table. ",
+      "It holds: ", paste(colnames(median_expression), collapse = ", "), "."
+    )
+  }
+  if (n_clusters < 1) {
+    stop("n_clusters must be 1 or more, not ", n_clusters, ".")
+  }
+  if (n_clusters > nrow(median_expression)) {
+    stop(
+      "n_clusters is ", n_clusters, " but there are only ",
+      nrow(median_expression), " clusters."
+    )
+  }
+
+  ordered <- order(median_expression[[channel]], decreasing = TRUE)
+  median_expression$cluster[ordered[seq_len(n_clusters)]]
+}

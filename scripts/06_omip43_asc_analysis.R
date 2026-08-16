@@ -74,7 +74,10 @@ kChannels <- c(
   `HLA-DR` = "Comp-PE-A"
 )
 kClusterChannels <- unname(kChannels)
-kMetaclusters <- 15
+kMetaclusters <- 25
+# How many of the CD38 highest clusters make up the ASC population. Chosen by the
+# sweep in script 07, which ranks configurations on their worst tissue.
+kAscClusters <- 2
 kSubsampleSize <- 50000
 kSeed <- 42
 
@@ -786,12 +789,20 @@ for (tissue in kTissues) {
 
   clusters <- RunFlowSomClustering(
     events, channels = kClusterChannels,
-    grid_size = 10, n_metaclusters = kMetaclusters, seed = kSeed
+    grid_size = 14, n_metaclusters = kMetaclusters, seed = kSeed
   )
   medians <- ClusterMedianExpression(events, clusters$metacluster, kClusterChannels)
   labels <- AnnotateClusters(medians, definitions)
 
-  asc_clusters <- labels$cluster[labels$cell_type == "Antibody secreting cells"]
+  # The paper identifies ASC by CD38 being highest, not by the shape of the whole
+  # profile: "very high CD38 expression is in fact considered adequate for basic
+  # identification of ASC". Ranking clusters on CD38 encodes that sentence.
+  # Scoring the profile instead selects a second CD38 positive population that
+  # bone marrow carries and the other tissues do not, and the F1 there falls from
+  # 90.9 to 12.6. Script 07 holds that measurement.
+  asc_clusters <- SelectByHighestMarker(
+    medians, kChannels[["CD38"]], n_clusters = kAscClusters
+  )
   is_asc <- clusters$metacluster %in% asc_clusters
 
   if (sum(is_asc) < 50) {

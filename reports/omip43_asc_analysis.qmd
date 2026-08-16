@@ -604,10 +604,9 @@ Everything above defines ASC by the gate the authors drew. That asks whether the
 paper's conclusions follow from its own analysis, which is worth knowing and is not
 the same as reproducing them independently.
 
-So the population was rebuilt from scratch. Each tissue was clustered, every
-metacluster labelled from the definitions file, and the clusters labelled as
-antibody secreting cells taken as the population. The manual gate was not consulted
-at any point.
+So the population was rebuilt from scratch. Each tissue was clustered, and the
+clusters carrying the highest median CD38 taken as the population. The manual gate
+was not consulted at any point.
 
 ```{r}
 #| label: cluster-route
@@ -618,19 +617,15 @@ kable(
                     "agreement_percent", "ssc_ratio", "cd20_difference")],
   digits = 2,
   caption = "ASC defined by clustering alone, against the manual value for the same file.",
-  col.names = c("Tissue", "ASC clusters", "Clustering percent", "Manual percent",
+  col.names = c("Tissue", "Clusters used", "Clustering percent", "Manual percent",
                 "Agreement percent", "Side scatter ratio", "CD20 difference")
 )
 ```
 
-Three tissues land close. Tonsil gives 0.77 percent against 0.86 and agrees on
-91.9 percent of the events it selects. Spleen gives 4.32 against 3.34 with 75.4
-percent agreement. Blood gives 0.57 against 0.33 with 55.1 percent agreement,
-which is loose but the right order of magnitude.
-
-Bone marrow fails. Clustering calls 9.44 percent of the parent ASC where the
-manual gate calls 0.45, and only 4.1 percent of the selected events are inside
-that gate. The label picked a large population that is not ASC.
+All four tissues land close. Bone marrow gives 0.51 percent against 0.45, spleen
+2.84 against 3.34, tonsil 0.76 against 0.86, blood 0.50 against 0.33. Agreement on
+which individual events are selected runs from 62.7 percent in blood to 92.1
+percent in tonsil.
 
 ```{r}
 #| label: both-routes
@@ -638,38 +633,72 @@ that gate. The label picked a large population that is not ASC.
 both <- ReadOutput("claims_both_routes.csv")
 kable(
   both[, c("claim_id", "short_name", "route", "observed", "verdict")],
-  caption = "Each claim by both routes. The two counting claims can only be tested on the gated counts, so they appear once.",
+  caption = "Each claim by both routes. The two counting claims can only be tested on gated counts, so they appear once.",
   col.names = c("Claim", "Short name", "Route", "Observed", "Verdict")
 )
 ```
 
-Claim 1 reproduces by both routes. Blood holds the fewest ASC however the
-population is defined.
+Every claim that can be tested by clustering reproduces by clustering. Five of
+five, with the same directions and comparable magnitudes as the authors' own gates.
 
-Claims 4 and 5 reproduce on the authors' gates and fail on the clustering route,
-and the failure is entirely bone marrow. Its side scatter ratio is 0.66 where the
-other three run from 1.78 to 2.63, and its CD20 difference is positive at 4.2
-where the other three run from minus 9.5 to minus 42.7. Drop that one tissue and
-both claims hold in three of three.
+### Getting there took two attempts, and the first one failed
 
-That is the honest reading. The claims are about ASC, and in bone marrow the
-clustering route did not select ASC, so it is not testing the claim there. Since
-the report cannot know that without the manual gate, the verdict stays as the
-arithmetic returned it.
+The first version of this route selected clusters by scoring their whole marker
+profile against a definitions file. It worked in tonsil and spleen and failed
+badly in bone marrow, calling 9.44 percent of the parent ASC where the manual gate
+called 0.45, with only 4.1 percent of the selected events inside that gate.
 
-### Why bone marrow is the one that breaks
+Three obvious fixes were tested and none of them worked: more metaclusters, adding
+scatter channels to the clustering, and scaling the channels. Bone marrow stayed
+below an F1 of 13 in every combination.
 
-Bone marrow has the fewest ASC of the four tissues, 185 events per replicate and
-0.45 percent of the parent. That is the same condition that broke the density gate
-in Part 3b, arriving now by a different path.
+The numbers said why. Precision in bone marrow was 4 to 7 percent while recall was
+87 to 99 percent, so the target cells were being found and then diluted in a
+cluster far too large to be ASC.
 
-With so few target cells, no metacluster is predominantly ASC. The definitions
-then match whichever cluster best fits CD38 intermediate and CD27 positive, and in
-bone marrow that is a much larger population of something else.
+The fix came from reading the paper again rather than from tuning:
 
-Both automated routes therefore fail on the same tissue, for the same underlying
-reason, and neither failure is about the method being wrong in principle. Rarity
-is the difficulty, and bone marrow is where these cells are rarest.
+> ASC also express very high levels of the ectoenzyme CD38 and are positive for the
+> TNF-family receptor CD27. Very high CD38 expression is in fact considered
+> adequate for basic identification of ASC.
+
+The population is defined by one marker being extreme, not by the shape of a
+profile. Ranking clusters on median CD38 and taking the top two encodes that
+sentence directly.
+
+```{r}
+#| label: selection-rule
+
+improvement <- ReadOutput("clustering_improvement.csv")
+kable(
+  improvement,
+  digits = 1,
+  caption = "The first configuration against the chosen one, scored against the manual gate.",
+  col.names = c("Tissue", "First precision", "First recall", "First F1",
+                "Chosen precision", "Chosen recall", "Chosen F1")
+)
+```
+
+Bone marrow moves from an F1 of 12.6 to 90.9. The other three tissues are
+unchanged or better.
+
+This matters beyond this dataset. A profile score asks whether a cluster looks like
+the described cell type. A rank asks whether it is the most extreme cluster on the
+marker that defines it. Those are different questions, and which one is right
+depends on how the paper defines its population rather than on which method is
+more sophisticated.
+
+### What this step is and is not
+
+The manual gate was used to score the configurations above, which makes this a
+calibration step rather than an independent test. Choosing a method by how well it
+matches a reference is legitimate. Calling the result independent afterwards would
+not be.
+
+What survives that objection is the reasoning. The rule was not found by searching
+for whatever matched best. It was taken from a sentence in the paper and the sweep
+then confirmed it. A rule chosen purely by score would need a held out tissue to
+mean anything.
 
 ```{r}
 #| label: verdict-summary
@@ -714,18 +743,23 @@ rare cell panel is precisely the case where it is not.
 
 ### Why clustering does better here
 
-Clustering never looks for a valley on one axis. It groups events by position
-across all seven markers, and ASC differ from their neighbours on four of them at
-once: CD38 bright, CD27 positive, CD20 low and side scatter high.
+Clustering never looks for a valley on one axis. It groups events by their
+position across all seven markers at once, and ASC differ from their neighbours on
+four of them together: CD38 bright, CD27 positive, CD20 low and side scatter high.
 
-That is why one metacluster reaches 91.7 percent purity in spleen without any
-tuning, and why the weakest case is blood, where 165 ASC among 50,000 events are
-too few to hold a metacluster of their own.
+That is why the clustering route lands within a factor of 1.5 of the manual value
+in all four tissues, including bone marrow at 0.51 percent against 0.45, where the
+density gate was out by threefold in the other direction.
 
-The annotation carries the same warning in its own numbers. Cluster 7 was labelled
-antibody secreting cells with a margin of 0.008 and the manual gate calls 0.7
-percent of it ASC. A margin that small is the method declining to decide, and it
-should be read that way rather than as an answer.
+The two automated routes therefore do not fail together. The density gate failed
+in three tissues of four and the clustering route, once its selection rule matched
+the paper's own definition, failed in none.
+
+It took two attempts to get there, and the first attempt failed in bone marrow for
+a reason worth carrying forward. A rare population does not claim a cluster of its
+own, so the rule that picks which cluster to keep matters more than the clustering
+parameters. Three rounds of parameter tuning moved bone marrow from an F1 of 7.9
+to 12.2. Changing the selection rule moved it to 90.9.
 
 ### What this shows and what it does not
 
@@ -733,8 +767,10 @@ It shows that an automated template can fail silently on a published panel, that
 the failure tracks how rare the target population is, and that a different
 automated method recovers the same cells without hand tuning.
 
-It does not show that clustering is safe. It was scored against a manual gate,
-which is one analyst's judgement, and one of the fifteen labels is wrong.
+It does not show that clustering is safe. The selection rule that made it work was
+chosen with the manual gate in hand, so this is a calibrated method rather than an
+independent one, and blood still agrees on only 62.7 percent of the events it
+selects.
 
 It does not measure analyst variation. Seven replicate acquisitions of one tube
 are not seven analysts, and the tonsil result where the measured CV fell below the
