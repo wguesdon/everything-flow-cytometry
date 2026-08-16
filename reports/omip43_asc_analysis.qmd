@@ -622,10 +622,10 @@ kable(
 )
 ```
 
-All four tissues land close. Bone marrow gives 0.51 percent against 0.45, spleen
-2.84 against 3.34, tonsil 0.76 against 0.86, blood 0.50 against 0.33. Agreement on
-which individual events are selected runs from 62.7 percent in blood to 92.1
-percent in tonsil.
+All four tissues land close. Bone marrow gives 0.42 percent against 0.45, spleen
+2.90 against 3.34, tonsil 0.68 against 0.86, blood 0.49 against 0.33. Agreement on
+which individual events are selected runs from 64.5 percent in blood to 95.1
+percent in bone marrow.
 
 ```{r}
 #| label: both-routes
@@ -638,8 +638,10 @@ kable(
 )
 ```
 
-Every claim that can be tested by clustering reproduces by clustering. Five of
-five, with the same directions and comparable magnitudes as the authors' own gates.
+Four of the five claims that clustering can test reproduce by clustering, with the
+same directions and comparable magnitudes as the authors' own gates. The fifth
+fails on a margin of 0.07 percentage points, and the next section explains why that
+verdict is kept rather than tuned away.
 
 ### Getting there took two attempts, and the first one failed
 
@@ -648,23 +650,68 @@ profile against a definitions file. It worked in tonsil and spleen and failed
 badly in bone marrow, calling 9.44 percent of the parent ASC where the manual gate
 called 0.45, with only 4.1 percent of the selected events inside that gate.
 
-Three obvious fixes were tested and none of them worked: more metaclusters, adding
-scatter channels to the clustering, and scaling the channels. Bone marrow stayed
-below an F1 of 13 in every combination.
+The numbers said where to look. Precision in bone marrow was 4 to 7 percent while
+recall was 87 to 99, so the target cells were being found and then diluted in a
+cluster far too large to be ASC. That is not a clustering problem. It is the rule
+that decides which cluster to keep.
 
-The numbers said why. Precision in bone marrow was 4 to 7 percent while recall was
-87 to 99 percent, so the target cells were being found and then diluted in a
-cluster far too large to be ASC.
+Forty-eight configurations were then measured across all four tissues, varying the
+number of metaclusters, whether scatter channels join the clustering, whether
+channels are scaled, and the selection rule. Each was ranked on its worst tissue
+rather than its average, because an average hides a total failure.
 
-The fix came from reading the paper again rather than from tuning:
+```{r}
+#| label: sweep-by-rule
+
+sweep_summary <- ReadOutput("clustering_sweep_summary.csv")
+by_rule <- do.call(rbind, lapply(
+  c("profile", "cd38 top 1", "cd38 top 2", "cd38 top 3"),
+  function(rule) {
+    piece <- sweep_summary[sweep_summary$selection == rule, ]
+    data.frame(
+      selection = rule,
+      configurations = nrow(piece),
+      best_worst_f1 = max(piece$worst_f1),
+      median_worst_f1 = stats::median(piece$worst_f1),
+      stringsAsFactors = FALSE
+    )
+  }
+))
+kable(
+  by_rule,
+  digits = 1,
+  caption = "The selection rule, summarised over every combination of the other three settings.",
+  col.names = c("Selection rule", "Configurations", "Best worst-tissue F1",
+                "Median worst-tissue F1")
+)
+```
+
+The selection rule decides everything and the other three settings barely matter.
+Every profile configuration lands between 6.8 and 12.2 on its worst tissue. Every
+configuration that ranks on CD38 and takes the top one lands between 48.7 and 77.1.
+
+The reason is in the paper, not in the parameters:
 
 > ASC also express very high levels of the ectoenzyme CD38 and are positive for the
 > TNF-family receptor CD27. Very high CD38 expression is in fact considered
 > adequate for basic identification of ASC.
 
 The population is defined by one marker being extreme, not by the shape of a
-profile. Ranking clusters on median CD38 and taking the top two encodes that
-sentence directly.
+profile. Taking three clusters is worse than taking one, at a best worst-tissue F1
+of 10.0, because the third admits a population that is positive without being
+extreme.
+
+```{r}
+#| label: sweep-top
+
+kable(
+  head(sweep_summary, 8),
+  digits = 1,
+  caption = "The eight best configurations. The chosen one is the first row.",
+  col.names = c("Metaclusters", "Scatter", "Scaled", "Selection", "Mean F1",
+                "Worst F1", "Worst tissue")
+)
+```
 
 ```{r}
 #| label: selection-rule
@@ -679,14 +726,26 @@ kable(
 )
 ```
 
-Bone marrow moves from an F1 of 12.6 to 90.9. The other three tissues are
-unchanged or better.
+Bone marrow goes from the worst tissue to the best, at 95.1 percent agreement.
 
-This matters beyond this dataset. A profile score asks whether a cluster looks like
-the described cell type. A rank asks whether it is the most extreme cluster on the
-marker that defines it. Those are different questions, and which one is right
-depends on how the paper defines its population rather than on which method is
-more sophisticated.
+### The trade-off the sweep exposed
+
+Choosing the top two clusters instead of the top one reproduces all five claims but
+agrees less well with the manual gate, at a worst-tissue F1 of 69.6 against 77.1.
+Choosing the top one agrees better and loses claim 1.
+
+The report keeps the sweep winner, and claim 1 therefore fails on the clustering
+route. It is worth seeing why rather than switching to whichever rule scores
+better on the claim table.
+
+Claim 1 says ASC are rarest in blood. By the manual gate that is clear: 0.26
+percent in blood against 0.41 in bone marrow. By the clustering route the two are
+0.49 and 0.42, so bone marrow comes out marginally lower and the ordering flips.
+
+The two tissues are 0.07 percentage points apart. That gap is smaller than the
+difference between the clustering route and the manual gate in either tissue on its
+own, so the method cannot resolve it, and a verdict of reproduced would have been
+luck rather than evidence.
 
 ### What this step is and is not
 
@@ -696,9 +755,8 @@ matches a reference is legitimate. Calling the result independent afterwards wou
 not be.
 
 What survives that objection is the reasoning. The rule was not found by searching
-for whatever matched best. It was taken from a sentence in the paper and the sweep
-then confirmed it. A rule chosen purely by score would need a held out tissue to
-mean anything.
+for whatever matched best. It was taken from a sentence in the paper, and the sweep
+then confirmed that every rule ignoring that sentence performs six times worse.
 
 ```{r}
 #| label: verdict-summary
@@ -748,7 +806,7 @@ position across all seven markers at once, and ASC differ from their neighbours 
 four of them together: CD38 bright, CD27 positive, CD20 low and side scatter high.
 
 That is why the clustering route lands within a factor of 1.5 of the manual value
-in all four tissues, including bone marrow at 0.51 percent against 0.45, where the
+in all four tissues, including bone marrow at 0.42 percent against 0.45, where the
 density gate was out by threefold in the other direction.
 
 The two automated routes therefore do not fail together. The density gate failed
@@ -758,8 +816,9 @@ the paper's own definition, failed in none.
 It took two attempts to get there, and the first attempt failed in bone marrow for
 a reason worth carrying forward. A rare population does not claim a cluster of its
 own, so the rule that picks which cluster to keep matters more than the clustering
-parameters. Three rounds of parameter tuning moved bone marrow from an F1 of 7.9
-to 12.2. Changing the selection rule moved it to 90.9.
+parameters. Across all 48 configurations, every rule that scored the whole
+marker profile stayed below an F1 of 12.2 on its worst tissue. Every rule that
+ranked on CD38 and took the top cluster reached 48.7 or better.
 
 ### What this shows and what it does not
 
@@ -769,7 +828,7 @@ automated method recovers the same cells without hand tuning.
 
 It does not show that clustering is safe. The selection rule that made it work was
 chosen with the manual gate in hand, so this is a calibrated method rather than an
-independent one, and blood still agrees on only 62.7 percent of the events it
+independent one, and blood still agrees on only 64.5 percent of the events it
 selects.
 
 It does not measure analyst variation. Seven replicate acquisitions of one tube

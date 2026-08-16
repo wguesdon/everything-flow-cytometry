@@ -252,11 +252,13 @@ TestYuClaims <- function(claims, measures, alpha = 0.05) {
     }
 
     if (claim$test == "sex_difference_by_timepoint") {
-      wanted_late <- if (grepl("^female", claim$expected)) {
-        "female higher"
-      } else {
-        "male higher"
-      }
+      # Claims 5 and 6 are about whether a difference is detectable in each
+      # window, not about which sex is numerically higher. The paper states the
+      # criterion in the legend of Figure 2: significance was determined by a
+      # Mann-Whitney test, and an asterisk means p < 0.05. A difference that is
+      # "lost" is one that stops being significant, and it keeps a direction
+      # while it is lost. Testing the direction instead answers a question the
+      # paper never asked.
       per_timepoint <- lapply(c("early", "middle", "late"), function(tp) {
         keep <- measures$timepoint == tp
         result <- CompareBySex(values[keep], measures$sex[keep])
@@ -264,41 +266,44 @@ TestYuClaims <- function(claims, measures, alpha = 0.05) {
         result
       })
       combined <- do.call(rbind, per_timepoint)
+
+      if (any(is.na(combined$p_value))) {
+        return(Row(claim, "a window holds too few samples to test",
+                   NA_character_, NA_real_, NA_real_, "not measured"))
+      }
+
+      combined$significant <- combined$p_value < alpha
+      # Claim 5 expects no significant difference at early and middle and a
+      # significant one at late. Claim 6 expects one in every window.
+      expected_significant <- if (claim$claim_id == 5) {
+        c(early = FALSE, middle = FALSE, late = TRUE)
+      } else {
+        c(early = TRUE, middle = TRUE, late = TRUE)
+      }
+      agree <- combined$significant == expected_significant[combined$timepoint]
+
+      verdict <- if (all(agree)) {
+        "reproduced"
+      } else if (!any(agree)) {
+        "opposite"
+      } else {
+        "partly reproduced"
+      }
+
       detail <- paste(
-        sprintf("%s %s", combined$timepoint, combined$observed),
+        sprintf("%s p %.3f %s, %s higher", combined$timepoint,
+                combined$p_value, ifelse(combined$significant, "*", "ns"),
+                sub(" higher", "", combined$observed)),
         collapse = "; "
       )
 
-      if (any(is.na(combined$observed))) {
-        return(Row(claim, detail, NA_character_, NA_real_, NA_real_,
-                   "not measured"))
-      }
-
-      if (claim$claim_id == 5) {
-        # The claim is a pattern, not one direction. Females lead at late and do
-        # not lead at early or middle.
-        late_ok <- combined$observed[combined$timepoint == "late"] == "female higher"
-        early_ok <- combined$observed[combined$timepoint == "early"] != "female higher"
-        middle_ok <- combined$observed[combined$timepoint == "middle"] != "female higher"
-        verdict <- if (late_ok && early_ok && middle_ok) {
-          "reproduced"
-        } else if (!late_ok && !early_ok && !middle_ok) {
-          "opposite"
-        } else {
-          "partly reproduced"
-        }
-      } else {
-        agree <- combined$observed == wanted_late
-        verdict <- if (all(agree)) {
-          "reproduced"
-        } else if (!any(agree)) {
-          "opposite"
-        } else {
-          "partly reproduced"
-        }
-      }
-      return(Row(claim, detail, paste(combined$observed, collapse = "; "),
-                 NA_real_, min(combined$p_value, na.rm = TRUE), verdict))
+      return(Row(
+        claim, detail,
+        paste(sprintf("%s %s", combined$timepoint,
+                      ifelse(combined$significant, "significant",
+                             "not significant")), collapse = "; "),
+        sum(agree), max(combined$p_value), verdict
+      ))
     }
 
     if (claim$test %in% c("sex_difference_before_seroconversion",

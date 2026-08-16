@@ -75,6 +75,9 @@ SubsampleEvents <- function(events, n = 50000, seed = 42) {
 #'   every channel, so a cluster is defined by identity and not by activation.
 #' @param grid_size The side of the square SOM grid. 10 gives 100 nodes.
 #' @param n_metaclusters The number of metaclusters to merge down to.
+#' @param scale_channels Scale each channel to zero mean and unit variance before
+#'   the map is fitted. Without it a channel with a wide range pulls harder than
+#'   one with a narrow range, whether or not it separates anything.
 #' @param seed The random seed.
 #' @return A list with `metacluster`, an integer per event, `node`, the SOM node
 #'   per event, and `fsom`, the fitted FlowSOM object.
@@ -83,6 +86,7 @@ RunFlowSomClustering <- function(events,
                                  channels,
                                  grid_size = 10,
                                  n_metaclusters = 12,
+                                 scale_channels = FALSE,
                                  seed = 42) {
   unknown <- setdiff(channels, colnames(events))
   if (length(unknown) > 0) {
@@ -96,7 +100,7 @@ RunFlowSomClustering <- function(events,
   frame <- flowCore::flowFrame(events)
 
   withr::with_seed(seed, {
-    fsom <- FlowSOM::ReadInput(frame, transform = FALSE, scale = FALSE)
+    fsom <- FlowSOM::ReadInput(frame, transform = FALSE, scale = scale_channels)
     fsom <- FlowSOM::BuildSOM(
       fsom, colsToUse = channels, xdim = grid_size, ydim = grid_size, silent = TRUE
     )

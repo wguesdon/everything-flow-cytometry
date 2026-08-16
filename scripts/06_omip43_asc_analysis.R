@@ -74,10 +74,13 @@ kChannels <- c(
   `HLA-DR` = "Comp-PE-A"
 )
 kClusterChannels <- unname(kChannels)
-kMetaclusters <- 25
-# How many of the CD38 highest clusters make up the ASC population. Chosen by the
-# sweep in script 07, which ranks configurations on their worst tissue.
-kAscClusters <- 2
+# Every clustering setting below comes from the sweep in script 07, which scored
+# 48 configurations on all four tissues and ranked them on their worst tissue
+# rather than their average. An average hides a total failure in one tissue.
+kMetaclusters <- 15
+kSomGrid <- 10
+kScaleChannels <- TRUE
+kAscClusters <- 1
 kSubsampleSize <- 50000
 kSeed <- 42
 
@@ -277,7 +280,8 @@ for (tissue in kTissues) {
 
   clustering <- RunFlowSomClustering(
     events, channels = kClusterChannels,
-    grid_size = 10, n_metaclusters = kMetaclusters, seed = kSeed
+    grid_size = kSomGrid, n_metaclusters = kMetaclusters,
+    scale_channels = kScaleChannels, seed = kSeed
   )
 
   # Purity and recall per metacluster, against the manual gate.
@@ -789,7 +793,8 @@ for (tissue in kTissues) {
 
   clusters <- RunFlowSomClustering(
     events, channels = kClusterChannels,
-    grid_size = 14, n_metaclusters = kMetaclusters, seed = kSeed
+    grid_size = kSomGrid, n_metaclusters = kMetaclusters,
+    scale_channels = kScaleChannels, seed = kSeed
   )
   medians <- ClusterMedianExpression(events, clusters$metacluster, kClusterChannels)
   labels <- AnnotateClusters(medians, definitions)

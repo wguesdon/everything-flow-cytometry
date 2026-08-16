@@ -39,6 +39,7 @@ suppressPackageStartupMessages({
   library(FlowSOM)
   library(uwot)
   library(ggplot2)
+  library(ggpubr)
   library(withr)
 })
 
@@ -307,99 +308,166 @@ print(sweep, digits = 3, row.names = FALSE)
 
 Log("Drawing the figures")
 
-severity_plot <- ggplot(
-  measures[!is.na(measures$cd161hi_percent_of_cd8), ],
-  aes(x = severity_rank, y = cd161hi_percent_of_cd8, fill = sex)
-) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.15), size = 1.4,
-             alpha = 0.8) +
-  labs(
-    title = "CD8+ CD161hi T cells against COVID-19 severity",
-    subtitle = paste(
-      "FR-FCM-Z3WR, 35 marker Cytek Aurora panel, 83 samples.",
-      "One cut point gated every sample."
-    ),
-    x = "Severity rank", y = "CD161hi, percent of CD8 T cells", fill = "Sex"
+# The two series are Female and Male, and the hues are assigned in a fixed order
+# rather than cycled. The pair passes every check of the palette validator on a
+# light surface: worst CVD separation 24.7 and worst normal-vision separation
+# 33.6, both well clear of their floors, and both above 3:1 contrast.
+kSexPalette <- c(Female = "#2a78d6", Male = "#eb6834")
+
+# A boxplot with the points drawn on top. The group sizes run from 4 to 23, and a
+# box alone hides an n of 4.
+SexBoxplot <- function(data, x, y, x_label, y_label, title, subtitle,
+                       comparison_label = "p.format") {
+  ggpubr::ggboxplot(
+    data, x = x, y = y, fill = "sex", palette = unname(kSexPalette),
+    outlier.shape = NA, alpha = 0.55, width = 0.62, size = 0.5
   ) +
-  theme_bw()
+    ggplot2::geom_point(
+      ggplot2::aes(fill = sex),
+      position = ggplot2::position_jitterdodge(
+        jitter.width = 0.18, dodge.width = 0.62
+      ),
+      shape = 21, size = 2.1, stroke = 0.5, colour = "white", alpha = 0.95,
+      show.legend = FALSE
+    ) +
+    ggpubr::stat_compare_means(
+      ggplot2::aes(group = sex), method = "wilcox.test",
+      label = comparison_label, size = 3.4, vjust = -0.2
+    ) +
+    ggplot2::scale_fill_manual(values = kSexPalette, name = NULL) +
+    ggplot2::labs(x = x_label, y = y_label, title = title,
+                  subtitle = subtitle) +
+    ggplot2::expand_limits(y = 0) +
+    ggpubr::theme_pubr(base_size = 12, legend = "top") +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(face = "bold", size = 13),
+      plot.subtitle = ggplot2::element_text(colour = "grey30", size = 10.5),
+      axis.title = ggplot2::element_text(size = 11.5),
+      panel.grid.major.y = ggplot2::element_line(colour = "grey92",
+                                                 linewidth = 0.3)
+    )
+}
+
+severity_plot <- SexBoxplot(
+  measures[!is.na(measures$cd161hi_percent_of_cd8), ],
+  x = "severity_rank", y = "cd161hi_percent_of_cd8",
+  x_label = "Severity rank",
+  y_label = "CD161hi, percent of CD8 T cells",
+  title = "CD8+ CD161hi T cells fall as COVID-19 severity rises",
+  subtitle = paste(
+    "FR-FCM-Z3WR, 35 marker Cytek Aurora, 83 samples from 45 subjects.",
+    "One cut point gated every sample.\nMann-Whitney p between the sexes",
+    "within each rank."
+  )
+)
 ggsave(file.path(kOutputDir, "cd161hi_by_severity.png"), severity_plot,
-       width = 9, height = 6, dpi = 150)
+       width = 8.5, height = 6, dpi = 300, bg = "white")
 
 timepoint_levels <- c("control", "early", "middle", "late")
 timepoint_data <- measures[measures$timepoint %in% timepoint_levels, ]
 timepoint_data$timepoint <- factor(timepoint_data$timepoint,
                                    levels = timepoint_levels)
 
-timepoint_plot <- ggplot(
-  timepoint_data, aes(x = timepoint, y = cd161hi_percent_of_cd8, fill = sex)
-) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.15), size = 1.4,
-             alpha = 0.8) +
-  labs(
-    title = "CD8+ CD161hi T cells by time after symptom onset",
-    subtitle = "Early is 14 days or less, middle is 15 to 21 days, late is over 21 days",
-    x = "Time point", y = "CD161hi, percent of CD8 T cells", fill = "Sex"
-  ) +
-  theme_bw()
+timepoint_plot <- SexBoxplot(
+  timepoint_data, x = "timepoint", y = "cd161hi_percent_of_cd8",
+  x_label = "Time after symptom onset",
+  y_label = "CD161hi, percent of CD8 T cells",
+  title = "The female CD161hi advantage stops being significant during infection",
+  subtitle = paste(
+    "Early is 14 days or less, middle is 15 to 21 days, late is over 21 days.",
+    "\nClaim 5 of the paper is the pattern of these three p values, not the",
+    "direction of the boxes."
+  )
+)
 ggsave(file.path(kOutputDir, "cd161hi_by_timepoint.png"), timepoint_plot,
-       width = 9, height = 6, dpi = 150)
+       width = 8.5, height = 6, dpi = 300, bg = "white")
 
-memory_plot <- ggplot(
-  timepoint_data, aes(x = timepoint, y = memory_percent_of_cd8, fill = sex)
-) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.15), size = 1.4,
-             alpha = 0.8) +
-  labs(
-    title = "CD8 memory T cells by time after symptom onset",
-    subtitle = "Memory is the sum of the central memory, effector memory and EMRA gates",
-    x = "Time point", y = "Memory, percent of CD8 T cells", fill = "Sex"
-  ) +
-  theme_bw()
+memory_plot <- SexBoxplot(
+  timepoint_data, x = "timepoint", y = "memory_percent_of_cd8",
+  x_label = "Time after symptom onset",
+  y_label = "Memory, percent of CD8 T cells",
+  title = "CD8 memory cells stay higher in males",
+  subtitle = paste(
+    "Memory is the sum of the central memory, effector memory and EMRA gates.",
+    "\nClaim 6 expects a significant difference in every window."
+  )
+)
 ggsave(file.path(kOutputDir, "memory_by_timepoint.png"), memory_plot,
-       width = 9, height = 6, dpi = 150)
+       width = 8.5, height = 6, dpi = 300, bg = "white")
 
-slope_plot <- ggplot(
+slope_plot <- ggpubr::ggscatter(
   measures[!is.na(measures$cd161hi_percent_of_cd8), ],
-  aes(x = severity_index, y = cd161hi_percent_of_cd8, colour = sex)
+  x = "severity_index", y = "cd161hi_percent_of_cd8",
+  color = "sex", palette = unname(kSexPalette),
+  size = 2.4, alpha = 0.85,
+  add = "reg.line", conf.int = TRUE,
+  add.params = list(size = 1)
 ) +
-  geom_point(size = 1.8, alpha = 0.8) +
-  geom_smooth(method = "lm", formula = y ~ x, se = TRUE, alpha = 0.15) +
-  scale_x_continuous(
+  ggpubr::stat_regline_equation(
+    ggplot2::aes(colour = sex, label = ggplot2::after_stat(eq.label)),
+    show.legend = FALSE, size = 4, label.x = 1.55,
+    label.y = c(49, 44)
+  ) +
+  ggplot2::scale_x_continuous(
     breaks = 1:4,
     labels = c("normal", "exposed", "infected", "hospitalized")
   ) +
-  labs(
-    title = "The regression the paper draws in Figure 2C",
-    subtitle = "A steeper fall in females is the claim under test",
-    x = "Severity rank", y = "CD161hi, percent of CD8 T cells", colour = "Sex"
+  ggplot2::scale_colour_manual(values = kSexPalette, name = NULL) +
+  # ggscatter draws the confidence band as a fill, which adds a second legend
+  # with the same two keys. One legend, or identity is stated twice.
+  ggplot2::scale_fill_manual(values = kSexPalette, guide = "none") +
+  ggplot2::guides(fill = "none") +
+  ggplot2::labs(
+    x = "Severity rank", y = "CD161hi, percent of CD8 T cells",
+    title = "Females lose CD161hi cells about four times as fast as males",
+    subtitle = paste(
+      "The regression of Figure 2C. The slope is the claim under test,",
+      "and the band is the 95 percent interval."
+    )
   ) +
-  theme_bw()
+  ggpubr::theme_pubr(base_size = 12, legend = "top") +
+  ggplot2::theme(
+    plot.title = ggplot2::element_text(face = "bold", size = 13),
+    plot.subtitle = ggplot2::element_text(colour = "grey30", size = 10.5),
+    panel.grid.major.y = ggplot2::element_line(colour = "grey92",
+                                               linewidth = 0.3)
+  )
 ggsave(file.path(kOutputDir, "cd161hi_slope_by_sex.png"), slope_plot,
-       width = 9, height = 6, dpi = 150)
+       width = 8.5, height = 6, dpi = 300, bg = "white")
 
 sweep_long <- do.call(rbind, lapply(c("claim_4", "claim_6", "claim_8"),
   function(column) {
-    data.frame(cd45ra_cut = sweep$cd45ra_cut, claim = column,
+    data.frame(cd45ra_cut = sweep$cd45ra_cut,
+               claim = sub("claim_", "Claim ", column),
                verdict = sweep[[column]], stringsAsFactors = FALSE)
   }
 ))
-sweep_plot <- ggplot(sweep_long, aes(x = cd45ra_cut, y = claim,
-                                     fill = verdict)) +
-  geom_tile(colour = "white", linewidth = 0.6) +
-  labs(
-    title = "What the CD45RA cut changes",
+sweep_plot <- ggplot2::ggplot(
+  sweep_long, ggplot2::aes(x = factor(cd45ra_cut), y = claim, fill = verdict)
+) +
+  ggplot2::geom_tile(colour = "white", linewidth = 1.4) +
+  ggplot2::scale_fill_manual(values = c(reproduced = "#1baf7a",
+                                        `partly reproduced` = "#eda100",
+                                        opposite = "#e34948"), name = NULL) +
+  ggplot2::labs(
+    x = "CD45RA cut, logicle scale", y = NULL,
+    title = "The CD45RA cut changes the number and not the answer",
     subtitle = paste(
       "CD45RA has no density minimum inside the CD8 gate, so this cut is a",
-      "choice and not a fit."
-    ),
-    x = "CD45RA cut, logicle scale", y = NULL, fill = "Verdict"
+      "choice.\nThe memory frequency moves from 55.5 to 65.3 percent across",
+      "this range."
+    )
   ) +
-  theme_bw()
+  ggpubr::theme_pubr(base_size = 12, legend = "top") +
+  ggplot2::theme(
+    plot.title = ggplot2::element_text(face = "bold", size = 13),
+    plot.subtitle = ggplot2::element_text(colour = "grey30", size = 10.5),
+    axis.line.y = ggplot2::element_blank(),
+    axis.ticks.y = ggplot2::element_blank()
+  )
 ggsave(file.path(kOutputDir, "cd45ra_sweep.png"), sweep_plot,
-       width = 9, height = 4, dpi = 150)
+       width = 9, height = 4.2, dpi = 300, bg = "white")
+
 
 # ---------------------------------------------------------------------------
 # Step 8: FlowSOM and UMAP on the pooled draw, as the paper did
@@ -529,24 +597,39 @@ if (length(all_events) < 2) {
   write.csv(route_comparison,
             file.path(kOutputDir, "route_comparison.csv"), row.names = FALSE)
 
-  route_plot <- ggplot(route_comparison,
-                       aes(x = cd161hi_percent_of_cd8_gating,
-                           y = cd161hi_percent_of_cd8_clustering)) +
-    geom_point(size = 1.8, alpha = 0.8) +
+  route_comparison <- merge(
+    route_comparison, sheet[, c("file_name", "sex")],
+    by.x = "sample", by.y = "file_name", all.x = TRUE
+  )
+  route_plot <- ggpubr::ggscatter(
+    route_comparison,
+    x = "cd161hi_percent_of_cd8_gating",
+    y = "cd161hi_percent_of_cd8_clustering",
+    color = "sex", palette = unname(kSexPalette), size = 2.4, alpha = 0.85
+  ) +
     geom_abline(slope = 1, intercept = 0, linetype = "dashed",
-                colour = "grey40") +
+                colour = "grey45", linewidth = 0.5) +
+    ggpubr::stat_cor(method = "spearman", size = 3.8, label.x.npc = 0.04,
+                     label.y.npc = 0.96) +
+    scale_colour_manual(values = kSexPalette, name = NULL) +
+    coord_equal() +
     labs(
       title = "Two routes to the same population, one sample per point",
-      subtitle = sprintf(
-        "Sequential gating against a FlowSOM metacluster. Spearman rho = %.3f.",
-        route_correlation
+      subtitle = paste(
+        "Sequential gating against a FlowSOM metacluster fitted inside the",
+        "CD8 gate.\nThe dashed line is equality. Neither route saw the other."
       ),
       x = "CD161hi by gating, percent of CD8 T cells",
       y = "CD161hi by clustering, percent of CD8 T cells"
     ) +
-    theme_bw()
+    ggpubr::theme_pubr(base_size = 12, legend = "top") +
+    theme(
+      plot.title = element_text(face = "bold", size = 13),
+      plot.subtitle = element_text(colour = "grey30", size = 10.5),
+      panel.grid.major = element_line(colour = "grey92", linewidth = 0.3)
+    )
   ggsave(file.path(kOutputDir, "route_comparison.png"), route_plot,
-         width = 8, height = 6, dpi = 150)
+         width = 7.5, height = 7, dpi = 300, bg = "white")
 
   umap_plot <- ggplot(embedding, aes(x = umap_1, y = umap_2,
                                      colour = metacluster)) +

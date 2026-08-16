@@ -271,13 +271,20 @@ kable(
 )
 ```
 
-Nine of the ten claims reproduce. Read the direction column and the p column as
-two different questions. The verdict compares the direction that was found
-against the direction the paper states. The p value is the test the paper itself
-used, which is Mann-Whitney for a two group comparison and Spearman for a
-correlation. A direction can be right while the test is not significant, and
-claims 2, 4 and 7 are exactly that. Claim 9 also sits above 0.05, but there the
-absence of a difference is the claim itself.
+Eight of the ten claims reproduce and two are partly reproduced. The two partial
+ones are claims 5 and 6, which are the only claims about time points, and the
+next section is about them.
+
+Read the direction column and the p column as two different questions. The p
+value is the test the paper itself used, which is Mann-Whitney for a two group
+comparison and Spearman for a correlation. A direction can be right while the
+test is not significant, and claims 2, 4 and 7 are exactly that. Claim 9 also
+sits above 0.05, but there the absence of a difference is the claim itself.
+
+Eight of the ten claims are directional, so their verdict compares the direction
+found against the direction stated. Claims 5 and 6 are not directional, and
+treating them as though they were is a mistake that this report made before it
+corrected itself.
 
 ### The headline claim
 
