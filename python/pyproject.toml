@@ -1,0 +1,39 @@
+[project]
+name = "everything-flow-cytometry"
+version = "0.1.0"
+description = "Python environment for the flow cytometry examples"
+readme = "README.md"
+requires-python = "==3.12.*"
+
+dependencies = [
+    # Notebook interface. The container serves both this and the R kernel.
+    "jupyterlab>=4.4",
+    "ipykernel>=6.29",
+    # Read and prepare FCS files
+    "flowkit>=1.2",
+    "readfcs>=2.0",
+    # Downstream analysis on an AnnData object
+    "anndata>=0.11",
+    "scanpy>=1.11",
+    # Arrays, tables and figures
+    "numpy>=2.1",
+    "pandas>=2.2",
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+    "pyarrow>=18.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.uv]
+# Keep the resolution reproducible. uv.lock is committed and the container
+# installs from it with --frozen, so a build never re-resolves.
+package = false

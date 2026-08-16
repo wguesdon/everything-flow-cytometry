@@ -27,3 +27,7 @@ results/
 
 # Transfer logs
 logs/*.log
+
+# Agent instruction files, kept local for now
+CLAUDE.md
+AGENTS.md

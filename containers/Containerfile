@@ -1,0 +1,117 @@
+# One container that serves JupyterLab with an R kernel and a Python kernel.
+#
+# Reproducibility rests on four pins, and the build fails if any of them drifts.
+#
+#   1. The base image is pinned by digest, so the R version and the system
+#      libraries cannot change under a re-tagged upstream image.
+#   2. CRAN comes from a dated Posit snapshot, so install.packages resolves to the
+#      versions that existed on that date.
+#   3. Bioconductor is pinned to release 3.23.
+#   4. Python is installed from uv.lock with --frozen, so uv never re-resolves.
+#
+# After the installs, verify_versions.R asserts every expected version and stops
+# the build on a mismatch. A silent upgrade is therefore not possible.
+#
+# Base: bioconductor/bioconductor_docker:RELEASE_3_23-R-4.6.1, published 2026-08-11.
+FROM bioconductor/bioconductor_docker@sha256:821dbf9ac119eac41f177531c7ca8fc7084c99c04eb218a1aa7f52cb63bad5d9
+
+LABEL org.opencontainers.image.title="everything-flow-cytometry"
+LABEL org.opencontainers.image.description="JupyterLab with an R kernel and a Python kernel for flow cytometry analysis"
+LABEL org.opencontainers.image.source="https://github.com/wguesdon/everything-flow-cytometry"
+
+ARG CRAN_SNAPSHOT=2026-08-15
+ARG BIOC_VERSION=3.23
+ARG PYTHON_VERSION=3.12
+ARG QUARTO_VERSION=1.10.18
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    CRAN_SNAPSHOT=${CRAN_SNAPSHOT} \
+    BIOC_VERSION=${BIOC_VERSION} \
+    VIRTUAL_ENV=/opt/venv \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_INSTALL_DIR=/opt/uv-python \
+    PATH=/opt/venv/bin:/root/.local/bin:${PATH}
+
+# System libraries that the cytometry packages and the notebook need.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        cmake \
+        libhdf5-dev \
+        libopenblas-dev \
+        libudunits2-dev \
+        libgsl-dev \
+        libmagick++-dev \
+        libcairo2-dev \
+        libxt-dev \
+        pandoc \
+        curl \
+        ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Quarto renders the walkthrough report. Pinned by version, not by "latest".
+RUN curl -fsSL -o /tmp/quarto.deb \
+        "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb" \
+    && dpkg -i /tmp/quarto.deb \
+    && rm /tmp/quarto.deb \
+    && quarto --version
+
+# Point R at the dated CRAN snapshot. The binary path depends on the Ubuntu
+# codename of the base image, so read it rather than assume it.
+RUN . /etc/os-release \
+    && echo "options(repos = c(CRAN = 'https://packagemanager.posit.co/cran/__linux__/${VERSION_CODENAME}/${CRAN_SNAPSHOT}'), HTTPUserAgent = sprintf('R/%s R (%s)', getRversion(), paste(getRversion(), R.version\$platform, R.version\$arch, R.version\$os)))" \
+        >> /usr/local/lib/R/etc/Rprofile.site \
+    && echo "Pinned CRAN to the ${CRAN_SNAPSHOT} snapshot for ${VERSION_CODENAME}"
+
+# CRAN packages. The snapshot fixes the version; verify_versions.R checks it.
+RUN R -q -e "install.packages(c( \
+        'IRkernel', 'IRdisplay', 'repr', \
+        'ggplot2', 'dplyr', 'tidyr', 'readr', \
+        'here', 'patchwork', 'matrixStats', \
+        'uwot', 'Rtsne', 'pheatmap', 'ggpubr', 'rstatix', \
+        'testthat', 'roxygen2', 'knitr', 'rmarkdown', 'withr' \
+    )); if (!all(c('IRkernel','ggplot2','dplyr','testthat') %in% rownames(installed.packages()))) quit(status = 1)"
+
+# Bioconductor packages, pinned to release 3.23.
+RUN R -q -e "BiocManager::install(version = Sys.getenv('BIOC_VERSION'), ask = FALSE, update = FALSE); \
+    BiocManager::install(c( \
+        'flowCore', 'flowWorkspace', 'openCyto', 'CytoML', 'ggcyto', \
+        'flowAI', 'PeacoQC', 'flowClust', 'flowDensity', 'flowStats', 'flowViz', \
+        'FlowSOM', 'diffcyt', 'CATALYST', \
+        'SingleCellExperiment', 'BiocParallel', \
+        'ExperimentHub', 'HDCytoData' \
+    ), ask = FALSE, update = FALSE)"
+
+# uv, for the Python side. Pinned by version, not by a moving installer.
+COPY --from=ghcr.io/astral-sh/uv:0.9.20 /uv /uvx /usr/local/bin/
+
+# Install the interpreter and the locked dependency set.
+COPY python/pyproject.toml python/uv.lock /tmp/pyproject/
+RUN cd /tmp/pyproject \
+    && uv python install ${PYTHON_VERSION} \
+    && uv sync --frozen --no-dev \
+    && rm -rf /tmp/pyproject
+
+# Register both kernels. jupyter comes from the venv, which is already on PATH.
+RUN R -q -e "IRkernel::installspec(name = 'ir', displayname = 'R 4.6.1 (cytometry)', user = FALSE)" \
+    && python -m ipykernel install --name python3 --display-name "Python 3.12 (cytometry)" --sys-prefix \
+    && jupyter kernelspec list
+
+# Record what was actually installed, and fail the build on a version mismatch.
+COPY containers/verify_versions.R /usr/local/bin/verify_versions.R
+RUN Rscript /usr/local/bin/verify_versions.R \
+    && R -q -e "writeLines(capture.output(sessionInfo()), '/opt/r_session_info.txt')" \
+    && uv pip list --python /opt/venv > /opt/python_packages.txt \
+    && echo "Build recorded in /opt/r_session_info.txt and /opt/python_packages.txt"
+
+WORKDIR /home/analysis
+EXPOSE 8888
+
+# Bind to every interface inside the container. The host publishes the port on
+# 127.0.0.1 only, so the notebook is reachable through an SSH tunnel and is not
+# exposed on the network. See containers/run.sh.
+CMD ["jupyter", "lab", \
+     "--ip=0.0.0.0", \
+     "--port=8888", \
+     "--no-browser", \
+     "--allow-root", \
+     "--ServerApp.root_dir=/home/analysis"]
