@@ -12,7 +12,9 @@
 #'
 #' A cytometer writes the matrix into one of three keywords, and which one it uses
 #' depends on the acquisition software. [flowCore::spillover()] returns all three
-#' slots, of which at most one is filled.
+#' slots, of which at most one is filled, and it raises an error when the file
+#' carries no matrix at all. Both outcomes are turned into one message here, so a
+#' caller does not have to know which shape flowCore chose.
 #'
 #' @param frame A `flowFrame`.
 #' @return A numeric matrix whose row and column names are detector names.
@@ -22,13 +24,17 @@
 #' }
 #' @export
 ExtractSpillover <- function(frame) {
-  slots <- flowCore::spillover(frame)
-  filled <- Filter(Negate(is.null), slots)
+  slots <- tryCatch(
+    flowCore::spillover(frame),
+    error = function(e) NULL
+  )
+  filled <- if (is.null(slots)) list() else Filter(Negate(is.null), slots)
 
   if (length(filled) == 0) {
     stop(
       "This flowFrame carries no spillover matrix. ",
-      "Compute one from single stained controls with flowStats::spillover_ng()."
+      "Compute one from single stained controls with ComputeSpilloverFromControls() ",
+      "or with flowStats::spillover_ng()."
     )
   }
 
@@ -41,6 +47,20 @@ ExtractSpillover <- function(frame) {
       "The spillover matrix is not square. It has ", nrow(matrix_out),
       " rows and ", ncol(matrix_out), " columns."
     )
+  }
+
+  # A stored matrix often carries column names and no row names, because the
+  # acquisition software writes the detector list once. The matrix is square over
+  # the same detectors, so the row names are the column names. Filling them here
+  # means no caller downstream has to test for a NULL dimname.
+  if (is.null(rownames(matrix_out)) && !is.null(colnames(matrix_out))) {
+    rownames(matrix_out) <- colnames(matrix_out)
+  }
+  if (is.null(colnames(matrix_out)) && !is.null(rownames(matrix_out))) {
+    colnames(matrix_out) <- rownames(matrix_out)
+  }
+  if (is.null(rownames(matrix_out))) {
+    stop("The spillover matrix carries no detector names on either dimension.")
   }
 
   matrix_out
@@ -120,9 +140,17 @@ SummariseSpillover <- function(spillover, top = 10) {
     stop("spillover must be a matrix, not a ", class(spillover)[1], ".")
   }
 
+  row_names <- rownames(spillover)
+  col_names <- colnames(spillover)
+  if (is.null(row_names)) row_names <- col_names
+  if (is.null(col_names)) col_names <- row_names
+  if (is.null(row_names)) {
+    stop("spillover carries no detector names, so a pair cannot be named.")
+  }
+
   long <- expand.grid(
-    from = rownames(spillover),
-    to = colnames(spillover),
+    from = row_names,
+    to = col_names,
     stringsAsFactors = FALSE
   )
   long$spill <- as.vector(spillover)

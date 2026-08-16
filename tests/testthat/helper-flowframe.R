@@ -57,3 +57,30 @@ MakeTestFlowFrameWithSpillover <- function(spill = 0.1) {
   flowCore::keyword(frame)[["SPILL"]] <- spillover
   frame
 }
+
+#' Build a small flowSet of compensation controls for a test
+#'
+#' The set holds one control per fluorescence channel plus one unstained control.
+#' The control names are deliberately spelled in three different ways, so the
+#' exact, collapsed and unstained matching passes are each exercised.
+#'
+#' @return A `flowSet` of three samples.
+MakeTestControlSet <- function() {
+  MakeNamedFrame <- function(seed) {
+    frame <- MakeTestFlowFrame(n_events = 100, seed = seed)
+    parameters <- flowCore::parameters(frame)
+    # The panel spells the second fluorochrome without a separator, while the
+    # control file below spells it with one.
+    flowCore::pData(parameters)$desc <- c(NA, NA, "CD3 Ax700", "CD4 PETxRed")
+    flowCore::parameters(frame) <- parameters
+    frame
+  }
+
+  frames <- list(
+    "Comp_Beads_CD3 Ax700_A1_A01_001.fcs" = MakeNamedFrame(1),
+    "Comp_Beads_CD4 PE-TxRed_B1_B01_002.fcs" = MakeNamedFrame(2),
+    "Comp_Beads_unstained_C1_C01_003.fcs" = MakeNamedFrame(3)
+  )
+
+  flowCore::flowSet(frames)
+}

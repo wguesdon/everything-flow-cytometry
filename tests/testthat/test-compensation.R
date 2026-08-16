@@ -89,3 +89,30 @@ test_that("SummariseSpillover honours the top argument", {
 test_that("SummariseSpillover rejects a non matrix", {
   expect_error(SummariseSpillover(list(1, 2)), "must be a matrix")
 })
+
+test_that("ExtractSpillover fills in row names that the file left empty", {
+  frame <- MakeTestFlowFrame()
+  spillover <- MakeTestSpillover()
+  rownames(spillover) <- NULL
+  flowCore::keyword(frame)[["SPILL"]] <- spillover
+
+  result <- ExtractSpillover(frame)
+
+  expect_equal(rownames(result), colnames(result))
+  expect_equal(rownames(result), c("Ax700-A", "PE-TxRed-A"))
+})
+
+test_that("SummariseSpillover works on a matrix with no row names", {
+  spillover <- matrix(
+    c(1.0, 0.30,
+      0.10, 1.00),
+    nrow = 2, byrow = TRUE,
+    dimnames = list(NULL, c("A", "B"))
+  )
+  result <- SummariseSpillover(spillover)
+
+  expect_equal(nrow(result), 2)
+  expect_equal(result$spill[1], 0.30)
+  expect_equal(result$from[1], "A")
+  expect_equal(result$to[1], "B")
+})
