@@ -61,6 +61,7 @@ The repository is at an early stage. The table below states what is ready and wh
 | `docs/literature.md` | Key reviews, the gating variability studies, the data sharing papers, and the paper behind each package |
 | `docs/packages.md` | R and Python packages, grouped by the step they perform, each with its paper |
 | `docs/datasets.md` | Public repositories that hold FCS files, with their current state |
+| `docs/candidate_datasets.md` | Every accession in `data/` with its paper, and the shortlist for the next report |
 | `docs/data_catalog.md` | Every folder in `data/` with its size, so you can choose what to pull |
 | `sync.sh` | Push and pull `data/` to and from S3, in whole or in part |
 | `config.sh` | The bucket URI and the storage class |
