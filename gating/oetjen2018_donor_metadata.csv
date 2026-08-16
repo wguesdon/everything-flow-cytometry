@@ -1,0 +1,23 @@
+sample,donor,sex,age,flow_cytometry,mass_cytometry,bulk_rna,scrna_seq,second_aspiration,note
+T,T,F,24,yes,yes,yes,yes,no,
+W,W,F,28,yes,no,no,yes,no,
+E,E,M,30,yes,no,no,yes,no,
+R,R,M,31,yes,no,no,yes,no,
+F,F,F,41,yes,no,no,yes,no,
+J,J,F,43,yes,yes,yes,yes,no,
+U,U,F,46,yes,yes,yes,yes,no,
+B,B,M,47,yes,yes,yes,yes,no,
+H,H,F,50,yes,yes,yes,yes,no,
+O,O,M,50,yes,yes,yes,yes,no,
+Sk,S,F,55,yes,no,no,yes,yes,Second aspiration of donor S
+S,S,F,56,yes,no,no,yes,no,Table 1 leaves the sex blank and the donor is the same as Sk
+L,L,M,57,yes,no,no,yes,no,
+P,P,F,58,yes,no,no,yes,no,
+G,G,M,58,yes,no,no,yes,no,
+A,A,F,59,yes,yes,yes,yes,no,
+Ck,C,F,59,yes,no,no,yes,yes,Second aspiration of donor C
+C,C,F,60,yes,yes,yes,yes,no,Table 1 leaves the sex blank and the donor is the same as Ck
+M,M,M,60,yes,no,no,yes,no,
+Q,Q,M,66,yes,no,no,yes,no,
+N,N,M,67,yes,no,no,yes,no,
+K,K,M,84,yes,no,no,yes,no,
