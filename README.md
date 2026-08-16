@@ -22,7 +22,8 @@ The repository is at an early stage. The table below states what is ready and wh
 | `docs/literature.md` | Ready. Every citation was verified against a retrieved record on 2026-08-13. |
 | `docs/packages.md` | Partial. The package list is complete for the tools in daily use. The version and maintenance status is checked for some entries only. |
 | `docs/datasets.md` | Ready. Every repository count was checked on 2026-08-13. |
-| `examples/` | Empty. It needs a public dataset and a container. |
+| `data/` and `sync.sh` | Ready. About 103 GB of FCS files and reference code, held in S3. |
+| `examples/` | Empty. It needs the analysis scripts and a container. |
 | Agent skills | Not started. They come after the example code runs. |
 
 ## Contents
@@ -32,6 +33,42 @@ The repository is at an early stage. The table below states what is ready and wh
 | `docs/literature.md` | Key reviews, the gating variability studies and the data sharing papers |
 | `docs/packages.md` | R and Python packages, grouped by the step they perform |
 | `docs/datasets.md` | Public repositories that hold FCS files, with their current state |
+| `docs/data_catalog.md` | Every folder in `data/` with its size, so you can choose what to pull |
+| `sync.sh` | Push and pull `data/` to and from S3, in whole or in part |
+| `config.sh` | The bucket URI and the storage class |
+| `scripts/import_from_wd1.sh` | Copy the archive from the WD1 external drive |
+| `scripts/make_data_catalog.sh` | Rewrite `docs/data_catalog.md` from the local `data/` folder |
+
+## The data
+
+`data/` holds about 103 GB and it is gitignored. Git holds the code and the
+documentation. S3 holds the data, in `s3://wguesdon-flow-cytometry`, with versioning
+enabled and all four public access blocks on.
+
+Most of the archive is FlowRepository downloads. That site stopped accepting new
+experiments in 2025 and its TLS certificate expired on 18 March 2023, so several of
+these accessions are hard to download again. Treat this archive as the working copy.
+
+A full pull transfers about 100 GB. Read `docs/data_catalog.md` first, then pull the
+folders you need.
+
+```bash
+./sync.sh catalog                                  # size of each folder, read from S3
+./sync.sh pull datasets/flowrepository/FR-FCM-ZZZU  # one accession
+./sync.sh pull literature repositories             # two folders at once
+./sync.sh push datasets/flowrepository/FR-FCM-Z282  # upload one folder
+./sync.sh push                                     # upload everything
+```
+
+| Flag | Effect |
+|---|---|
+| `--dry-run` | Show the changes and transfer nothing |
+| `--delete` | Remove remote files that are missing locally. Push only, one folder at a time, and it asks first. |
+
+`--delete` is refused on `pull`. It would erase local files that are absent from the
+bucket, and `data/` is gitignored, so this working copy can be the only copy. The
+bucket has versioning enabled, so a wrong `push --delete` can be undone. A wrong
+`pull --delete` cannot.
 
 ## Planned work
 

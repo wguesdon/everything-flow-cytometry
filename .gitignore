@@ -1,8 +1,11 @@
-# Flow cytometry data. Download it from the accession in docs/datasets.md.
+# The data archive, about 103 GB. It lives in S3, not in git.
+# Pull it with ./sync.sh, and read docs/data_catalog.md to choose what you need.
+data/
+
+# Loose cytometry files anywhere else in the tree
 *.fcs
 *.wsp
 *.jo
-data/raw/
 
 # R
 .Rproj.user/
