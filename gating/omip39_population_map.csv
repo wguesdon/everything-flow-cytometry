@@ -1,0 +1,8 @@
+manual,automated,note
+Viable CD14- CD19-,Viable,"The dump channel carries the viability dye plus CD14 and CD19, so one gate removes dead cells, monocytes and B cells at once."
+Single Cells,SingleCells,FSC-A against FSC-H. The template uses openCyto singletGate and the analyst drew a polygon.
+Lymphocytes,Lymphocytes,"FSC-A against SSC-A. The analyst drew a polygon by eye; the template fits flowClust with K=2."
+CD56+ CD3-,CD56posCD3neg,NK cells. The analyst used one quadrant gate and the template uses two one-dimensional gates combined with a boolean.
+CD56+CD3+,CD56posCD3pos,NKT-like cells. Same quadrant against boolean difference.
+CD56- CD3+,CD56negCD3pos,T cells. Same quadrant against boolean difference.
+CD56- CD3-,CD56negCD3neg,Double negative. Same quadrant against boolean difference.

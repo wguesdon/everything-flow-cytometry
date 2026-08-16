@@ -1,0 +1,10 @@
+alias,pop,parent,dims,gating_method,gating_args,collapseDataForGating,groupBy,preprocessing_method,preprocessing_args
+Viable,-,root,Zombie aqua CD14 CD19,mindensity,,,,,
+SingleCells,+,Viable,"FSC-A,FSC-H",singletGate,,,,,
+Lymphocytes,+,SingleCells,"FSC-A,SSC-A",flowClust,K=2,,,,
+CD56pos,+,Lymphocytes,CD56 PEDazzle594,mindensity,,,,,
+CD3pos,+,Lymphocytes,CD3 PECy5,mindensity,,,,,
+CD56posCD3neg,+,Lymphocytes,,boolGate,CD56pos&!CD3pos,,,,
+CD56posCD3pos,+,Lymphocytes,,boolGate,CD56pos&CD3pos,,,,
+CD56negCD3pos,+,Lymphocytes,,boolGate,!CD56pos&CD3pos,,,,
+CD56negCD3neg,+,Lymphocytes,,boolGate,!CD56pos&!CD3pos,,,,
