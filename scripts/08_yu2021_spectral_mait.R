@@ -32,7 +32,7 @@
 #
 # Run it in the container:
 #   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
-#     Rscript scripts/07_yu2021_spectral_mait.R
+#     Rscript scripts/08_yu2021_spectral_mait.R
 
 suppressPackageStartupMessages({
   library(flowCore)

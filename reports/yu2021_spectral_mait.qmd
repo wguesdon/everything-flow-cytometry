@@ -36,7 +36,7 @@ ReadOutput <- function(name) {
   if (!file.exists(path)) {
     stop(
       "The analysis output is missing: ", path, "\n",
-      "Run scripts/07_yu2021_spectral_mait.R first. ",
+      "Run scripts/08_yu2021_spectral_mait.R first. ",
       "See the section 'Reproducing this'."
     )
   }
@@ -521,7 +521,7 @@ and that is the next check this analysis needs.
 
 # The analysis
 podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
-  Rscript scripts/07_yu2021_spectral_mait.R
+  Rscript scripts/08_yu2021_spectral_mait.R
 
 # This report
 podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \

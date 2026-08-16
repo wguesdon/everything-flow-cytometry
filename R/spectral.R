@@ -122,7 +122,7 @@ EstimateSpectralTransform <- function(path, channels = NULL) {
 #' the data.
 #'
 #' The price is that a sample whose staining drifted is gated at the wrong place
-#' and nothing corrects for it. [CutPointDiagnostics()] reports that.
+#' and nothing corrects for it. No batch correction runs before this step.
 #'
 #' @param path Path to a CSV with the columns `marker`, `parent`, `side`, `cut`,
 #'   `source` and `note`. `side` is `"above"` or `"below"`.
@@ -195,7 +195,7 @@ SingletMask <- function(events, tolerance = 3) {
 #'   resolve a marker name to a detector name.
 #' @param cd45ra_cut Overrides the CD45RA cut in `cuts`. A vector returns one row
 #'   of counts per value, which is how the sweep in
-#'   `scripts/07_yu2021_spectral_mait.R` shows what the choice changes without
+#'   `scripts/08_yu2021_spectral_mait.R` shows what the choice changes without
 #'   reading every file again.
 #' @param subsample_n Live CD45 positive events to draw for the pooled
 #'   clustering. Pass 0 to skip the draw.
