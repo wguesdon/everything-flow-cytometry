@@ -70,6 +70,35 @@ bucket, and `data/` is gitignored, so this working copy can be the only copy. Th
 bucket has versioning enabled, so a wrong `push --delete` can be undone. A wrong
 `pull --delete` cannot.
 
+### Run a long transfer in tmux
+
+A full push moves about 100 GB. Start it in a tmux session so the transfer survives
+a closed terminal or a dropped SSH connection.
+
+```bash
+cd /mnt/data/Github/everything-flow-cytometry
+tmux new -s flow_push
+./sync.sh push 2>&1 | tee logs/push_$(date +%Y_%m_%d).log
+```
+
+Press `Ctrl-b` then `d` to detach. The transfer continues.
+
+```bash
+tmux attach -t flow_push     # go back to it
+tmux ls                      # list the sessions
+tail -f logs/push_*.log      # watch the log without attaching
+```
+
+To start it detached in one command:
+
+```bash
+tmux new -d -s flow_push -c /mnt/data/Github/everything-flow-cytometry \
+  './sync.sh push 2>&1 | tee logs/push_'"$(date +%Y_%m_%d)"'.log'
+```
+
+`aws s3 sync` compares each object before it transfers, so an interrupted push is
+safe. Run the same command again and it continues from where it stopped.
+
 ## Planned work
 
 1. Add one worked example on a public dataset. The example reads FCS files, applies compensation and
