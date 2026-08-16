@@ -1,0 +1,23 @@
+# Flow cytometry data. Download it from the accession in docs/datasets.md.
+*.fcs
+*.wsp
+*.jo
+data/raw/
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+renv/staging/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Output
+output/
+results/
+*.html_files/
