@@ -1,0 +1,359 @@
+---
+title: "Entering a benchmark with one feature"
+subtitle: "The FlowCAP II sample classification challenges, FR-FCM-ZZZV and FR-FCM-ZZZU"
+author: "William Guesdon"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: show
+    code-tools: true
+    embed-resources: true
+    theme: cosmo
+    fig-width: 9
+    fig-height: 6
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(knitr)
+})
+
+kOutputDir <- file.path("..", "output", "flowcap2")
+
+ReadOutput <- function(name) {
+  path <- file.path(kOutputDir, name)
+  if (!file.exists(path)) {
+    stop(
+      "The analysis output is missing: ", path, "\n",
+      "Run scripts/12_flowcap2_challenges.R first. ",
+      "See the section 'Reproducing this'."
+    )
+  }
+  read.csv(path, check.names = FALSE)
+}
+
+OutputImage <- function(name) {
+  file.path(kOutputDir, name)
+}
+
+verdicts <- ReadOutput("claim_verdicts.csv")
+scores <- ReadOutput("scores.csv")
+```
+
+## Why this dataset
+
+- Every other report in this repository tests a claim about a cell frequency.
+  This one tests a claim about an algorithm.
+- FlowCAP II asked whether a computational pipeline can read a class label out of
+  a set of FCS files. It handed every entrant half of the labels for training and
+  it scored them on the half it held back [1].
+- Two of the three challenge datasets are in this archive, and both carry the
+  labels and the split that the benchmark used.
+- The benchmark answered its question in two opposite ways. Many algorithms
+  classified the HVTN samples perfectly, and none of them classified the HEUvsUE
+  samples at all. A report that reproduces only one of those two results has not
+  reproduced the paper.
+
+```{r}
+#| label: hvtn-design
+
+kable(
+  ReadOutput("hvtn_design.csv"),
+  caption = "Challenge 3, the HVTN deposit. Each of 48 subjects contributes five files.",
+  col.names = c("Treatment", "Split", "Files")
+)
+```
+
+```{r}
+#| label: heu-design
+
+heu <- ReadOutput("heu_design.csv")
+kable(
+  heu[heu$Freq > 0, ],
+  caption = "Challenge 1, the HEUvsUE deposit. Each of 44 infants contributes seven files.",
+  col.names = c("Condition", "Stimulation", "Files")
+)
+```
+
+## Part 1: the rule that enters the benchmark
+
+- The rule is the simplest one that can compete. It scores every gated feature on
+  the training half alone, takes the single best one, places a threshold on it,
+  and applies that threshold unchanged to the half that was held back.
+- A one feature rule cannot hide behind its own complexity. It names the
+  population it used, which is exactly what the paper's own discussion turns on.
+- Nothing about the held out samples takes part in the feature choice or in the
+  threshold.
+
+### The cytokine gate is the part that had to change
+
+- A cytokine gate cannot be fitted the way every other gate in this repository is
+  fitted. An unstimulated T cell is negative for all four cytokines, so the
+  density carries one mode and a two component mixture splits the negative
+  population down the middle.
+- The first attempt did exactly that and reported 90 percent of CD4 T cells as
+  interleukin 2 positive, which is impossible.
+- Both deposits ship their own unstimulated controls, so the threshold is placed
+  on the control at its 99.9th percentile and applied to the stimulated file of
+  the same subject. That is how an intracellular staining panel is read at the
+  bench.
+- The HVTN deposit gives each subject two negative controls. One sets the
+  threshold and the other measures the background at that same threshold, so a
+  reported frequency sits above a background that was measured rather than
+  assumed.
+
+### One transform for every file
+
+- This is the only report here that does not estimate a logicle per file.
+- A threshold taken from a subject's control is applied to that subject's
+  stimulated file, so the two files have to sit on one scale. A logicle estimated
+  per file does not give that, and the estimator refuses some files of the HVTN
+  deposit at every decade count.
+- Every channel is therefore transformed with one arcsinh at a fixed cofactor.
+
+```{r}
+#| label: failures
+
+failures <- ReadOutput("hvtn_failures.csv")
+kable(
+  if (nrow(failures) == 0) {
+    data.frame(Reason = "none", Files = 0)
+  } else {
+    as.data.frame(table(Reason = failures$reason))
+  },
+  caption = "Why a file of the HVTN deposit could not be gated, out of 240.",
+  col.names = c("Reason", "Files")
+)
+```
+
+## Part 2: the population the paper names
+
+```{r}
+#| label: env-gag
+
+kable(
+  ReadOutput("env_against_gag.csv"),
+  digits = 4,
+  caption = "Every cytokine of every T cell subset, Env against Gag, paired within a subject. The values are percentages above the control threshold with the background removed.",
+  col.names = c("Feature", "Subjects", "Env median", "Gag median",
+                "Subjects where Env is higher", "p")
+)
+```
+
+```{r}
+#| label: env-gag-figure
+#| fig-cap: "Env against Gag on every feature. The values are background removed, so a value near zero means no response above the subject's own control."
+
+knitr::include_graphics(OutputImage("env_against_gag.png"))
+```
+
+- The paper reports that manual gating identified the CD4 interleukin 2
+  population as discriminative, with the Env stimulated samples systematically
+  higher than the Gag stimulated ones.
+- The deposit says the same. CD4 interleukin 2 is higher in Env in 37 of the 47
+  paired subjects, and the paired test gives p below 0.001.
+- Three other features separate the two antigens as well, and one of them does it
+  more strongly. CD8 interferon gamma is the most significant of the eight, and
+  it runs the other way, with the Gag samples higher.
+- That is worth stating rather than smoothing over. The paper names one
+  population because manual gating looked at one population. An automated sweep
+  over all eight finds it, and it also finds three the paper does not mention.
+
+## Part 3: the two challenges, scored the way the benchmark scored them
+
+```{r}
+#| label: scores
+
+kable(
+  scores,
+  digits = 3,
+  caption = "The four measures the FlowCAP table reports, for the training half and the held out half of each challenge.",
+  col.names = c("Challenge", "Half", "Recall", "Precision", "Accuracy",
+                "F-measure", "Samples")
+)
+```
+
+```{r}
+#| label: scores-figure
+#| fig-cap: "The two challenges side by side. The dashed line is the accuracy of a coin."
+
+knitr::include_graphics(OutputImage("scores.png"))
+```
+
+```{r}
+#| label: selected
+
+ranking <- ReadOutput("hvtn_feature_ranking.csv")
+kable(
+  ranking,
+  digits = 3,
+  caption = "Every feature, ranked by how far its training area under the curve sits from a half. The top row is the feature the rule selected.",
+  col.names = c("Feature", "Training area under the curve", "Separation")
+)
+```
+
+```{r}
+#| label: selected-figure
+#| fig-cap: "The selected feature, with the threshold that the training half fitted. The testing points were never seen when the threshold was placed."
+
+knitr::include_graphics(OutputImage("hvtn_selected_feature.png"))
+```
+
+- On the HVTN challenge one feature classifies the held out half at an accuracy
+  near 0.8. That is well short of the perfect scores that six named algorithms
+  reached, and it is a long way above a coin.
+- The rule selected CD4 interleukin 4 rather than CD4 interleukin 2. The paper
+  reports that four of the eight methods which named their features chose one
+  containing CD4 interleukin 2, so the claim about the selected feature is
+  recorded as not reproduced even though the population itself separates the two
+  antigens.
+- On the HEUvsUE challenge the same rule reaches an accuracy of 0.875 on the
+  training half and 0.538 on the half it had not seen.
+
+```{r}
+#| label: heu-ranking
+
+kable(
+  head(ReadOutput("heu_feature_ranking.csv"), 10),
+  digits = 3,
+  caption = "The ten features that separate the HEUvsUE training half best. None of them survives the move to the held out half.",
+  col.names = c("Feature", "Training area under the curve", "Separation")
+)
+```
+
+- That collapse is the paper's own sentence, measured. The training half looks
+  classifiable and the held out half is not.
+- The paper draws the conclusion that these samples may be unclassifiable on the
+  basis of the markers used. This analysis cannot settle that, and it does
+  reproduce the pattern the conclusion rests on.
+
+## Part 4: every claim, with a verdict
+
+```{r}
+#| label: verdicts
+
+kable(
+  verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+  caption = "Every claim the paper makes about these two challenge datasets.",
+  col.names = c("Claim", "What the paper says", "Expected", "Measured",
+                "Verdict")
+)
+```
+
+```{r}
+#| label: verdict-counts
+
+kable(
+  as.data.frame(table(verdicts$verdict)),
+  caption = "How the six claims came out.",
+  col.names = c("Verdict", "Claims")
+)
+```
+
+## Discussion
+
+### What this shows
+
+- The two opposite results of the benchmark both reproduce from the deposited
+  files, using one rule that was written without reference to either.
+- The HVTN samples are classifiable. A single gated feature, chosen on the
+  training half, holds an accuracy near 0.8 on samples it had never seen.
+- The HEUvsUE samples are not. The same rule finds a feature that separates the
+  training half at an accuracy of 0.875 and then falls to a coin on the held out
+  half.
+- The population the paper names is discriminative. CD4 interleukin 2 is higher
+  after Env stimulation in 37 of 47 subjects.
+
+### Where this rule falls short of the benchmark
+
+- Six named algorithms reached an F-measure of 1.0 on the HVTN challenge and this
+  rule reaches 0.77.
+- The gap is the rule and not the data. One feature and one threshold cannot
+  combine evidence, and the eight features here disagree with each other. CD4
+  interleukin 4 and CD4 interleukin 2 both favour Env while CD8 interferon gamma
+  favours Gag, so a method that reads all three at once has information that a
+  method reading one of them does not.
+- That is the useful negative result. The benchmark was not won by better gating.
+  It was won by combining features, and this report shows how much is left on the
+  table by refusing to.
+
+### What this does not show
+
+- It does not enter the benchmark properly. FlowCAP scored a submission against
+  its own held out labels under a protocol, and this report scores itself.
+- The AML challenge, which is the third dataset and the one the paper treats as
+  the practical use case, is not in this archive.
+- The HEUvsUE deposit carries no training and testing split, so this report makes
+  one by alternating individuals. It is deterministic and stated, and it is not
+  the split the benchmark used.
+- Fifteen of the 44 infants lack a complete feature vector, because a lineage
+  gate did not resolve in at least one of their seven files. That leaves a small
+  test set and it widens every interval in Part 3.
+
+### What is left to do
+
+- A rule that combines features is the obvious next step, and the deposit
+  supports it. The honest way to run it is to fix the method before looking at
+  the held out half, exactly as this one did.
+- The HVTN deposit also carries a positive control for every subject, stimulated
+  with staphylococcal enterotoxin B. It is gated here and it is not used, and it
+  is the natural check on whether a subject's cells responded at all.
+
+## Reproducing this
+
+```bash
+# Pull the two accessions, about 8 GB of the 103 GB archive
+./sync.sh pull datasets/flowrepository/FlowRepository_FR-FCM-ZZZV_files
+./sync.sh pull datasets/flowrepository/FR-FCM-ZZZU
+
+# Build the container. Every package version is pinned and asserted at build time.
+./containers/build.sh
+
+# The analysis
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  Rscript scripts/12_flowcap2_challenges.R
+
+# This report
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  quarto render reports/flowcap2_challenges.qmd
+```
+
+- Both deposits carry their own label file in `attachments/`, so the class of
+  every sample travels with the data.
+- The claims live in `gating/flowcap2_paper_claims.csv`, each with the sentence
+  it came from.
+
+```{r}
+#| label: session-info
+
+sessionInfo()
+```
+
+## References
+
+[1] Aghaeepour N, Finak G, FlowCAP Consortium, DREAM Consortium, Hoos H, Mosmann
+TR, Brinkman R, Gottardo R, Scheuermann RH. Critical assessment of automated flow
+cytometry data analysis techniques. Nat Methods 2013;10(3):228-238. PMID
+23396282. PMC3906045. doi:10.1038/nmeth.2365.
+
+[2] Spearman P, Lally MA, Elizaga M, Montefiori D, Tomaras GD, McElrath MJ, Hural
+J, De Rosa SC, et al. A trimeric, V2-deleted HIV-1 envelope glycoprotein vaccine
+elicits potent neutralizing antibodies but limited breadth of neutralization in
+human volunteers. J Infect Dis 2011;203(8):1165-1173. PMID 21451004. PMC3068023.
+doi:10.1093/infdis/jiq175.
+
+[3] Hahne F, LeMeur N, Brinkman RR, Ellis B, Haaland P, Sarkar D, Spidlen J,
+Strain E, Gentleman R. flowCore: a Bioconductor package for high throughput flow
+cytometry. BMC Bioinformatics 2009;10:106. PMID 19358741.
+doi:10.1186/1471-2105-10-106.

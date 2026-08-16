@@ -1,7 +1,7 @@
 # Candidate datasets for the next report
 
 This page lists every dataset in `data/datasets/flowrepository/` that carries a published paper. It
-says what each deposit can test and what it cannot. Seven reports are complete. The first three
+says what each deposit can test and what it cannot. Eight reports are complete. The first four
 entries of the shortlist below are now written, and the page keeps them so that a reader can see why
 each one was chosen.
 
@@ -10,6 +10,7 @@ each one was chosen.
 | FR-FCM-Z282 | `reports/z282_harmonisation.qmd` | 15 of 20 claims reproduce. One cut per operator fixes repeatability and not agreement. |
 | FR-FCM-ZYQ9 and ZYQB | `reports/oetjen2018_bone_marrow.qmd` | The deposited viability gate runs the opposite way to the convention. The age claim reproduces and the lineage frequencies are not measurable by an automated cut. |
 | FR-FCM-Z2KP | `reports/vanderbeke2021_covid.qmd` | The closest human against automated agreement in the repository, at rho 0.94 or better on three of five measures. |
+| FR-FCM-ZZZV and ZZZU | `reports/flowcap2_challenges.qmd` | Both halves of the benchmark reproduce. One feature classifies the HVTN samples at 0.79 accuracy on the held out half, and the same rule collapses from 0.88 to 0.54 on HEUvsUE. |
 
 Every accession was read from the local folder on 2026-08-16. Every citation was retrieved from
 Europe PMC on the same date. No citation is written from memory.
@@ -178,8 +179,9 @@ that the Maecker study raised and that no report in this repository has been abl
 Take FR-FCM-ZYQ9 with FR-FCM-ZYQB second. It brings mass cytometry into the repository and it tests an
 age effect across 20 donors.
 
-All three were taken, in that order. FR-FCM-ZZZU and FR-FCM-ZZZV, the two FlowCAP-II benchmarks, are
-the next ones and they are still open.
+All three were taken, in that order, and the two FlowCAP-II benchmarks were taken after them. The
+open entries are now FR-FCM-Z244, the mass cytometry transplantation panel, and the OMIP deposits that
+are still inside a zip file.
 
 ## Every accession in the archive
 
