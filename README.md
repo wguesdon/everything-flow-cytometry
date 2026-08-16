@@ -13,14 +13,26 @@ The software to replace manual gating exists. Most of it is command line R, and 
 laboratories do not use it. This repository puts the reading list, the package list and runnable
 example code in one place.
 
+## The two lists
+
+Start with these two documents. They are the reference part of the repository.
+
+| Document | What you find in it |
+|---|---|
+| [`docs/packages.md`](docs/packages.md) | Every R and Python package worth using, grouped by the step it performs. Each package names its own paper. A separate table lists the packages that no longer work. |
+| [`docs/literature.md`](docs/literature.md) | The reviews, the studies that measure how much variation manual gating adds, the data sharing papers, the standards and the benchmarks. Its last section maps each package to the paper that describes it. |
+
+The two documents point at each other. Read `docs/packages.md` to choose a tool. Read
+[the last section of `docs/literature.md`](docs/literature.md#papers-behind-the-packages) to cite it.
+
 ## Status
 
 The repository is at an early stage. The table below states what is ready and what is not.
 
 | Item | State |
 |---|---|
-| `docs/literature.md` | Ready. Every citation was verified against a retrieved record on 2026-08-13. |
-| `docs/packages.md` | Partial. The package list is complete for the tools in daily use. The version and maintenance status is checked for some entries only. |
+| `docs/literature.md` | Ready. Every citation was verified against a retrieved record on 2026-08-13, and the package papers on 2026-08-16. |
+| `docs/packages.md` | Partial. The package list is complete for the tools in daily use, and every package names its paper. The version and maintenance status is checked for some entries only. |
 | `docs/datasets.md` | Ready. Every repository count was checked on 2026-08-13. |
 | `data/` and `sync.sh` | Ready. About 103 GB of FCS files and reference code, held in S3. |
 | `examples/` | Empty. It needs the analysis scripts and a container. |
@@ -30,14 +42,15 @@ The repository is at an early stage. The table below states what is ready and wh
 
 | Path | Content |
 |---|---|
-| `docs/literature.md` | Key reviews, the gating variability studies and the data sharing papers |
-| `docs/packages.md` | R and Python packages, grouped by the step they perform |
+| `docs/literature.md` | Key reviews, the gating variability studies, the data sharing papers, and the paper behind each package |
+| `docs/packages.md` | R and Python packages, grouped by the step they perform, each with its paper |
 | `docs/datasets.md` | Public repositories that hold FCS files, with their current state |
 | `docs/data_catalog.md` | Every folder in `data/` with its size, so you can choose what to pull |
 | `sync.sh` | Push and pull `data/` to and from S3, in whole or in part |
 | `config.sh` | The bucket URI and the storage class |
 | `scripts/import_from_wd1.sh` | Copy the archive from the WD1 external drive |
 | `scripts/make_data_catalog.sh` | Rewrite `docs/data_catalog.md` from the local `data/` folder |
+| `scripts/verify_package_papers.sh` | Retrieve the paper for each package from Europe PMC, so the citations stay checkable |
 
 ## The data
 
@@ -112,3 +125,7 @@ safe. Run the same command again and it continues from where it stopped.
 The citations and the repository counts come from a literature search that was run on 2026-08-13.
 Each claim was checked against Europe PMC, PubMed, Crossref, Semantic Scholar or the PMC full text. A
 claim that failed verification is not in this repository.
+
+The paper for each package was retrieved from Europe PMC on 2026-08-16. Run
+`./scripts/verify_package_papers.sh` to repeat that search and to compare the result against
+`docs/literature.md`.
