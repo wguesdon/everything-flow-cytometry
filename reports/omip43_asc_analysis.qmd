@@ -347,11 +347,43 @@ definitions <- read.csv(
   file.path("..", "gating", "omip43_cell_type_definitions.csv"),
   check.names = FALSE
 )
+
+# The file names detectors, because that is what the score has to match against
+# the data. Here the columns are shown as markers, so this table and the scaled
+# table below can be read side by side.
+detector_to_marker <- c(
+  "Comp-APC-A" = "CD19",
+  "Comp-BV421-A" = "CD20",
+  "Comp-PerCP-Cy5-5-A" = "IgD",
+  "Comp-BV786-A" = "CD27",
+  "Comp-BUV395-A" = "CD38"
+)
+shown <- definitions
+names(shown)[match(names(detector_to_marker), names(shown))] <- detector_to_marker
+
 kable(
-  definitions,
-  caption = "The definitions the labels are scored against. A blank means the marker is not used for that type."
+  shown[, c("cell_type", unname(detector_to_marker))],
+  caption = "The definitions the labels are scored against. A blank means the marker takes no part in that type."
 )
 ```
+
+The reasoning behind each row is kept in the file itself, in a `note` column left
+out of the table above for width.
+
+```{r}
+#| label: definition-notes
+
+kable(
+  definitions[, c("cell_type", "note")],
+  caption = "Why each definition is written that way.",
+  col.names = c("Cell type", "Note")
+)
+```
+
+Five markers do the labelling. The clustering itself used seven, adding
+cytoplasmic immunoglobulin and HLA-DR, so the scaled table below carries two
+columns that the score does not read. They are shown because they help a reader
+judge a label even when the rule ignores them.
 
 **Step 2. Take the median of every marker in every cluster, and scale it.** Each
 marker is rescaled to run from 0 to 1 across the fifteen clusters, so a bright
@@ -565,6 +597,79 @@ HLA-DR as varying between tissues, and the PE channel in these deposited files
 carries HLA-DR rather than Ki67. The paper describes both as options for that
 channel. It is recorded here as not measurable rather than counted as a failure,
 because the data to test it was never deposited.
+
+### The same claims, from a population the manual gate never touched
+
+Everything above defines ASC by the gate the authors drew. That asks whether the
+paper's conclusions follow from its own analysis, which is worth knowing and is not
+the same as reproducing them independently.
+
+So the population was rebuilt from scratch. Each tissue was clustered, every
+metacluster labelled from the definitions file, and the clusters labelled as
+antibody secreting cells taken as the population. The manual gate was not consulted
+at any point.
+
+```{r}
+#| label: cluster-route
+
+cluster_route <- ReadOutput("cluster_route_phenotype.csv")
+kable(
+  cluster_route[, c("tissue", "asc_clusters", "asc_percent", "manual_percent",
+                    "agreement_percent", "ssc_ratio", "cd20_difference")],
+  digits = 2,
+  caption = "ASC defined by clustering alone, against the manual value for the same file.",
+  col.names = c("Tissue", "ASC clusters", "Clustering percent", "Manual percent",
+                "Agreement percent", "Side scatter ratio", "CD20 difference")
+)
+```
+
+Three tissues land close. Tonsil gives 0.77 percent against 0.86 and agrees on
+91.9 percent of the events it selects. Spleen gives 4.32 against 3.34 with 75.4
+percent agreement. Blood gives 0.57 against 0.33 with 55.1 percent agreement,
+which is loose but the right order of magnitude.
+
+Bone marrow fails. Clustering calls 9.44 percent of the parent ASC where the
+manual gate calls 0.45, and only 4.1 percent of the selected events are inside
+that gate. The label picked a large population that is not ASC.
+
+```{r}
+#| label: both-routes
+
+both <- ReadOutput("claims_both_routes.csv")
+kable(
+  both[, c("claim_id", "short_name", "route", "observed", "verdict")],
+  caption = "Each claim by both routes. The two counting claims can only be tested on the gated counts, so they appear once.",
+  col.names = c("Claim", "Short name", "Route", "Observed", "Verdict")
+)
+```
+
+Claim 1 reproduces by both routes. Blood holds the fewest ASC however the
+population is defined.
+
+Claims 4 and 5 reproduce on the authors' gates and fail on the clustering route,
+and the failure is entirely bone marrow. Its side scatter ratio is 0.66 where the
+other three run from 1.78 to 2.63, and its CD20 difference is positive at 4.2
+where the other three run from minus 9.5 to minus 42.7. Drop that one tissue and
+both claims hold in three of three.
+
+That is the honest reading. The claims are about ASC, and in bone marrow the
+clustering route did not select ASC, so it is not testing the claim there. Since
+the report cannot know that without the manual gate, the verdict stays as the
+arithmetic returned it.
+
+### Why bone marrow is the one that breaks
+
+Bone marrow has the fewest ASC of the four tissues, 185 events per replicate and
+0.45 percent of the parent. That is the same condition that broke the density gate
+in Part 3b, arriving now by a different path.
+
+With so few target cells, no metacluster is predominantly ASC. The definitions
+then match whichever cluster best fits CD38 intermediate and CD27 positive, and in
+bone marrow that is a much larger population of something else.
+
+Both automated routes therefore fail on the same tissue, for the same underlying
+reason, and neither failure is about the method being wrong in principle. Rarity
+is the difficulty, and bone marrow is where these cells are rarest.
 
 ```{r}
 #| label: verdict-summary

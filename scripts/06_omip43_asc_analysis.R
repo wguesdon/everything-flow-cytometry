@@ -753,6 +753,141 @@ Log("Claims reproduced:", sum(verdicts$verdict == "reproduced"), "of",
     nrow(verdicts))
 
 # ---------------------------------------------------------------------------
+# 5c. The same claims again, from a population the manual gate never touched
+# ---------------------------------------------------------------------------
+#
+# Everything above defines ASC by the gate the authors drew. That tests whether
+# the paper's conclusions follow from its own analysis, which is worth knowing and
+# is not the same as reproducing them independently.
+#
+# Here the ASC population is defined by clustering instead. Each tissue is
+# clustered, every metacluster is labelled from the definitions file, and the
+# clusters labelled as antibody secreting cells become the population. The manual
+# gate is not consulted at any point, so the claims below are tested against cells
+# selected by a route that shares nothing with the original analysis.
+
+Log("Rebuilding the ASC population from clustering, per tissue")
+
+cluster_phenotype_rows <- list()
+for (tissue in kTissues) {
+  gating_hierarchy <- gating_sets[[tissue]][[1]]
+  events_all <- flowCore::exprs(
+    flowWorkspace::gh_pop_get_data(gating_hierarchy, kParentPath)
+  )
+  truth_all <- flowWorkspace::gh_pop_get_indices(gating_hierarchy, kAscPath)[
+    flowWorkspace::gh_pop_get_indices(gating_hierarchy, kParentPath)
+  ]
+
+  withr::with_seed(kSeed, {
+    keep <- sample.int(nrow(events_all), min(kSubsampleSize, nrow(events_all)))
+  })
+  events <- events_all[keep, , drop = FALSE]
+  truth <- truth_all[keep]
+
+  clusters <- RunFlowSomClustering(
+    events, channels = kClusterChannels,
+    grid_size = 10, n_metaclusters = kMetaclusters, seed = kSeed
+  )
+  medians <- ClusterMedianExpression(events, clusters$metacluster, kClusterChannels)
+  labels <- AnnotateClusters(medians, definitions)
+
+  asc_clusters <- labels$cluster[labels$cell_type == "Antibody secreting cells"]
+  is_asc <- clusters$metacluster %in% asc_clusters
+
+  if (sum(is_asc) < 50) {
+    Log("  ", tissue, "no usable ASC cluster, skipping")
+    next
+  }
+
+  MedianIn <- function(channel, subset) stats::median(events[subset, channel])
+
+  cluster_phenotype_rows[[length(cluster_phenotype_rows) + 1]] <- data.frame(
+    tissue = tissue,
+    asc_clusters = length(asc_clusters),
+    asc_events = sum(is_asc),
+    asc_percent = 100 * mean(is_asc),
+    manual_percent = 100 * mean(truth),
+    agreement_percent = 100 * sum(is_asc & truth) / sum(is_asc),
+    ssc_asc = MedianIn("SSC-A", is_asc),
+    ssc_other = MedianIn("SSC-A", !is_asc),
+    cd20_asc = MedianIn(kChannels[["CD20"]], is_asc),
+    cd20_other = MedianIn(kChannels[["CD20"]], !is_asc),
+    cd19_asc = MedianIn(kChannels[["CD19"]], is_asc),
+    hladr_asc = MedianIn(kChannels[["HLA-DR"]], is_asc),
+    stringsAsFactors = FALSE
+  )
+  Log("  ", tissue, sprintf("%d cluster(s), %.2f%% of the parent against %.2f%% manual",
+                            length(asc_clusters), 100 * mean(is_asc), 100 * mean(truth)))
+}
+
+cluster_phenotype <- do.call(rbind, cluster_phenotype_rows)
+cluster_phenotype$ssc_ratio <- cluster_phenotype$ssc_asc / cluster_phenotype$ssc_other
+cluster_phenotype$cd20_difference <- cluster_phenotype$cd20_asc -
+  cluster_phenotype$cd20_other
+write.csv(cluster_phenotype, file.path(kOutputDir, "cluster_route_phenotype.csv"),
+          row.names = FALSE)
+
+cat("\n=== ASC defined by clustering alone ===\n")
+print(cluster_phenotype[, c("tissue", "asc_percent", "manual_percent",
+                            "agreement_percent", "ssc_ratio", "cd20_difference")],
+      digits = 3, row.names = FALSE)
+
+# The same claims, scored against this population.
+cluster_pbmc <- cluster_phenotype$asc_percent[cluster_phenotype$tissue == "PBMC"]
+cluster_others <- cluster_phenotype$asc_percent[cluster_phenotype$tissue != "PBMC"]
+
+route_rows <- list(
+  Verdict(1,
+          sprintf("PBMC %.2f%%, others %.2f to %.2f%%", cluster_pbmc,
+                  min(cluster_others), max(cluster_others)),
+          if (all(cluster_pbmc < cluster_others)) "reproduced" else "not reproduced",
+          "Tested on clusters, not on the manual gate."),
+  Verdict(4,
+          sprintf("side scatter ratio %.2f to %.2f",
+                  min(cluster_phenotype$ssc_ratio), max(cluster_phenotype$ssc_ratio)),
+          if (all(cluster_phenotype$ssc_ratio > 1)) "reproduced" else "not reproduced",
+          "Tested on clusters, not on the manual gate."),
+  Verdict(5,
+          sprintf("CD20 difference %.1f to %.1f",
+                  min(cluster_phenotype$cd20_difference),
+                  max(cluster_phenotype$cd20_difference)),
+          if (all(cluster_phenotype$cd20_difference < 0)) "reproduced" else
+            "not reproduced",
+          "Tested on clusters, not on the manual gate."),
+  Verdict(6,
+          sprintf("CD19 median %.0f to %.0f, CV %.1f%%",
+                  min(cluster_phenotype$cd19_asc), max(cluster_phenotype$cd19_asc),
+                  MeasuredCv(cluster_phenotype$cd19_asc)),
+          if (MeasuredCv(cluster_phenotype$cd19_asc) > 5) "reproduced" else
+            "too small to call",
+          "Tested on clusters, not on the manual gate."),
+  Verdict(7,
+          sprintf("HLA-DR median %.0f to %.0f, CV %.1f%%",
+                  min(cluster_phenotype$hladr_asc), max(cluster_phenotype$hladr_asc),
+                  MeasuredCv(cluster_phenotype$hladr_asc)),
+          if (MeasuredCv(cluster_phenotype$hladr_asc) > 5) "reproduced" else
+            "too small to call",
+          "Tested on clusters, not on the manual gate.")
+)
+
+route_two <- merge(claims, do.call(rbind, route_rows), by = "claim_id")
+route_two <- route_two[order(route_two$claim_id), ]
+
+both_routes <- rbind(
+  cbind(verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+        route = "the authors' gates"),
+  cbind(route_two[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+        route = "clustering")
+)
+both_routes <- both_routes[order(both_routes$claim_id), ]
+write.csv(both_routes, file.path(kOutputDir, "claims_both_routes.csv"),
+          row.names = FALSE)
+
+cat("\n=== The same claims by two independent routes ===\n")
+print(both_routes[, c("claim_id", "short_name", "route", "observed", "verdict")],
+      row.names = FALSE)
+
+# ---------------------------------------------------------------------------
 # 6. Figures
 # ---------------------------------------------------------------------------
 
