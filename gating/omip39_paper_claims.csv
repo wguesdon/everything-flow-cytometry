@@ -1,0 +1,8 @@
+claim_id,marker,measure,direction,quote,figure
+1,NKG2A,percent_positive,lower,"adaptive NKG2C1 NK cells were demonstrated to be enriched for NKG2A– and CD571 cells and are consequently considered terminally differentiated",1B
+2,CD57,percent_positive,higher,"adaptive NKG2C1 NK cells were demonstrated to be enriched for NKG2A– and CD571 cells and are consequently considered terminally differentiated",1B
+3,NKp30,percent_positive,lower,"The initial description of adaptive NKG2C1 NK cells in HCMV-seropositive healthy individuals included reduced proportions of cells expressing the natural cytotoxicity receptor NKp30 (CD337)",1B
+4,ILT2,percent_positive,higher,"as well as increased frequencies of ILT2 (CD85j)-expressing cells",1B
+5,Siglec-7,percent_positive,lower,"In-depth phenotypical analyses have demonstrated that adaptive NK cells preferentially lack the inhibitory receptor Siglec-7",1B
+6,CD2,percent_positive,higher,"analysis of large cohorts has revealed a slightly increased proportion of CD21 cells within adaptive NK-cell subsets",1B
+7,CD7,median_intensity,lower,"and that CD7 is expressed at lower levels per cell",1B
