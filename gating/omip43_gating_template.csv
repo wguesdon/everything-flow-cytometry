@@ -1,0 +1,9 @@
+alias,pop,parent,dims,gating_method,gating_args,collapseDataForGating,groupBy,preprocessing_method,preprocessing_args
+live,-,root,fix blue,mindensity,,,,,
+nondebris,+,live,"FSC-A,SSC-A",boundary,"min=c(20000,0)",,,,
+sing1,+,nondebris,"FSC-A,FSC-H",singletGate,,,,,
+sing2,+,sing1,"SSC-A,SSC-H",singletGate,,,,,
+dumped,-,sing2,dump,mindensity,,,,,
+CD38pos,+,dumped,CD38,mindensity,,,,,
+CD38high,+,CD38pos,CD38,mindensity,,,,,
+ASC,+,CD38high,CD27,mindensity,,,,,
