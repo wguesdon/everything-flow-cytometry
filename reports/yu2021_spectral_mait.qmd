@@ -290,7 +290,7 @@ corrected itself.
 
 ```{r}
 #| label: severity-figure
-#| fig-cap: "CD161hi cells against severity rank. The paper's Figure 1G and Figure 2B are the same comparison."
+#| fig-cap: "CD161hi cells against severity rank, with the Mann-Whitney p between the sexes within each rank. The paper's Figure 1G and Figure 2B are the same comparison."
 
 knitr::include_graphics(OutputImage("cd161hi_by_severity.png"))
 ```
@@ -313,35 +313,79 @@ The female slope is about four times the male slope. The paper writes that
 females had a more dramatic loss of peripheral CD161hi cells compared with males,
 and the deposited data says the same thing.
 
-### The claim that does not reproduce
+### The two claims about time points, and a mistake this report made
 
 Claim 5 states that the greater abundance of CD161hi cells in females was lost at
-early and middle time points but not in late disease. The data holds females
-above males at all three time points, so the pattern the paper describes is not
-there.
+early and middle time points but not in late disease.
+
+The first version of this analysis tested that by asking which sex was
+numerically higher in each window. Females came out higher in all three, so the
+claim was reported as failing. That test was wrong, and the paper says so in the
+legend of its Figure 2, which states that significance was determined by a
+Mann-Whitney test and that an asterisk means p below 0.05.
+
+A difference that is lost is one that stops being significant. It keeps a
+direction while it is lost. Asking which sex is higher answers a question the
+paper never asked, and it will report a failure whenever an effect shrinks
+without reversing, which is the normal way an effect disappears.
+
+The test now compares the significance pattern instead.
 
 ```{r}
 #| label: timepoint-figure
-#| fig-cap: "CD161hi cells by time after symptom onset. The paper reports that the female advantage disappears at early and middle."
+#| fig-cap: "CD161hi cells by time after symptom onset, with the Mann-Whitney p between the sexes in each window. This is the comparison of Figure 2E."
 
 knitr::include_graphics(OutputImage("cd161hi_by_timepoint.png"))
 ```
 
-The direction of the underlying difference is right in every window. What fails is
-the interaction, which is the part of the claim that says the difference
-disappears and comes back. That is the hardest kind of claim to reproduce,
-because it needs three separate comparisons to fall out in a specific pattern,
-and the smallest of those windows holds ten female samples.
+Two of the three windows match the paper exactly. The difference is not
+significant at early, with a p of 0.625, and not significant at middle, with a p
+of 0.824, which is what the paper means by lost. At late the paper found a
+significant difference and this analysis finds a p of 0.065, which misses the
+threshold by 0.015.
+
+So claim 5 is partly reproduced, and the part that fails is one window that lands
+just outside significance rather than a pattern that runs the wrong way.
 
 ```{r}
 #| label: memory-figure
-#| fig-cap: "CD8 memory cells by time after symptom onset. The male predominance holds in every window, which is claim 6."
+#| fig-cap: "CD8 memory cells by time after symptom onset. Claim 6 expects a significant difference in all three windows."
 
 knitr::include_graphics(OutputImage("memory_by_timepoint.png"))
 ```
 
-Claim 6 is the same shape of statement about the memory compartment, and it does
-reproduce. Males sit above females at early, middle and late, with a p of 0.009.
+Claim 6 is the same shape of statement about the memory compartment, and it comes
+out the same way once it is tested on the same criterion. Males sit above females
+in every window. The difference is significant at early, with a p of 0.025, and
+at late, with a p of 0.009, and it is not significant at middle, with a p of
+0.198.
+
+Both time point claims therefore land two windows out of three, and each one
+misses a different window. Neither miss is a reversal.
+
+### Whether the miss is ours
+
+Three explanations were tested before the claims were reported as partial.
+
+The first is the inclusion rule. The paper's Figure 2E is about time after
+symptom onset, which only an infected person has, and the time windows in Table
+S1 also carry 18 samples from exposed contacts who were never infected. The late
+window is 11 exposed against 13 infected. Restricting the test to the 53
+confirmed COVID-19 samples does not rescue either claim. It weakens every window,
+because it removes a third of the samples, and the late p for claim 5 moves from
+0.065 to 0.225.
+
+The second is the repeated sampling. Collapsing each subject to one value per
+window, so that nobody counts more than once, leaves both claims where they are.
+The late p for claim 5 moves from 0.065 to 0.073.
+
+The third is the time window definition. The paper sets early at 14 days or less,
+middle at 15 to 21 days and late at over 21 days. The `timepoint` column of Table
+S1 matches that rule on every one of the 68 samples that carries a day count,
+with no sample on the wrong side of a boundary. The windows are the authors' own.
+
+None of the three changes the answer, so the remaining gap is between a p of
+0.065 in 24 samples and a p below 0.05 in the authors' own analysis.
 
 ## Part 5: what the CD45RA choice changes
 
@@ -452,10 +496,15 @@ the 83 samples, having reached that number by different means. One fitted a
 boundary on one marker. The other grouped events in eight dimensions and never
 saw a gate.
 
-Four of the five claims reproduce by both routes. Claim 5 comes out differently.
-Under clustering the early window shows males above females, which is what the
-paper describes, so the clustering route supports claim 5 in the window where the
-gating route did not. Neither route produces the full pattern.
+All five claims come out the same way by both routes. Four reproduce and claim 5
+is partly reproduced, and it misses on the same window for the same reason. The
+clustering route gives the late window a p of 0.065, which is the value the
+gating route gives it to three decimal places.
+
+That agreement is worth more than either number alone. The late window misses
+significance under a boundary fitted on one marker and under a metacluster fitted
+in eight dimensions, so the miss is a property of these 24 samples and not of the
+gate.
 
 ## Discussion
 
@@ -464,12 +513,28 @@ gating route did not. Neither route produces the full pattern.
 A published finding from a 35 marker spectral panel reproduces from the deposited
 files, using an analysis that shares no code and no software with the original.
 The authors used FlowJo and Omiq. This used flowCore, FlowSOM and one CSV of cut
-points. Nine of ten claims come out with the direction the paper states, and the
-central one comes out by two independent routes that agree at rho 0.959.
+points. Eight of ten claims come out as the paper states them, and the central
+one comes out by two independent routes that agree at rho 0.959.
 
-The claim that failed is an interaction rather than a difference, and it failed
-in the direction of being too simple: females sit above males everywhere, instead
-of only in late disease.
+The two partial claims are the two about time points, and each lands two windows
+out of three. Neither miss is a reversal. Claim 5 needs a significant difference
+at late and finds p 0.065, and claim 6 needs one at middle and finds p 0.198.
+
+### The failure that was ours
+
+The first version of this report said claim 5 did not reproduce, because females
+were numerically higher in all three windows. That was a mistake in the test, not
+a finding about the data. The paper states its criterion in the legend of Figure
+2, which is a Mann-Whitney test with an asterisk at p below 0.05, and a
+difference that is lost is one that stops being significant rather than one that
+reverses.
+
+The lesson generalises past this dataset. A claim of the form "the difference
+disappeared" is a claim about detectability. Encoding it as a claim about
+direction guarantees a false failure, because an effect that shrinks to nothing
+still points somewhere. The claims file now records the criterion for each claim
+next to the sentence it came from, so the encoding is reviewable rather than
+buried in the test.
 
 ### Where the fragility sits
 

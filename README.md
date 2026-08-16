@@ -38,7 +38,7 @@ Render one with `quarto render reports/<name>.qmd` after you run the script it n
 | `reports/yu2021_spectral_mait.qmd` | FR-FCM-Z3WR, Cytek Aurora | Whether a published spectral finding reproduces from the deposited files |
 
 The last one is the only spectral dataset. It holds 83 files, 35 markers and 23 million events, and
-nine of the paper's ten flow claims reproduce from it.
+eight of the paper's ten flow claims reproduce from it and two are partly reproduced.
 
 ## Status
 
