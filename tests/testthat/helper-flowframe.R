@@ -33,6 +33,32 @@ MakeTestFlowFrame <- function(n_events = 200, seed = 42) {
   frame
 }
 
+#' Build a flowFrame whose time channel carries a known acquisition rate
+#'
+#' `StableTimeWindow()` reads the time channel alone, so the frame needs nothing
+#' else. With `gap = FALSE` the events arrive at an even rate. With `gap = TRUE`
+#' the middle third of the run arrives four times as fast, which is the shape
+#' that makes an automated window discard a large part of a file.
+#'
+#' @param n_events The number of events. Defaults to 4000.
+#' @param gap Whether to make the middle third arrive faster.
+#' @return A `flowFrame` with the channels `Time` and `FSC-A`.
+MakeTimeFlowFrame <- function(n_events = 4000, gap = FALSE) {
+  if (gap) {
+    slow <- seq(0, 1000, length.out = round(n_events / 2))
+    fast <- seq(1000, 1100, length.out = n_events - length(slow))
+    time <- sort(c(slow, fast))
+  } else {
+    time <- seq(0, 1000, length.out = n_events)
+  }
+
+  values <- cbind(
+    Time = time,
+    `FSC-A` = rep(100000, length(time))
+  )
+  flowCore::flowFrame(values)
+}
+
 #' Build a small square spillover matrix for a test
 #'
 #' @param channels The detector names for the rows and the columns.

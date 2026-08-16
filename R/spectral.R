@@ -157,20 +157,25 @@ ReadGateCuts <- function(path) {
 #' and events further than `tolerance` robust deviations from it are dropped. The
 #' fit is per sample because the scatter gain, not the biology, sets its slope.
 #'
-#' @param events A numeric matrix with the columns `FSC-A` and `FSC-H`.
+#' @param events A numeric matrix that carries the two scatter columns.
 #' @param tolerance The number of median absolute deviations to keep.
+#' @param area The forward scatter area column. Beckman Coulter writes `FS-A`
+#'   where Becton Dickinson writes `FSC-A`, so the FR-FCM-Z282 deposit needs this
+#'   argument.
+#' @param height The forward scatter height column.
 #' @return A logical vector, `TRUE` for an event to keep.
 #' @export
-SingletMask <- function(events, tolerance = 3) {
-  needed <- c("FSC-A", "FSC-H")
+SingletMask <- function(events, tolerance = 3,
+                        area = "FSC-A", height = "FSC-H") {
+  needed <- c(area, height)
   missing <- setdiff(needed, colnames(events))
   if (length(missing) > 0) {
     stop("The event matrix has no ", paste(missing, collapse = " and "),
          " column, so singlets cannot be gated.")
   }
 
-  area <- events[, "FSC-A"]
-  height <- events[, "FSC-H"]
+  area <- events[, area]
+  height <- events[, height]
 
   fit <- stats::lm(height ~ area)
   residual <- stats::residuals(fit)

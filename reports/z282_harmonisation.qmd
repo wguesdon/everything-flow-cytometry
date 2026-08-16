@@ -1,0 +1,557 @@
+---
+title: "Thirteen operators, one panel, and what centralising the analysis actually fixes"
+subtitle: "The multicentre harmonisation deposit FR-FCM-Z282, with a third and a fourth arm that the paper does not have"
+author: "William Guesdon"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: show
+    code-tools: true
+    embed-resources: true
+    theme: cosmo
+    fig-width: 9
+    fig-height: 6
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(knitr)
+})
+
+kOutputDir <- file.path("..", "output", "z282")
+
+ReadOutput <- function(name) {
+  path <- file.path(kOutputDir, name)
+  if (!file.exists(path)) {
+    stop(
+      "The analysis output is missing: ", path, "\n",
+      "Run scripts/09_z282_harmonisation.R first. ",
+      "See the section 'Reproducing this'."
+    )
+  }
+  read.csv(path, check.names = FALSE)
+}
+
+OutputImage <- function(name) {
+  file.path(kOutputDir, name)
+}
+
+kArmOrder <- c("local", "central", "automated", "automated shared")
+
+Arm <- function(frame) {
+  frame$analysis <- factor(frame$analysis, levels = kArmOrder)
+  frame[order(frame$analysis), ]
+}
+
+design <- ReadOutput("design.csv")
+verdicts <- ReadOutput("claim_verdicts.csv")
+```
+
+## Why this dataset
+
+- The three earlier reports each ended on the same admission. They could not
+  measure how much of the spread in a flow result comes from the analyst,
+  because that needs the same files gated by many people and each of them had
+  one file or one operator.
+- FlowRepository FR-FCM-Z282 is that design. Thirteen operators at five centres
+  stained and acquired the same six samples on seven instruments, and they sent
+  both the raw files and their own analysis to the coordinating centre [1].
+- One reference operator then re-analysed all 234 files in Kaluza.
+- The deposit therefore carries two complete answers for every file. The
+  operator's own answer is the local analysis and the reference operator's
+  answer is the central analysis.
+- This report adds a third answer and a fourth. Both come from one automated
+  rule that never sees either of the other two.
+- The question the paper asks is whether centralising the analysis reduces
+  variability. The question this report adds is which part of centralising does
+  the work.
+
+```{r}
+#| label: design
+
+kable(design, caption = "The deposit, counted from the file names and from the attached spreadsheet.")
+```
+
+- The design is balanced. Each of the thirteen operators contributes 18 files,
+  which is two materials, three vials and three rounds.
+- The frozen PBMC replicates were stained on three separate days, so they are an
+  interassay measure. The whole blood replicates were stained on one day, so they
+  are an intra-assay measure. That difference runs through every number below.
+
+```{r}
+#| label: operators
+
+kable(
+  ReadOutput("operators.csv"),
+  caption = "Every operator, the centre they work in, the instrument they used and its model.",
+  col.names = c("Operator", "Centre", "Instrument", "Instrument model")
+)
+```
+
+## Part 1: what one pipeline has to survive
+
+- The earlier reports named a channel once in a template CSV and reused it for
+  every file. That is not possible here.
+- Three makers name the same detector three ways. Becton Dickinson writes
+  `PerCP-Cy5-5-A`, one operator configured the same analyser by laser and filter
+  and it writes `Blue 670 LP-A`, and Beckman Coulter writes `FL4-A`.
+- The sixth colour is not the same reagent in the two materials. It is the
+  LIVE/DEAD Near-IR viability dye in the frozen PBMC panel and it is anti-CD45 in
+  the whole blood panel, and both sit in the same detector.
+- Some operators left the marker field empty, so those files carry a detector
+  name and nothing else.
+- The channel is therefore resolved per file, in two passes. The first pass reads
+  the marker name the operator typed. The second pass falls back on the
+  fluorochrome, through `gating/z282_panel.csv`.
+
+```{r}
+#| label: resolution
+
+kable(
+  ReadOutput("channel_resolution_summary.csv"),
+  caption = "How each marker was matched to a channel across the deposit.",
+  col.names = c("Marker", "Resolved by", "Channels")
+)
+```
+
+```{r}
+#| label: pipeline-states
+
+kable(
+  ReadOutput("pipeline_states.csv"),
+  caption = "Every state the pipeline had to detect before it could gate."
+)
+```
+
+- The compensation state is not uniform either. Most Becton Dickinson exports
+  carry a matrix with `APPLY COMPENSATION` set to `TRUE`, which means the values
+  are already compensated. The Kaluza exports carry `$SPILLOVER` and no such
+  keyword, so the matrix still has to be applied. Eighteen files carry no matrix
+  at all.
+- The scales differ as well. The measurement range is 262,144 on the Becton
+  Dickinson instruments, 1,048,576 on the Gallios, and 1,024 on the eighteen
+  files that one operator exported already scaled.
+- A shared cut point across the deposit is therefore impossible. A value on one
+  instrument's scale means nothing on another's, which is why every cut in this
+  report is fitted inside one file or inside one operator.
+
+```{r}
+#| label: cut-rules
+
+kable(
+  ReadOutput("cut_rule_summary.csv"),
+  caption = "Which rule produced each cut. The mixture only runs when the density carries no usable minimum.",
+  col.names = c("Marker", "Rule", "Cuts")
+)
+```
+
+- The density minimum is the rule of first resort and it produced most cuts.
+- A two component mixture is the fallback, and it exists because CCR7 and CD45RA
+  are continuous. The paper says so in its own discussion, and the OMIP-039 and
+  Yu 2021 reports met the same marker behaving the same way.
+
+```{r}
+#| label: failures
+
+failures <- ReadOutput("gating_failures.csv")
+kable(
+  as.data.frame(table(reason = failures$reason)),
+  caption = "Why a file could not be gated. The count is out of 234.",
+  col.names = c("Reason", "Files")
+)
+```
+
+- A file that cannot be gated is reported and dropped, not filled in.
+- That is the lesson of the OMIP-043 report. A template that ran to completion
+  and returned a number for a gate that had kept everything was worse than one
+  that stopped.
+
+### Two files of this deposit are one acquisition
+
+```{r}
+#| label: repeats
+
+repeats <- ReadOutput("repeated_acquisitions.csv")
+kable(
+  repeats,
+  caption = "Files that share an acquisition date, a start time and a GUID with another file.",
+  col.names = c("File", "Operator", "Material", "Vial", "Round", "Date", "Time",
+                "Events")
+)
+```
+
+- These files carry different names and different checksums, and their FCS
+  headers name the same acquisition.
+- The design counts them as separate replicates. A repeatability measure computed
+  over them understates the spread, because two of the three replicates are one
+  measurement exported twice.
+- The number is small and it is worth recording rather than smoothing over.
+
+## Part 2: the paper's claims, from the deposit alone
+
+- The twenty claims live in `gating/z282_paper_claims.csv`, each with the
+  sentence it came from, so a reader can check the claim against the paper before
+  the check of the number against the data.
+- Every claim in this part is answered from the local arm and the central arm.
+  The automated arms take no part in it.
+
+```{r}
+#| label: interoperator-counts
+
+kable(
+  Arm(ReadOutput("interoperator_counts.csv")),
+  caption = "How many of the fifteen parameters meet each acceptability threshold. The paper sets CV below 0.20, bias below 0.20 and ICC above 0.75.",
+  col.names = c("Arm", "Material", "Parameters", "CV acceptable",
+                "Bias acceptable", "ICC acceptable"),
+  row.names = FALSE
+)
+```
+
+```{r}
+#| label: interoperator-cv-figure
+#| fig-cap: "Interoperator coefficient of variation, per parameter. The dashed line is the paper's acceptability threshold of 0.20."
+
+knitr::include_graphics(OutputImage("interoperator_cv.png"))
+```
+
+```{r}
+#| label: interoperator-icc-figure
+#| fig-cap: "Agreement between operators, as the intraclass correlation of a two way random effects model. The dashed line is 0.75."
+
+knitr::include_graphics(OutputImage("interoperator_icc.png"))
+```
+
+```{r}
+#| label: intraoperator-counts
+
+kable(
+  Arm(ReadOutput("intraoperator_counts.csv")),
+  digits = 3,
+  caption = "Repeatability within one operator. Each arm holds 195 measurements, which is 13 operators by 15 parameters.",
+  col.names = c("Arm", "Material", "Measurements", "Above 0.20", "Median CV",
+                "Maximum CV"),
+  row.names = FALSE
+)
+```
+
+```{r}
+#| label: z-counts
+
+kable(
+  Arm(ReadOutput("z_counts.csv")),
+  digits = 3,
+  caption = "Operator performance as a Z-score against the reference distribution. A score is unsatisfactory at 3 and questionable between 2 and 3.",
+  col.names = c("Arm", "Material", "Measurements", "Unsatisfactory",
+                "Questionable", "Median absolute Z"),
+  row.names = FALSE
+)
+```
+
+```{r}
+#| label: z-figure
+#| fig-cap: "Every operator and every parameter. Red is an overestimate against the reference value and blue is an underestimate."
+
+knitr::include_graphics(OutputImage("z_score_heatmap.png"))
+```
+
+```{r}
+#| label: verdicts
+
+kable(
+  verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+  caption = "Every claim the paper makes from the flow data, tested against the deposit.",
+  col.names = c("Claim", "What the paper says", "Expected", "Measured",
+                "Verdict")
+)
+```
+
+```{r}
+#| label: verdict-counts
+
+kable(
+  as.data.frame(table(verdicts$verdict)),
+  caption = "How the twenty claims came out.",
+  col.names = c("Verdict", "Claims")
+)
+```
+
+- Several claims reproduce to the digit. The intraoperator maximum CV in frozen
+  PBMC comes out at 1.32 local against 0.75 central, and the median at 0.13
+  against 0.14, which is the paper's sentence exactly.
+- The Z-score counts also land exactly. No score is unsatisfactory in the central
+  analysis, one is in local frozen PBMC and 49 are in local whole blood.
+- Those two hits matter more than the rest. They are computed from the paper's
+  own definitions applied to the paper's own numbers, so an exact match says the
+  definitions were read correctly before anything else was measured.
+- The counts that miss by one or two come from the acceptability tables. The
+  paper does not state whether a parameter exactly at a threshold counts as
+  acceptable, and a difference of one parameter in fifteen follows from that
+  choice alone.
+
+### Where the deposit disagrees with the paper
+
+- Claim 4 is the largest miss. The paper reports bias acceptable for 7 of 15
+  parameters in locally analysed whole blood and this analysis finds 10.
+- Claim 18 is the other one. The paper puts 63.9 percent of the naive and memory
+  variance in the first two principal components and this analysis finds a higher
+  figure.
+
+```{r}
+#| label: pca
+
+kable(
+  ReadOutput("pca_summary.csv"),
+  digits = 1,
+  caption = "Principal components on the centrally analysed whole blood values.",
+  col.names = c("Group", "Variables", "Observations",
+                "Variance in the first two components, percent")
+)
+```
+
+- The paper centres and scales its data within each donor and each sample type
+  before it runs the decomposition. This analysis scales across the whole set.
+  The difference in the reported variance follows from that, and it is a
+  difference in method rather than in the data.
+
+## Part 3: two automated arms
+
+- The automated arm applies one rule to all 234 files. It reads no operator's
+  result and no reference value.
+- The rule fits every cut on the file it gates, which is what an openCyto
+  template does.
+- The automated shared arm applies the same rule with one change. It takes the
+  median of an operator's own fitted cuts, per marker and per material, and gates
+  every file of that operator at that one value.
+- The second arm exists because of what the first one showed, and because the Yu
+  2021 report had already met the problem. That report fitted its cuts once on
+  the pooled cohort, on the argument that a cut which moves with the sample
+  changes a frequency for a reason that is not biology.
+
+```{r}
+#| label: shared-cuts
+
+shared <- ReadOutput("shared_cuts.csv")
+kable(
+  head(shared[order(shared$operator, shared$material, shared$marker), ], 12),
+  digits = 2,
+  caption = "The first twelve shared cut points. Each one is the median of that operator's own per file cuts, on that operator's own logicle scale.",
+  col.names = c("Operator", "Material", "Marker", "Cut")
+)
+```
+
+```{r}
+#| label: distribution-figure
+#| fig-cap: "The fifteen frequencies by arm. Every box holds the operator and donor means of one arm."
+
+knitr::include_graphics(OutputImage("distribution_by_arm.png"))
+```
+
+- The automated arms land close to the two human arms on the abundant
+  populations and they drift on the small subsets. That is the pattern every
+  earlier report in this repository found.
+
+```{r}
+#| label: intraoperator-figure
+#| fig-cap: "Repeatability within an operator, by arm. The dashed line is the acceptability threshold of 0.20."
+
+knitr::include_graphics(OutputImage("intraoperator_cv.png"))
+```
+
+## Part 4: what the four arms say
+
+```{r}
+#| label: dispersion
+
+kable(
+  Arm(ReadOutput("dispersion_by_arm.csv")),
+  digits = 3,
+  caption = "The median coefficient of variation across operators, pooled over the fifteen parameters and the three donors.",
+  col.names = c("Arm", "Material", "Median CV"),
+  row.names = FALSE
+)
+```
+
+- Read the intraoperator table and the interoperator table against each other.
+  They answer two different questions and the two automated arms separate them.
+- One cut per operator, in place of one cut per file, cuts the within operator
+  spread by about a third in frozen PBMC and by a fifth in whole blood.
+- The same change does not improve agreement between operators at all. The count
+  of parameters with an acceptable CV and the count with an acceptable ICC both
+  stay where they were.
+- That is the finding this deposit makes possible. Holding a boundary steady
+  across the files of one operator fixes repeatability. It does nothing for
+  agreement, because each operator still holds a different boundary.
+- The central analysis fixes both, and it fixes them for one reason. One person
+  applied one judgement to every file of every operator.
+
+```{r}
+#| label: icc-after
+
+kable(
+  ReadOutput("icc_after_exclusion.csv"),
+  digits = 3,
+  caption = "Agreement in centrally analysed whole blood, before and after the operators outside a Z of 1.5 are removed.",
+  col.names = c("Parameter", "ICC, all operators", "ICC, selected operators")
+)
+```
+
+- The paper runs this same exclusion and reports that two parameters stay below
+  0.75, and it names them as CD3-CM and CD4-CM. This analysis names the same two.
+
+```{r}
+#| label: size
+
+kable(
+  Arm(ReadOutput("cv_by_population_size.csv")),
+  digits = 3,
+  caption = "The median interoperator CV of the three parent populations against the twelve naive and memory subsets.",
+  col.names = c("Arm", "Material", "Parent median CV", "Subset median CV"),
+  row.names = FALSE
+)
+```
+
+- Precision follows population size in every arm, including both automated ones.
+- The three parent gates sit on markers with two clear modes. The twelve subsets
+  sit on CD45RA and CCR7, which have no valley to find, and that single
+  difference explains the whole gap.
+
+```{r}
+#| label: phenotype
+
+kable(
+  ReadOutput("phenotype_by_material.csv"),
+  digits = 2,
+  caption = "The centrally analysed medians of each material.",
+  col.names = c("Material", "CD4 percent of CD3", "CD8 percent of CD3",
+                "CD4 over CD8", "CD8 terminally differentiated, percent")
+)
+```
+
+- The paper flags the frozen PBMC preparation as carrying a CD4 over CD8 ratio
+  below the expected value and a high proportion of terminally differentiated
+  CD8 cells. The deposit says the same thing.
+- The whole blood samples from the same study carry a normal ratio, so the
+  anomaly belongs to the frozen preparation and not to the panel.
+
+## Discussion
+
+### What this shows
+
+- A published harmonisation result reproduces from the deposited spreadsheet. Of
+  the twenty claims encoded from the paper, most come out as stated, and the two
+  claims that fix the definitions of every indicator come out to the digit.
+- The gap that three earlier reports in this repository named is now measured.
+  Thirteen analysts working on their own files disagree by far more than one
+  analyst working on all of them, and the difference is largest in whole blood,
+  where the material is easiest and the analysis is therefore the only thing
+  left to vary.
+- The two automated arms separate repeatability from agreement, which the paper's
+  design cannot do on its own. A stable boundary fixes the first. Only a shared
+  judgement fixes the second.
+
+### Where the automated arms are weak, and why
+
+- Both automated arms sit well below the two human arms on every indicator. That
+  is the honest result and it is worth stating plainly rather than tuning away.
+- Part of the gap is real. A rule that refits a boundary on every file follows
+  the day to day drift in staining, and a person does not.
+- Part of the gap is built into the comparison. The Z-score reference is the mean
+  and the spread of the centrally analysed values, so any arm that differs
+  systematically from the reference operator scores badly by construction, no
+  matter how self consistent it is.
+- The frozen PBMC arm carries the worst numbers and it also carries the hardest
+  problem. Those replicates were stained on three separate days, so a per file
+  cut has three days of drift to follow.
+
+### What this does not show
+
+- It does not show that the paper is right. It shows that the numbers in the
+  paper follow from the spreadsheet the authors deposited.
+- It does not separate the operator from the instrument. Two centres ran several
+  operators on one analyser and one operator appears on more than one, so the
+  design cannot attribute a difference to the person rather than to the machine.
+- It does not measure the staining. Every operator stained their own tubes, so a
+  difference between two operators holds the preparation, the acquisition and the
+  analysis together. Only the local against central contrast isolates the
+  analysis, because there the same file is read twice.
+- The automated arms failed on some files and those files are dropped. A dropped
+  file is not a missing measurement at random, because the files that fail are
+  the ones whose densities do not resolve, which are also the ones a person finds
+  hardest.
+
+### What is left to do
+
+- The 234 files come from 7 instruments and the design is unbalanced across them,
+  so a variance components model with the operator, the instrument and the centre
+  as separate random effects would say more than the indicators do. It is not run
+  here.
+- The reference operator is named as Op_M in the paper and the deposit is
+  de-identified with a randomised operator code. The two are treated as the same
+  letter in this report. That assumption is stated here because nothing in the
+  deposit confirms it.
+
+## Reproducing this
+
+```bash
+# Pull this dataset only, 5.8 GB of the 103 GB archive
+./sync.sh pull datasets/flowrepository/FR-FCM-Z282
+
+# Derive the committed metadata from the deposit. It runs once, on the host.
+uv run --project python python scripts/z282_derive_metadata.py
+
+# Build the container. Every package version is pinned and asserted at build time.
+./containers/build.sh
+
+# The analysis
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  Rscript scripts/09_z282_harmonisation.R
+
+# This report
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  quarto render reports/z282_harmonisation.qmd
+```
+
+- The operator results are derived from the spreadsheet the authors attached to
+  the deposit. They are committed as `gating/z282_operator_results.csv`, so the
+  claim tests run without the 5.8 GB download.
+- The 234 sample files are needed only for the two automated arms.
+
+```{r}
+#| label: session-info
+
+sessionInfo()
+```
+
+## References
+
+[1] Macchia I, La Sorsa V, Ruspantini I, Sanchez M, Tirelli V, Carollo M, Fedele
+G, Leone P, Schiavoni G, Buccione C, Rizza P, Nisticò P, Palermo B, Morrone S,
+Stabile H, Rughetti A, Nuti M, Zizzari IG, Fionda C, Maggio R, Capuano C,
+Quintarelli C, Sinibaldi M, Agrati C, Casetti R, Rozo Gonzalez A, Iacobone F,
+Gismondi A, Belardelli F, Biffoni M, Urbani F. Multicentre Harmonisation of a
+Six-Colour Flow Cytometry Panel for Naïve/Memory T Cell Immunomonitoring. J
+Immunol Res 2020;2020:1938704. PMID 32322591. PMC7153001.
+doi:10.1155/2020/1938704.
+
+[2] Maecker HT, McCoy JP Jr, for the FOCIS Human Immunophenotyping Consortium. A
+model for harmonizing flow cytometry in clinical trials. Nat Immunol
+2010;11(11):975-978. PMID 20959798.
+
+[3] Hahne F, LeMeur N, Brinkman RR, Ellis B, Haaland P, Sarkar D, Spidlen J,
+Strain E, Gentleman R. flowCore: a Bioconductor package for high throughput flow
+cytometry. BMC Bioinformatics 2009;10:106. PMID 19358741.
+doi:10.1186/1471-2105-10-106.
+
+[4] Bates D, Mächler M, Bolker B, Walker S. Fitting Linear Mixed-Effects Models
+Using lme4. J Stat Softw 2015;67(1):1-48. doi:10.18637/jss.v067.i01.

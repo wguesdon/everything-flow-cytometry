@@ -36,9 +36,13 @@ Render one with `quarto render reports/<name>.qmd` after you run the script it n
 | `reports/omip39_automated_gating.qmd` | OMIP-039, FR-FCM-ZYY6 | Whether an automated template lands where the published manual gates land |
 | `reports/omip43_asc_analysis.qmd` | OMIP-043 | Where automated gating fails on a rare population, and whether clustering recovers it |
 | `reports/yu2021_spectral_mait.qmd` | FR-FCM-Z3WR, Cytek Aurora | Whether a published spectral finding reproduces from the deposited files |
+| `reports/z282_harmonisation.qmd` | FR-FCM-Z282, 13 operators | How much of the spread in a flow result comes from the analyst, and what centralising the analysis fixes |
 
-The last one is the only spectral dataset. It holds 83 files, 35 markers and 23 million events, and
-eight of the paper's ten flow claims reproduce from it and two are partly reproduced.
+The spectral report covers the only Cytek Aurora dataset in the archive. It holds 83 files, 35 markers
+and 23 million events, and eight of the paper's ten flow claims reproduce from it.
+
+The harmonisation report is the only one that can measure analyst variation, because it is the only
+deposit where many people gated the same files and every answer was published.
 
 ## Status
 
@@ -51,7 +55,7 @@ The repository is at an early stage. The table below states what is ready and wh
 | `docs/datasets.md` | Ready. Every repository count was checked on 2026-08-13. |
 | `data/` and `sync.sh` | Ready. About 103 GB of FCS files and reference code, held in S3. |
 | `examples/` | Empty. It needs the analysis scripts and a container. |
-| `reports/` | Four reports render and their scripts run in the container. The spectral one covers the only Cytek Aurora dataset in the archive. |
+| `reports/` | Five reports render and their scripts run in the container. Every prose paragraph is written as bullet points. |
 | Agent skills | Not started. They come after the example code runs. |
 
 ## Contents
@@ -69,6 +73,7 @@ The repository is at an early stage. The table below states what is ready and wh
 | `scripts/make_data_catalog.sh` | Rewrite `docs/data_catalog.md` from the local `data/` folder |
 | `scripts/verify_package_papers.sh` | Retrieve the paper for each package from Europe PMC, so the citations stay checkable |
 | `scripts/find_spectral_datasets.py` | Read every FCS header in `data/` and report which files came from a spectral analyser |
+| `scripts/z282_derive_metadata.py` | Turn the FR-FCM-Z282 spreadsheet and file names into the committed CSV files in `gating/` |
 | `gating/` | The gating templates, the cut points and the paper claims, each one a CSV a reviewer can read |
 | `reports/` | The rendered analyses, listed above |
 

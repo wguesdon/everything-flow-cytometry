@@ -21,6 +21,8 @@ dependencies = [
     "matplotlib>=3.9",
     "seaborn>=0.13",
     "pyarrow>=18.0",
+    # Read the spreadsheets that a FlowRepository deposit attaches
+    "openpyxl>=3.1.5",
 ]
 
 [dependency-groups]

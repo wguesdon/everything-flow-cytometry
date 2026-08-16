@@ -1,0 +1,8 @@
+marker,fluorochrome,material,detector_aliases,note
+CD4,FITC,both,FITC|Blue 530/30,The blue 530/30 filter is the FITC detector on a FACSCantoII configured by laser and filter
+CCR7,PE,both,PE|Blue 585/42,The blue 585/42 filter is the PE detector
+CD8,PE-Cy5.5,both,PerCP-Cy5-5|PerCP-Cy5.5|PE-Cy5-5|PE-Cy5.5|PE-Cy5|Blue 670 LP,The panel uses PE-Cy5.5 and some operators recorded the detector as PerCP-Cy5-5
+CD3,PE-Cy7,both,PE-Cy7|Blue 780/60,The blue 780/60 filter is the PE-Cy7 detector
+CD45RA,APC,both,APC|Red 660/20,The red 660/20 filter is the APC detector
+NIR,APC-Cy7,PBMC,APC-Cy7|APC-H7|Red 780/60,The sixth colour is the LIVE/DEAD Fixable Near-IR dye in the frozen PBMC panel
+CD45,APC-Cy7,WB,APC-Cy7|APC-H7|Red 780/60,The sixth colour is anti-CD45 APC-Cy7 in the whole blood panel
