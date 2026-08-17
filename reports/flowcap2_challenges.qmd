@@ -53,12 +53,11 @@ scores <- ReadOutput("scores.csv")
 
 ## Why this dataset
 
-Every other report in this repository tests a claim about a cell frequency. This
-one tests a claim about an algorithm. FlowCAP II asked whether a computational
-pipeline can read a class label out of a set of FCS files, handing every entrant
-half of the labels for training and scoring them on the half it held back [1].
-Two of the three challenge datasets are in this archive, and both carry the
-labels and the split that the benchmark used.
+The FlowCAP II benchmark tests a claim about an algorithm. FlowCAP II asked
+whether a computational pipeline can read a class label out of a set of FCS
+files, handing every entrant half of the labels for training and scoring them on
+the half it held back [1]. Two of the three challenge datasets are in this
+archive, and both carry the labels and the split that the benchmark used.
 
 The benchmark answered its own question in two opposite ways. Many algorithms
 classified the HVTN samples perfectly, and none of them classified the HEUvsUE
@@ -86,6 +85,42 @@ kable(
 )
 ```
 
+## Methods
+
+### The dataset
+
+The HVTN deposit (FR-FCM-ZZZV) contains 48 subjects, each contributing five
+files. The HEUvsUE deposit (FR-FCM-ZZZU) contains 44 infants, each contributing
+seven files. Both deposits carry label files and the training and testing split
+used by the FlowCAP II benchmark.
+
+### Preprocessing
+
+Every channel is transformed with an arcsinh at a fixed cofactor. A logicle
+transform estimated per file was not used because a threshold taken from a
+subject's control must be applied to that subject's stimulated file, and the two
+files must sit on one scale. The logicle estimator refuses some files of the HVTN
+deposit at every decade count.
+
+### Gating
+
+The cytokine gate uses the unstimulated control of each subject. The threshold is
+placed at the 99.9th percentile of the control and applied to the stimulated file
+of the same subject. The HVTN deposit provides two negative controls per subject.
+One sets the threshold and the other measures the background at that threshold.
+
+### Statistics
+
+The rule scores every gated feature on the training half alone, selects the
+single best feature by area under the curve, places a threshold on it, and
+applies that threshold to the held out half. The FlowCAP scoring uses recall,
+precision, accuracy, and F-measure.
+
+### Software
+
+The analysis uses flowCore, ggplot2, and knitr. Every version is pinned in the
+container.
+
 ## Part 1: the rule that enters the benchmark
 
 The rule that enters the benchmark is the simplest one that can compete. It
@@ -99,28 +134,19 @@ it used, which is exactly what the paper's own discussion turns on.
 
 ### The cytokine gate is the part that had to change
 
-A cytokine gate cannot be fitted the way every other gate in this repository is
-fitted. An unstimulated T cell is negative for all four cytokines, so the density
-carries one mode and a two component mixture splits the negative population down
-the middle. The first attempt did exactly that, and it reported 90 percent of CD4
-T cells as interleukin 2 positive, which is impossible.
-
-Both deposits ship their own unstimulated controls, so the threshold is placed on
-the control at its 99.9th percentile and applied to the stimulated file of the
-same subject. That is how an intracellular staining panel is read at the bench.
-The HVTN deposit goes further and gives each subject two negative controls. One
-sets the threshold and the other measures the background at that same threshold,
-so a reported frequency sits above a background that was measured rather than
-assumed.
+An unstimulated T cell is negative for all four cytokines, so a two component
+mixture splits the negative population down the middle. The first attempt did
+exactly that, and it reported 90 percent of CD4 T cells as interleukin 2
+positive. The threshold is placed on the control at its 99.9th percentile and
+applied to the stimulated file of the same subject. The HVTN deposit gives each
+subject two negative controls. One sets the threshold and the other measures the
+background at that same threshold.
 
 ### One transform for every file
 
-This is the only report here that does not estimate a logicle per file. A
-threshold taken from a subject's control is applied to that subject's stimulated
-file, so the two files have to sit on one scale. A logicle estimated per file
-does not give that, and the estimator refuses some files of the HVTN deposit at
-every decade count. Every channel is therefore transformed with one arcsinh at a
-fixed cofactor.
+A threshold taken from a subject's control is applied to that subject's
+stimulated file, so the two files have to sit on one scale. Every channel is
+transformed with one arcsinh at a fixed cofactor.
 
 ```{r}
 #| label: failures
@@ -136,6 +162,9 @@ kable(
   col.names = c("Reason", "Files")
 )
 ```
+
+The gating failures reduce the number of subjects available for the paired
+analysis.
 
 ## Part 2: the population the paper names
 
@@ -165,10 +194,9 @@ Env in 37 of the 47 paired subjects, and the paired test gives p below 0.001.
 
 Three other features separate the two antigens as well, and one of them does it
 more strongly. CD8 interferon gamma is the most significant of the eight, and it
-runs the other way, with the Gag samples higher. That is worth stating rather
-than smoothing over. The paper names one population because manual gating looked
-at one population; an automated sweep over all eight finds that population, and
-it also finds the three the paper does not mention.
+runs the other way, with the Gag samples higher. The paper names one population
+because manual gating looked at one population. An automated sweep over all eight
+finds that population, and it also finds the three the paper does not mention.
 
 ## Part 3: the two challenges, scored the way the benchmark scored them
 
@@ -261,6 +289,9 @@ kable(
 )
 ```
 
+The claim verdicts determine which findings of the original paper are reproduced
+by this analysis.
+
 ## Discussion
 
 ### What this shows
@@ -284,9 +315,8 @@ other. CD4 interleukin 4 and CD4 interleukin 2 both favour Env while CD8
 interferon gamma favours Gag, so a method that reads all three at once has
 information that a method reading one of them does not.
 
-That is the useful negative result. The benchmark was not won by better gating.
-It was won by combining features, and this report shows how much is left on the
-table by refusing to.
+The benchmark was won by combining features rather than by better gating. A
+single feature rule cannot combine evidence from multiple features.
 
 ### What this does not show
 
@@ -303,12 +333,11 @@ seven files. That leaves a small test set and it widens every interval in Part 3
 
 ### What is left to do
 
-A rule that combines features is the obvious next step, and the deposit supports
-it. The honest way to run it is to fix the method before looking at the held out
-half, exactly as this one did. The HVTN deposit also carries a positive control
-for every subject, stimulated with staphylococcal enterotoxin B. It is gated here
-and it is not used, and it is the natural check on whether a subject's cells
-responded at all.
+A rule that combines features is the next step, and the deposit supports it. The
+method should be fixed before looking at the held out half, exactly as this rule
+did. The HVTN deposit also carries a positive control for every subject,
+stimulated with staphylococcal enterotoxin B. It is gated here and it is not
+used, and it is the natural check on whether a subject's cells responded at all.
 
 ## Reproducing this
 
