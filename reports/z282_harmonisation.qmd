@@ -1,6 +1,6 @@
 ---
-title: "Thirteen operators, one panel, and what centralising the analysis actually fixes"
-subtitle: "The multicentre harmonisation deposit FR-FCM-Z282, with a third and a fourth arm that the paper does not have"
+title: "Operator variation in a multicentre flow cytometry harmonisation study"
+subtitle: "The multicentre harmonisation deposit FR-FCM-Z282, with automated and shared-cut analysis arms"
 author: "William Guesdon"
 date: today
 format:
@@ -58,32 +58,27 @@ design <- ReadOutput("design.csv")
 verdicts <- ReadOutput("claim_verdicts.csv")
 ```
 
-## Why this dataset
+## Introduction
 
-Flow cytometry results vary across operators, and the variation needs a design
-where the same files are gated by many people. FlowRepository FR-FCM-Z282 is
-that design. Thirteen operators at five centres stained and acquired the same
-six samples on seven instruments, and they sent both the raw files and their own
-analysis to the coordinating centre [1]. One reference operator then re-analysed
-all 234 files in Kaluza.
+Macchia et al. reported a multicentre harmonisation study of a six-colour flow
+cytometry panel for naive and memory T cell immunomonitoring [1]. Thirteen
+operators at five centres stained and acquired the same six samples on seven
+instruments. The deposit contains the raw FCS files, the operator analyses, and
+the results from one reference operator who re-analysed all 234 files in Kaluza.
+Two materials were used: frozen PBMC stained across three days and whole blood
+stained on one day.
 
-Every file in the deposit therefore carries two complete answers. The operator's
-own answer is the local analysis. The reference operator's answer is the central
-analysis. A third answer and a fourth come from one automated rule that never
-sees either of the other two. The paper asks whether centralising the analysis
-reduces variability. This report tests which part of centralising does the work.
+This report reproduces the paper's acceptability thresholds and Z-score
+indicators from the deposit, then adds two automated analysis arms. One arm
+applies a single gating rule to every file. The second arm applies the same rule
+but uses the median of each operator's own fitted cuts per marker and per
+material.
 
 ```{r}
 #| label: design
 
 kable(design, caption = "The deposit, counted from the file names and from the attached spreadsheet.")
 ```
-
-The design is balanced. Each of the thirteen operators contributes 18 files,
-which is two materials, three vials and three rounds. The frozen PBMC replicates
-were stained on three separate days, so they are an interassay measure, while
-the whole blood replicates were stained on one day and are an intra-assay
-measure. That difference runs through every number below.
 
 ```{r}
 #| label: operators
@@ -202,9 +197,6 @@ kable(
   col.names = c("Reason", "Files")
 )
 ```
-
-A template that runs to completion and returns a number for a gate that kept
-every event is worse than one that stops.
 
 ### Two files of this deposit are one acquisition
 
@@ -372,9 +364,6 @@ kable(
 knitr::include_graphics(OutputImage("distribution_by_arm.png"))
 ```
 
-The automated arms land close to the two human arms on the abundant populations,
-and they drift on the small subsets.
-
 ```{r}
 #| label: intraoperator-figure
 #| fig-cap: "Repeatability within an operator, by arm. The dashed line is the acceptability threshold of 0.20."
@@ -402,11 +391,6 @@ place of one cut per file, cuts the within operator spread by about a third in
 frozen PBMC and by a fifth in whole blood. The same change does not improve
 agreement between operators. The count of parameters with an acceptable CV and
 the count with an acceptable ICC both stay where they were.
-
-Holding a boundary steady across the files of one operator fixes repeatability.
-It does nothing for agreement, because each operator still holds a different
-boundary. The central analysis fixes both. One person applied one judgement to
-every file of every operator.
 
 ```{r}
 #| label: icc-after
@@ -436,8 +420,7 @@ kable(
 
 Precision follows population size in every arm, including both automated ones.
 The three parent gates sit on markers with two clear modes. The twelve subsets
-sit on CD45RA and CCR7, which have no valley to find, and that single difference
-explains the whole gap.
+sit on CD45RA and CCR7, which have no valley to find.
 
 ```{r}
 #| label: phenotype
