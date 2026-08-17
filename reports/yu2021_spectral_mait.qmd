@@ -53,12 +53,9 @@ verdicts <- ReadOutput("claim_verdicts.csv")
 
 ## Why this dataset
 
-The OMIP-039 and OMIP-043 reports both worked on one panel at a time on a
-conventional analyser, and both asked whether an automated method lands where an
-expert lands. Neither of them left the conventional instrument. A spectral
-analyser is a different machine. It does not assign one detector to one
-fluorochrome. It records the emission of every fluorochrome across 64 detectors
-and then solves for the contribution of each one, which is why a spectral panel
+A conventional analyser assigns one detector to one fluorochrome. A spectral
+analyser records the emission of every fluorochrome across 64 detectors and
+then solves for the contribution of each one, which is why a spectral panel
 carries 35 markers where a conventional panel carries 20.
 
 This report uses FlowRepository FR-FCM-Z3WR, the flow cytometry deposit of Yu
@@ -109,29 +106,58 @@ kable(
 )
 ```
 
+## Methods
+
+### The dataset
+
+FlowRepository FR-FCM-Z3WR holds 83 FCS files from 45 subjects acquired on a
+four laser Cytek Aurora running SpectroFlo 2.2.0.2. The panel carries 35 named
+markers and one unnamed viability channel, for 36 fluorescence parameters.
+Samples were collected across 12 acquisition dates between 29 May 2020 and 16
+September 2020. Metadata for sex, severity rank, time point and seroconversion
+status was derived from Table S1 of the paper and joined on the subject code
+that the file name uses.
+
+### Preprocessing
+
+The files were exported from SpectroFlo after unmixing, so they carry one column
+per fluorochrome and no spillover matrix. The keyword `APPLY COMPENSATION` reads
+`FALSE` in all 83 files. Compensation was not applied. The viability channel
+does not carry a marker name, so the function that selects fluorescence channels
+by the `$PnS` keyword was replaced by one that keeps every channel that is not
+scatter and not time. The transform was applied to all 36 fluorescence
+parameters.
+
+### Gating
+
+An openCyto template was used for sequential gating. Cut points were fitted once
+on a pooled subsample of all 83 files, and the same cut was applied to every
+sample. Marker cuts were placed at a minimum of the pooled density where one
+existed. The CD45RA cut was set from the CD4 T cell density, because the CD8
+gate density has no minimum in the positive region.
+
+### Statistics
+
+The Mann-Whitney test was used for two group comparisons and the Spearman
+correlation for associations, matching the tests the paper itself used. Each of
+the ten claims from the paper was tested against the deposited files. For claims
+about time windows, significance at p below 0.05 was the criterion, matching the
+paper's figure legends. A CD45RA sensitivity sweep was run at every cut from 2.4
+to 4.2. FlowSOM clustering was run with 15 metaclusters on all live CD45
+positive events and with 10 metaclusters inside the CD8 gate.
+
+### Software
+
+The analysis used flowCore, openCyto, FlowSOM and ggplot2. Every package version
+is pinned in the container and asserted at build time.
+
 ## Part 1: what spectral changes about the pipeline
 
-Two steps of the conventional pipeline do not apply here, and one new step
-does. Compensation does not apply, because SpectroFlo unmixed the data before
-export, so the files carry one column per fluorochrome and no spillover matrix.
-The keyword `APPLY COMPENSATION` reads `FALSE` in all 83 files. The compensation
-work of the OMIP-039 report has nothing to act on, and the pipeline starts at
-the transform.
-
-The viability channel does not carry a marker name. `FluorescenceChannels()`
-selects a channel only when `$PnS` is set, which is correct for a conventional
-panel and wrong here, because the first gate of the hierarchy uses that channel.
-`SpectralChannels()` keeps every channel that is not scatter and not time, so
-the transform covers the viability dye.
-
-The new step is the cohort. This analysis compares 83 samples across 12
-acquisition dates, so a gate that moves between samples moves the answer.
+Compensation is not required and the viability channel requires a different
+selection function. The cohort requires a single set of cut points across all
+samples.
 
 ## Part 2: the cohort, and where the grouping comes from
-
-The FCS files carry a subject code and a day, but no sex and no severity. Table
-S1 of the paper carries both, and it keys on the same subject code that the file
-name uses.
 
 ```{r}
 #| label: cohort
@@ -145,21 +171,14 @@ kable(
 ```
 
 All 83 files match a metadata row, and the metadata marks exactly 83 samples as
-included in the flow analysis, so the join is complete in both directions.
-`gating/yu2021_sample_metadata.csv` records it. Set the subject column against
-the sample column and the 83 samples collapse to 45 subjects, with one subject
-contributing up to five samples. Every test below treats a sample as
-independent, and the paper appears to do the same. That treatment inflates the
+included in the flow analysis, so the join is complete in both directions. The
+83 samples collapse to 45 subjects, with one subject contributing up to five
+samples. Every test treats a sample as independent. That treatment inflates the
 apparent precision, and the discussion returns to it.
 
 ## Part 3: one cut for the cohort, and the marker where that fails
 
-An openCyto template fits every gate per sample, which is right when the
-question is about one file. It is wrong here, because a cut that moves with the
-sample changes a frequency for a reason that is not biology, and every claim in
-this paper is a comparison between samples. The cut points were therefore fitted
-once, on a pooled subsample of all 83 files, and the same cut gates every
-sample.
+Cut points were fitted once on a pooled subsample and applied to every sample.
 
 ```{r}
 #| label: cuts
@@ -182,9 +201,9 @@ of CD8 T cells positive, and the central memory and effector memory gates hold
 no events at all.
 
 The same reagent does resolve on CD4 T cells, where the density has a minimum at
-2.54, and that value is used for CD8 T cells as well. It is a choice, it is
-recorded as a choice in the source column above, and Part 5 measures what the
-choice changes.
+2.54, and that value is used for CD8 T cells as well. The cut is recorded as a
+choice in the source column of the cuts table. Part 5 measures what the choice
+changes.
 
 ```{r}
 #| label: hierarchy
@@ -268,15 +287,14 @@ Eight of the ten claims reproduce and two are partly reproduced. The two partial
 ones are claims 5 and 6, which are the only claims about time points, and the
 next section is about them.
 
-Read the direction column and the p column as two different questions. The p
-value is the test the paper itself used, Mann-Whitney for a two group comparison
-and Spearman for a correlation. A direction can be right while the test is not
-significant, and claims 2, 4 and 7 are exactly that. Claim 9 also sits above
-0.05, and there the absence of a difference is the claim itself. Eight of the
-ten claims are directional, so their verdict compares the direction found
-against the direction stated. Claims 5 and 6 are not directional, and this
-report made the mistake of treating them as though they were before it corrected
-itself.
+The p value is the test the paper itself used, Mann-Whitney for a two group
+comparison and Spearman for a correlation. A direction can be right while the
+test is not significant, and claims 2, 4 and 7 are exactly that. Claim 9 also
+sits above 0.05, and there the absence of a difference is the claim itself.
+Eight of the ten claims are directional, so their verdict compares the direction
+found against the direction stated. Claims 5 and 6 are not directional, and the
+first version of this analysis treated them as directional before the criterion
+was corrected.
 
 ### The headline claim
 
@@ -398,11 +416,10 @@ kable(
 knitr::include_graphics(OutputImage("cd45ra_sweep.png"))
 ```
 
-The memory frequency moves from 55.5 to 65.3 percent across the range, which is
-a large change in the number. No verdict changes. That is the useful result. The
-cut point is not measurable from the data, and it does not matter, because all
-three claims are comparisons between two groups gated at the same place. A cut
-that is wrong by the same amount in both groups cancels.
+The memory frequency moves from 55.5 to 65.3 percent across the range. No
+verdict changes. The cut point is not measurable from the data, and it does not
+matter, because all three claims are comparisons between two groups gated at the
+same place. A cut that is wrong by the same amount in both groups cancels.
 
 ## Part 6: clustering as a second route
 
@@ -435,8 +452,7 @@ is an NK cell cluster, not a MAIT cluster.
 The reason is the size of the population. CD161hi cells are 9 percent of CD8 T
 cells, which is under 2 percent of the CD45 positive parent, and a rare
 population is absorbed by a neighbouring metacluster when the number of
-metaclusters is fixed in advance. The OMIP-039 report met the same failure on
-the NK subsets.
+metaclusters is fixed in advance.
 
 ### Clustering inside the CD8 gate does find them
 
@@ -450,8 +466,8 @@ kable(
 )
 ```
 
-The margin is not a close call. The MAIT metacluster is chosen by the highest
-median CD161, and no cluster is named by eye.
+The MAIT metacluster is chosen by the highest median CD161, and no cluster is
+named by eye.
 
 ```{r}
 #| label: route-comparison
@@ -483,10 +499,10 @@ and never saw a gate.
 All five claims come out the same way by both routes. Four reproduce and claim 5
 is partly reproduced, and it misses on the same window for the same reason. The
 clustering route gives the late window a p of 0.065, which is the value the
-gating route gives it to three decimal places. That agreement is worth more than
-either number alone. The late window misses significance under a boundary fitted
-on one marker and under a metacluster fitted in eight dimensions, so the miss is
-a property of these 24 samples and not of the gate.
+gating route gives it to three decimal places. The late window misses
+significance under a boundary fitted on one marker and under a metacluster
+fitted in eight dimensions, so the miss is a property of these 24 samples and
+not of the gate.
 
 ## Discussion
 
@@ -521,18 +537,17 @@ test.
 
 ### Where the fragility sits
 
-The OMIP-039 report ended with the statement that a gate on a bimodal marker is
-a fit and a gate on a continuum is a decision. This dataset gives a cleaner
-example of the same point, because it separates the two cases inside one panel.
-CD3, CD8, CCR7 and CD161 are bimodal, their cuts were fitted from the pooled
-density, and the analysis inherits nothing from the analyst at those four gates.
-CD45RA is a continuum, its cut cannot be fitted, and the analysis inherits a
-number that a person chose. The sweep in Part 5 then shows that the chosen
-number changes the frequency by ten percentage points and changes no conclusion.
+A gate on a bimodal marker is a fit and a gate on a continuum is a decision.
+This dataset separates the two cases inside one panel. CD3, CD8, CCR7 and
+CD161 are bimodal, their cuts were fitted from the pooled density, and the
+analysis inherits nothing from the analyst at those four gates. CD45RA is a
+continuum, its cut cannot be fitted, and the analysis inherits a number that a
+person chose. The sweep in Part 5 then shows that the chosen number changes the
+frequency by ten percentage points and changes no conclusion.
 
-That result is worth separating from the general worry about gating. A cut point
-matters when the reported quantity is a frequency. It cancels when the reported
-quantity is a comparison between two groups gated at the same place.
+A cut point matters when the reported quantity is a frequency. It cancels when
+the reported quantity is a comparison between two groups gated at the same
+place.
 
 ### What this does not show
 
