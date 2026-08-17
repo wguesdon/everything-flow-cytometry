@@ -52,17 +52,12 @@ verdicts <- ReadOutput("claim_verdicts.csv")
 
 ## Why this dataset
 
-Every earlier report in this repository that set an automated result against a
-human one did it on a single donor file, because that is all the deposited
-workspaces gated. FR-FCM-Z2KP breaks that pattern. The FlowJo workspace that
-Vanderbeke and colleagues shipped gates every sample of the cohort, so the
-human arm here covers 49 files across three clinical groups rather than one
-file [1]. The deposit is also the cleanest one in the archive. Each file was
-exported after a live cell gate and every fluorescence channel is compensated,
-so the scatter, viability and compensation steps that broke the bone marrow
-report have nothing to act on. That combination makes this dataset the fair
-test of the approach. When the input is clean and the human boundaries are
-published, how close does one automated rule get?
+The FlowJo workspace that Vanderbeke and colleagues shipped gates every sample
+of the cohort, so the human arm here covers 49 files across three clinical
+groups rather than one file [1]. Each file was exported after a live cell gate
+and every fluorescence channel is compensated, so the scatter, viability and
+compensation steps have nothing to act on. The input is clean and the human
+boundaries are published.
 
 ```{r}
 #| label: design
@@ -111,6 +106,39 @@ kable(
 )
 ```
 
+## Methods
+
+### The dataset
+
+The cohort comprises 49 files across three clinical groups. The FlowJo
+workspace gates every sample. Each file was exported after a live cell gate and
+every fluorescence channel is compensated.
+
+### Preprocessing
+
+No preprocessing was applied. The deposited files were used as exported.
+
+### Gating
+
+The manual arm is the deposited workspace, applied to the deposited files by
+CytoML. No gate was refit. The automated arm uses a density minimum with a two
+component mixture as the fallback, fitted on each file. Both arms count the
+same five populations with the same denominators. CD3 is a percentage of the
+exported live cells. CD4 and CD8 are percentages of CD3. CD14 and CD19 sit
+beside CD3 rather than under it, which is the shape the workspace uses.
+
+### Statistics
+
+Spearman correlation measures agreement between arms across files. The median
+difference between arms is reported for each measure. Group comparisons use the
+Mann-Whitney test for COVID-19 against healthy and the Kruskal-Wallis test
+between the two COVID-19 groups.
+
+### Software
+
+The analysis uses CytoML, flowCore, ggplot2 and knitr. Every version is pinned
+in the container.
+
 ## Part 1: six patients who changed group after the workspace was written
 
 ```{r}
@@ -128,21 +156,13 @@ Six deposited files are named `ICU_changedW`, where the workspace still names
 the same sample `W`. Those six patients moved from the ward to intensive care
 after the workspace was built, and the file name records the move while the
 workspace does not. A join on the file name therefore drops six of the 49
-samples, and it drops them silently. The join key used here removes the marker,
-so both arms meet on all of them. The mismatch is worth naming anyway, because
-it is the kind that a pipeline swallows. Six patients in the most severe group
-is 12 percent of the cohort, and losing them would move every group comparison
-in this report.
+samples, and it drops them silently. The join key removes the marker, so both
+arms meet on all of them. Six patients in the most severe group is 12 percent
+of the cohort, and losing them would move every group comparison.
 
 ## Part 2: the two arms
 
-The manual arm is the deposited workspace, applied to the deposited files by
-`CytoML`, and nothing here refits a gate. The automated arm is the rule this
-repository uses everywhere else, a density minimum with a two component mixture
-as the fallback, fitted on each file. Both arms count the same five populations
-with the same denominators. CD3 is a percentage of the exported live cells, CD4
-and CD8 are percentages of CD3, and CD14 and CD19 sit beside CD3 rather than
-under it, which is the shape the workspace uses.
+Both arms count the same five populations on the files that both measured.
 
 ```{r}
 #| label: cut-rules
@@ -173,16 +193,13 @@ kable(
 knitr::include_graphics(OutputImage("arm_comparison.png"))
 ```
 
-This is the closest agreement between a human and an automated rule anywhere in
-this repository. CD3, CD8 and CD14 all correlate above rho 0.94 across the
-files, and the median difference between the two arms stays inside four
-percentage points on every measure. CD4 and CD19 correlate less well, at about
-rho 0.77, and both are the measures where the two arms also disagree most in
-the median, so the looser correlation is not an artefact of one outlier. The
-comparison is fair in a way the earlier ones were not. Because the live cell
-gate was applied before export, the workspace and the automated rule see the
-same events, and a difference between the arms is a difference in where a
-boundary sits and nothing else.
+CD3, CD8 and CD14 all correlate above rho 0.94 across the files, and the
+median difference between the two arms stays inside four percentage points on
+every measure. CD4 and CD19 correlate less well, at about rho 0.77, and both
+are the measures where the two arms also disagree most in the median, so the
+looser correlation is not an artefact of one outlier. The live cell gate was
+applied before export, so the workspace and the automated rule see the same
+events.
 
 ## Part 3: the claims
 
@@ -251,14 +268,13 @@ knitr::include_graphics(OutputImage("pd1_by_subset.png"))
 ```
 
 The paper reports PD-1 high on the effector T cells, with a predominance in CD8
-terminally differentiated effector memory cells. The effector part reproduces
-cleanly. The two effector memory subsets and the two terminally differentiated
-subsets carry far more PD-1 than the naive subsets, and the ordering is
-unambiguous. The predominance does not, because the highest subset in this
-analysis is CD8 effector memory rather than CD8 terminally differentiated, so
-the claim is recorded as partly reproduced. The two subsets are separated by
-the CCR7 cut, the least reliable cut in every report in this repository, so a
-swap between two neighbouring subsets is the expected failure.
+terminally differentiated effector memory cells. The effector part reproduces.
+The two effector memory subsets and the two terminally differentiated subsets
+carry far more PD-1 than the naive subsets, and the ordering is unambiguous.
+The predominance does not, because the highest subset in this analysis is CD8
+effector memory rather than CD8 terminally differentiated, so the claim is
+recorded as partly reproduced. The two subsets are separated by the CCR7 cut,
+so a swap between two neighbouring subsets is the expected failure.
 
 ```{r}
 #| label: verdicts
@@ -287,14 +303,13 @@ kable(
 
 On a clean deposit with published boundaries, an automated rule tracks a human
 closely. Three of the five lineage measures correlate above rho 0.94 across 48
-files, and no median differs by more than four percentage points. This is a
-different result from the three reports before it, and the reason is the input
-rather than the method. The rule did not change. The scatter, the viability
-gate and the compensation were already settled by the depositors, so the only
-thing left for the rule to get wrong was the position of a cut on a bimodal
-marker, which is the case it handles well. The claims the paper makes from the
-flow data hold as well. Four reproduce, and two reproduce in direction without
-reaching significance on six healthy controls.
+files, and no median differs by more than four percentage points. The input
+rather than the method explains the result. The rule did not change. The
+scatter, the viability gate and the compensation were already settled by the
+depositors, so the only thing left for the rule to get wrong was the position
+of a cut on a bimodal marker, which is the case it handles well. The claims the
+paper makes from the flow data hold as well. Four reproduce, and two reproduce
+in direction without reaching significance on six healthy controls.
 
 ### Where the two arms part company
 
@@ -310,8 +325,8 @@ correlation says.
 ### What this does not show
 
 This report does not show that the automated rule would work on the raw files.
-The deposit is exported after a live cell gate, so the steps that failed on the
-bone marrow deposit were never attempted here. It also does not test the
+The deposit is exported after a live cell gate, so the scatter, viability and
+compensation steps were never attempted here. It also does not test the
 cytokine claims that the paper draws from mass cytometry or from single cell
 sequencing, because those data sit in other accessions and in GEO. The healthy
 group holds six samples, so every comparison against it in this report is
@@ -323,9 +338,9 @@ as an absence of an effect.
 The workspace gates five populations, and the panel carries twenty more
 markers, including the cytokines that the paper's argument rests on, none of
 them gated in the deposited workspace. An automated route is the only way to
-reach them, and this report shows the rule is trustworthy on this deposit. The
-six relabelled patients should also be checked against the paper's own group
-assignment before their clinical group is used in anything further.
+reach them. The six relabelled patients should also be checked against the
+paper's own group assignment before their clinical group is used in anything
+further.
 
 ## Reproducing this
 
