@@ -19,9 +19,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-# A number the prose may introduce without it being a claim. A section number, a
-# figure number and a single digit inside a name are not measurements.
-NUMBER_PATTERN = re.compile(r"\d[\d,]*\.?\d*")
+# A number as it appears in running text. The trailing group is optional so that a
+# sentence final full stop, as in "the ASC gate on CD38 and CD27.", does not
+# become part of the number.
+NUMBER_PATTERN = re.compile(r"\d[\d,]*(?:\.\d+)?")
 DASH_PATTERN = re.compile(r"[–—]")
 
 

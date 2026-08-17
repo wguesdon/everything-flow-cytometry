@@ -51,30 +51,75 @@ OutputImage <- function(name) {
 
 OMIP-043 identifies antibody secreting cells, historically called plasma
 cells, across four human tissues [1]. The target population is defined as CD38
-high and CD27 positive, and the word "high" decides everything that follows.
-CD38 high is the bright end of one continuous distribution rather than a
-separated peak, so a method that looks for a dip between two peaks has to be
-checked rather than trusted.
+high and CD27 positive. CD38 high is the bright end of a continuous
+distribution rather than a separated peak. A method that looks for a dip
+between two peaks requires verification on this panel.
 
-The dataset is also unusually good for a check of arithmetic, because the
-authors state their design target in counting terms and both halves of that
-sentence can be tested against the data they deposited. The aim of this report
-is to reproduce the paper's findings as closely as the deposited data allows.
+The authors state a design target in counting terms. Both halves of that
+statement can be tested against the deposited data. The analysis reproduces
+the paper's findings as closely as the deposited data allows.
 
 ### What the replicates are
 
 Each tissue group holds seven files that share one `$SRC` and one acquisition
 date, 3 August 2017. They are replicate acquisitions of one preparation per
-tissue, not seven donors, and that is what makes the dataset useful here.
-Donor variation is absent by construction, so the spread across the seven
-files measures acquisition and analysis and nothing else. It is the Maecker
-design in miniature, run on one bench instead of fifteen laboratories.
+tissue and not seven donors. Donor variation is absent, so the spread across
+the seven files measures acquisition and analysis.
+
+## Methods
+
+### The dataset
+
+FlowRepository accession FR-FCM-Z2ZG (OMIP-043) contains flow cytometry files
+from four human tissues: blood, bone marrow, spleen and tonsil. Each tissue
+group holds seven replicate files from one preparation, acquired on 3 August
+2017. The target population is antibody secreting cells, defined as CD38 high
+and CD27 positive.
+
+### Preprocessing
+
+FCS files were read and compensation was applied using the spillover matrix
+stored in the SPILL keyword. Fluorescence channels were transformed to a
+logicle scale.
+
+### Gating
+
+The deposited FlowJo workspace defines seven sequential populations: a time
+gate, a viability gate, a permissive scatter gate, two singlet gates, a dump
+gate for CD3, CD14, CD15 and CD193, and the ASC gate on CD38 and CD27. The
+manual ASC gate is a rectangleGate on CD38 from 141.8 to 209.1 and on CD27
+from 109.7 to 211.3.
+
+An automated gating template was constructed to mirror the manual hierarchy.
+Density minimum gating (mindensity) was applied to the viability and dump
+gates, and two sequential mindensity gates were used to reach CD38 high.
+
+### Statistics
+
+The coefficient of variation from counting alone follows a Poisson
+distribution, calculated as 1 divided by the square root of the event count.
+The measured CV across replicates was compared against this floor.
+
+FlowSOM clustering was performed with 15 metaclusters. Clusters were scored
+against the manual ASC gate using purity and recall. A configuration sweep
+tested 48 combinations of metacluster count, scatter channel inclusion,
+channel scaling, and selection rule. Each configuration was ranked on its
+worst tissue F1 score.
+
+Cluster annotation used a definitions file specifying expected marker signs
+for each cell type. Median marker expression per cluster was scaled to 0 to 1
+and scored against the definitions.
+
+### Software
+
+The analysis used R with the flowCore, openCyto, FlowSOM, and ggplot2
+packages. Every version is pinned in the container and asserted at build
+time.
 
 ## Part 1: the manual gates
 
-The deposited workspace gates seven populations in sequence. They are a time
-gate, a viability gate, a permissive scatter gate, two singlet gates, a dump
-gate for CD3, CD14, CD15 and CD193, and finally the ASC gate.
+The manual ASC gate was applied to each of the 28 files through the deposited
+workspace.
 
 ```{r}
 #| label: manual-counts
@@ -90,9 +135,8 @@ kable(
 )
 ```
 
-The frequencies span an order of magnitude between tissues, from 0.23 percent
-in blood to 3.5 percent in spleen. Within a tissue the seven replicates agree
-closely, which is what replicate acquisitions of one tube should do.
+ASC frequencies range from 0.23 percent in blood to 3.5 percent in spleen.
+The seven replicates within each tissue show close agreement.
 
 ## Part 2: the counting claims
 
@@ -101,10 +145,9 @@ The paper states its design target directly.
 > We targeted a 5% coefficient of variation (CV), which resulted in regularly
 > collecting 400-2,000 events in the ASC gate.
 
-The two numbers in that sentence are one claim, because arithmetic relates
-them. A count of rare events follows a Poisson distribution, so the relative
-spread from counting alone is `1 / sqrt(n)`. At 400 events that spread is
-exactly 5 percent, which is where the paper's lower bound comes from.
+The two numbers in that sentence are linked by arithmetic. A count of rare
+events follows a Poisson distribution, so the relative spread from counting
+alone is `1 / sqrt(n)`. At 400 events that spread is 5 percent.
 
 ```{r}
 #| label: counting-claims
@@ -126,24 +169,17 @@ kable(
 knitr::include_graphics(OutputImage("asc_event_counts.png"))
 ```
 
-Not one of the 28 replicates falls inside the stated 400 to 2,000 range. Blood
-and bone marrow sit below it at 290 and 185 events, and spleen and tonsil sit
-above it at around 3,500.
-
-The mismatch is not an error in the paper, and it deserves a careful reading.
-The sentence says "regularly", which describes the authors' usual practice
-across many experiments rather than a promise about this particular deposit.
-The 5 percent CV target itself is met where the count is high enough, in
-spleen and tonsil, and it is missed in blood and bone marrow where the cells
-are rarest. The target describes an aim, and this deposit shows where the aim
-is hard to reach.
+None of the 28 replicates falls inside the stated 400 to 2,000 range. Blood
+and bone marrow sit below it at 290 and 185 events. Spleen and tonsil sit
+above it at around 3,500. The word "regularly" in the quoted sentence
+describes the authors' usual practice across many experiments rather than a
+promise about this deposit. The 5 percent CV target is met in spleen and
+tonsil and missed in blood and bone marrow.
 
 ### The floor and what sits above it
 
-The Poisson CV is a floor. No amount of care in the laboratory goes below it,
-because it is the spread of the counting itself. The measured CV across the
-seven replicates includes that floor plus pipetting, staining, acquisition and
-the gate.
+The measured CV across the seven replicates includes the Poisson counting
+floor plus pipetting, staining, acquisition and the gate.
 
 ```{r}
 #| label: spread
@@ -165,17 +201,16 @@ kable(
 knitr::include_graphics(OutputImage("cv_comparison.png"))
 ```
 
-Read the last column. In blood, bone marrow and spleen the measured spread
-sits above the counting floor, so something other than counting contributes to
-it. In tonsil the measured CV of 1.17 percent falls below the Poisson floor of
-1.73 percent, and the excess is reported as missing rather than as a negative
-number.
+The excess CV column shows the measured spread minus the Poisson floor. In
+blood, bone marrow and spleen the measured spread sits above the counting
+floor. In tonsil the measured CV of 1.17 percent falls below the Poisson
+floor of 1.73 percent, and the excess is reported as missing rather than as a
+negative number.
 
 A measured spread below the counting floor is not possible for independent
-samples, so the seven tonsil files are not independent. That fits what they
-are. They are repeated acquisitions from one tube, where the same cells can be
-sampled more than once and the counts are correlated. The arithmetic detected
-the study design.
+samples, so the seven tonsil files are not independent. They are repeated
+acquisitions from one tube, where the same cells can be sampled more than once
+and the counts are correlated.
 
 ## Part 3: automated gating, and why it fails
 
