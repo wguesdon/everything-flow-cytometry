@@ -60,21 +60,19 @@ verdicts <- ReadOutput("claim_verdicts.csv")
 
 ## Why this dataset
 
-The three earlier reports each ended on the same admission. They could not
-measure how much of the spread in a flow result comes from the analyst, because
-that measurement needs the same files gated by many people, and each report had
-one file or one operator. FlowRepository FR-FCM-Z282 is that design. Thirteen
-operators at five centres stained and acquired the same six samples on seven
-instruments, and they sent both the raw files and their own analysis to the
-coordinating centre [1]. One reference operator then re-analysed all 234 files
-in Kaluza.
+Flow cytometry results vary across operators, and the variation needs a design
+where the same files are gated by many people. FlowRepository FR-FCM-Z282 is
+that design. Thirteen operators at five centres stained and acquired the same
+six samples on seven instruments, and they sent both the raw files and their
+own analysis to the coordinating centre [1]. One reference operator then
+re-analysed all 234 files in Kaluza.
 
-Every file in the deposit therefore carries two complete answers. The operator's
-own answer is the local analysis; the reference operator's answer is the central
-analysis. This report adds a third answer and a fourth, and both come from one
-automated rule that never sees either of the other two. The paper asks whether
-centralising the analysis reduces variability. The question this report adds is
-which part of centralising does the work.
+Every file in the deposit therefore carries two complete answers. The
+operator's own answer is the local analysis. The reference operator's answer
+is the central analysis. A third answer and a fourth come from one automated
+rule that never sees either of the other two. The paper asks whether
+centralising the analysis reduces variability. This report tests which part
+of centralising does the work.
 
 ```{r}
 #| label: design
@@ -98,20 +96,75 @@ kable(
 )
 ```
 
+## Methods
+
+### The dataset
+
+FlowRepository FR-FCM-Z282 contains files from thirteen operators at five
+centres. The operators stained and acquired the same six samples on seven
+instruments. Two materials were used: frozen PBMC and whole blood. The deposit
+holds 234 files. Each operator contributes 18 files, which is two materials,
+three vials and three rounds. The frozen PBMC replicates were stained on three
+separate days, so they are an interassay measure. The whole blood replicates
+were stained on one day and are an intra-assay measure. One reference operator
+re-analysed all 234 files in Kaluza.
+
+### Preprocessing
+
+The channel is resolved per file, in two passes. The first pass reads the
+marker name the operator typed. The second pass falls back on the
+fluorochrome, through `gating/z282_panel.csv`.
+
+Compensation state varies across the deposit. Most Becton Dickinson exports
+carry a matrix with `APPLY COMPENSATION` set to `TRUE`, so the values are
+already compensated. The Kaluza exports carry `$SPILLOVER` and no such
+keyword, so the matrix still has to be applied. Eighteen files carry no matrix
+at all.
+
+The measurement range is 262,144 on the Becton Dickinson instruments,
+1,048,576 on the Gallios, and 1,024 on the eighteen files that one operator
+exported already scaled. Every cut is fitted inside one file or inside one
+operator.
+
+### Gating
+
+The density minimum is the rule of first resort. A two component mixture is
+the fallback for CCR7 and CD45RA, which are continuous.
+
+The automated arm applies one rule to all 234 files. It reads no operator's
+result and no reference value, and it fits every cut on the file it gates,
+which is what an openCyto template does. The automated shared arm applies the
+same rule with one change. It takes the median of an operator's own fitted
+cuts, per marker and per material, and gates every file of that operator at
+that one value.
+
+A file that cannot be gated is reported and dropped, not filled in.
+
+### Statistics
+
+The twenty claims are encoded from the paper with the sentence each came from.
+The paper sets acceptability thresholds at CV below 0.20, bias below 0.20 and
+ICC above 0.75. Z-score performance is measured against the reference
+distribution. A score is unsatisfactory at 3 and questionable between 2 and 3.
+
+The reference operator is treated as Op_M, the letter used in the paper. The
+deposit is de-identified with a randomised operator code, and nothing in the
+deposit confirms the match.
+
+### Software
+
+The analysis runs in R. Every package version is pinned in the container.
+
 ## Part 1: what one pipeline has to survive
 
-The earlier reports named a channel once in a template CSV and reused it for
-every file. That is not possible here. Three makers name the same detector three
-ways. Becton Dickinson writes `PerCP-Cy5-5-A`, one operator configured the same
-analyser by laser and filter and it writes `Blue 670 LP-A`, and Beckman Coulter
-writes `FL4-A`. The sixth colour is not the same reagent in the two materials.
-It is the LIVE/DEAD Near-IR viability dye in the frozen PBMC panel and anti-CD45
-in the whole blood panel, and both sit in the same detector. Some operators left
-the marker field empty, so those files carry a detector name and nothing else.
-
-The channel is therefore resolved per file, in two passes. The first pass reads
-the marker name the operator typed. The second pass falls back on the
-fluorochrome, through `gating/z282_panel.csv`.
+A single template channel name cannot cover this deposit. Three makers name
+the same detector three ways. Becton Dickinson writes `PerCP-Cy5-5-A`, one
+operator configured the same analyser by laser and filter and it writes
+`Blue 670 LP-A`, and Beckman Coulter writes `FL4-A`. The sixth colour is not
+the same reagent in the two materials. It is the LIVE/DEAD Near-IR viability
+dye in the frozen PBMC panel and anti-CD45 in the whole blood panel, and both
+sit in the same detector. Some operators left the marker field empty, so those
+files carry a detector name and nothing else.
 
 ```{r}
 #| label: resolution
@@ -132,19 +185,6 @@ kable(
 )
 ```
 
-The compensation state is not uniform either. Most Becton Dickinson exports
-carry a matrix with `APPLY COMPENSATION` set to `TRUE`, which means the values
-are already compensated. The Kaluza exports carry `$SPILLOVER` and no such
-keyword, so the matrix still has to be applied. Eighteen files carry no matrix
-at all.
-
-The scales differ as well. The measurement range is 262,144 on the Becton
-Dickinson instruments, 1,048,576 on the Gallios, and 1,024 on the eighteen files
-that one operator exported already scaled. A shared cut point across the deposit
-is therefore impossible, because a value on one instrument's scale means nothing
-on another's. Every cut in this report is fitted inside one file or inside one
-operator.
-
 ```{r}
 #| label: cut-rules
 
@@ -154,11 +194,6 @@ kable(
   col.names = c("Marker", "Rule", "Cuts")
 )
 ```
-
-The density minimum is the rule of first resort, and it produced most cuts. A
-two component mixture is the fallback, and it exists because CCR7 and CD45RA are
-continuous. The paper says so in its own discussion, and the OMIP-039 and Yu
-2021 reports met the same marker behaving the same way.
 
 ```{r}
 #| label: failures
@@ -171,10 +206,8 @@ kable(
 )
 ```
 
-A file that cannot be gated is reported and dropped, not filled in. That is the
-lesson of the OMIP-043 report, where a template that ran to completion and
-returned a number for a gate that had kept everything was worse than one that
-stopped.
+A template that runs to completion and returns a number for a gate that kept
+every event is worse than one that stops.
 
 ### Two files of this deposit are one acquisition
 
@@ -194,14 +227,11 @@ These files carry different names and different checksums, and yet their FCS
 headers name the same acquisition. The design counts them as separate
 replicates, so a repeatability measure computed over them understates the
 spread, because two of the three replicates are one measurement exported twice.
-The number is small, and it is worth recording rather than smoothing over.
 
 ## Part 2: the paper's claims, from the deposit alone
 
-The twenty claims live in `gating/z282_paper_claims.csv`, each with the sentence
-it came from, so a reader can check the claim against the paper before the
-number is checked against the data. Every claim in this part is answered from
-the local arm and the central arm. The automated arms take no part in it.
+Every claim in this part is answered from the local arm and the central arm.
+The automated arms take no part in it.
 
 ```{r}
 #| label: interoperator-counts
@@ -285,23 +315,24 @@ kable(
 
 Several claims reproduce to the digit. The intraoperator maximum CV in frozen
 PBMC comes out at 1.32 local against 0.75 central, and the median at 0.13
-against 0.14, which is the paper's sentence exactly. The Z-score counts also
-land exactly. No score is unsatisfactory in the central analysis, one is in
-local frozen PBMC and 49 are in local whole blood.
+against 0.14. The Z-score counts also land exactly. No score is
+unsatisfactory in the central analysis, one is in local frozen PBMC and 49
+are in local whole blood.
 
-Those two hits matter more than the rest, because they are computed from the
-paper's own definitions applied to the paper's own numbers. An exact match says
-the definitions were read correctly before anything else was measured. The
-counts that miss by one or two come from the acceptability tables. The paper
-does not state whether a parameter exactly at a threshold counts as acceptable,
-and a difference of one parameter in fifteen follows from that choice alone.
+The two exact matches come from indicators computed from the paper's own
+definitions applied to the paper's own numbers. An exact match shows the
+definitions were read correctly before anything else was measured. The counts
+that miss by one or two come from the acceptability tables. The paper does not
+state whether a parameter exactly at a threshold counts as acceptable, and a
+difference of one parameter in fifteen follows from that choice alone.
 
 ### Where the deposit disagrees with the paper
 
-Claim 4 is the largest miss. The paper reports bias acceptable for 7 of 15
-parameters in locally analysed whole blood, and this analysis finds 10. Claim 18
-is the other one. The paper puts 63.9 percent of the naive and memory variance
-in the first two principal components, and this analysis finds a higher figure.
+Claim 4 differs by three parameters. The paper reports bias acceptable for 7
+of 15 parameters in locally analysed whole blood, and this analysis finds 10.
+Claim 18 also differs. The paper puts 63.9 percent of the naive and memory
+variance in the first two principal components, and this analysis finds a
+higher figure.
 
 ```{r}
 #| label: pca
@@ -322,16 +353,8 @@ a difference in method rather than in the data.
 
 ## Part 3: two automated arms
 
-The automated arm applies one rule to all 234 files. It reads no operator's
-result and no reference value, and it fits every cut on the file it gates, which
-is what an openCyto template does. The automated shared arm applies the same
-rule with one change. It takes the median of an operator's own fitted cuts, per
-marker and per material, and gates every file of that operator at that one
-value.
-
-The second arm exists because of what the first one showed, and because the Yu
-2021 report had already met the problem. That report fitted its cuts once on the
-pooled cohort, on the argument that a cut which moves with the sample changes a
+The second arm exists because the first one showed that per-file cuts follow
+day to day drift. A cut fitted once on the pooled cohort avoids changing a
 frequency for a reason that is not biology.
 
 ```{r}
@@ -353,9 +376,8 @@ kable(
 knitr::include_graphics(OutputImage("distribution_by_arm.png"))
 ```
 
-The automated arms land close to the two human arms on the abundant populations,
-and they drift on the small subsets. That is the pattern every earlier report in
-this repository found.
+The automated arms land close to the two human arms on the abundant
+populations, and they drift on the small subsets.
 
 ```{r}
 #| label: intraoperator-figure
@@ -378,19 +400,17 @@ kable(
 )
 ```
 
-Read the intraoperator table and the interoperator table against each other.
-They answer two different questions, and the two automated arms separate them.
-One cut per operator, in place of one cut per file, cuts the within operator
-spread by about a third in frozen PBMC and by a fifth in whole blood. The same
-change does not improve agreement between operators at all. The count of
-parameters with an acceptable CV and the count with an acceptable ICC both stay
-where they were.
+The intraoperator table and the interoperator table answer two different
+questions, and the two automated arms separate them. One cut per operator, in
+place of one cut per file, cuts the within operator spread by about a third in
+frozen PBMC and by a fifth in whole blood. The same change does not improve
+agreement between operators. The count of parameters with an acceptable CV and
+the count with an acceptable ICC both stay where they were.
 
-That is the finding this deposit makes possible. Holding a boundary steady
-across the files of one operator fixes repeatability. It does nothing for
-agreement, because each operator still holds a different boundary. The central
-analysis fixes both, and it fixes them for one reason. One person applied one
-judgement to every file of every operator.
+Holding a boundary steady across the files of one operator fixes
+repeatability. It does nothing for agreement, because each operator still
+holds a different boundary. The central analysis fixes both. One person
+applied one judgement to every file of every operator.
 
 ```{r}
 #| label: icc-after
@@ -449,18 +469,17 @@ A published harmonisation result reproduces from the deposited spreadsheet. Of
 the twenty claims encoded from the paper, most come out as stated, and the two
 claims that fix the definitions of every indicator come out to the digit.
 
-The gap that three earlier reports in this repository named is now measured.
-Thirteen analysts working on their own files disagree by far more than one
-analyst working on all of them, and the difference is largest in whole blood,
-where the material is easiest and the analysis is therefore the only thing left
-to vary. The two automated arms separate repeatability from agreement, which the
-paper's design cannot do on its own. A stable boundary fixes the first. Only a
-shared judgement fixes the second.
+The operator effect is now measured. Thirteen analysts working on their own
+files disagree by far more than one analyst working on all of them, and the
+difference is largest in whole blood, where the material is easiest and the
+analysis is therefore the only thing left to vary. The two automated arms
+separate repeatability from agreement, which the paper's design cannot do on
+its own. A stable boundary fixes the first. Only a shared judgement fixes the
+second.
 
 ### Where the automated arms are weak, and why
 
-Both automated arms sit well below the two human arms on every indicator. That
-is the honest result, and it is worth stating plainly rather than tuning away.
+Both automated arms sit below the two human arms on every indicator.
 
 Part of the gap is real. A rule that refits a boundary on every file follows the
 day to day drift in staining, and a person does not. Part of the gap is built
@@ -495,11 +514,6 @@ The 234 files come from 7 instruments, and the design is unbalanced across them,
 so a variance components model with the operator, the instrument and the centre
 as separate random effects would say more than the indicators do. It is not run
 here.
-
-The reference operator is named as Op_M in the paper, and the deposit is
-de-identified with a randomised operator code. This report treats the two as the
-same letter, and the assumption is stated here because nothing in the deposit
-confirms it.
 
 ## Reproducing this
 
