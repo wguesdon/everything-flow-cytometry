@@ -1,6 +1,6 @@
 ---
-title: "OMIP-43 and the limits of automated gating"
-subtitle: "Rare cell counting, a template that fails silently, and clustering that recovers the population"
+title: "Antibody secreting cell analysis in OMIP-043"
+subtitle: "FlowRepository FR-FCM-ZYBP, four tissues, automated gating and clustering"
 author: "William Guesdon"
 date: today
 format:
@@ -47,17 +47,20 @@ OutputImage <- function(name) {
 }
 ```
 
-## Why this dataset
+## Introduction
 
 OMIP-043 identifies antibody secreting cells, historically called plasma cells,
 across four human tissues [1]. The target population is defined as CD38 high and
-CD27 positive. CD38 high is the bright end of a continuous distribution rather
-than a separated peak. A method that looks for a dip between two peaks requires
-verification on this panel.
+CD27 positive. The authors state a design target of 5 percent coefficient of
+variation, which corresponds to collecting 400 to 2,000 events in the ASC gate.
 
-The authors state a design target in counting terms. Both halves of that
-statement can be tested against the deposited data. The analysis reproduces the
-paper's findings as closely as the deposited data allows.
+FlowRepository accession FR-FCM-ZYBP contains flow cytometry files from blood,
+bone marrow, spleen and tonsil. Each tissue group holds seven replicate files
+from one preparation, acquired on 3 August 2017.
+
+This report measures whether the deposited data meet the stated counting target,
+whether an automated gating template reproduces the manual ASC gate, and whether
+clustering recovers the population without a density valley.
 
 ### What the replicates are
 
@@ -70,7 +73,7 @@ seven files measures acquisition and analysis.
 
 ### The dataset
 
-FlowRepository accession FR-FCM-Z2ZG (OMIP-043) contains flow cytometry files
+FlowRepository accession FR-FCM-ZYBP (OMIP-043) contains flow cytometry files
 from four human tissues: blood, bone marrow, spleen and tonsil. Each tissue
 group holds seven replicate files from one preparation, acquired on 3 August
 2017. The target population is antibody secreting cells, defined as CD38 high
@@ -144,9 +147,8 @@ The paper states its design target directly.
 > We targeted a 5% coefficient of variation (CV), which resulted in regularly
 > collecting 400-2,000 events in the ASC gate.
 
-The two numbers in that sentence are linked by arithmetic. A count of rare
-events follows a Poisson distribution, so the relative spread from counting
-alone is `1 / sqrt(n)`. At 400 events that spread is 5 percent.
+A count of rare events follows a Poisson distribution, so the relative spread
+from counting alone is `1 / sqrt(n)`. At 400 events that spread is 5 percent.
 
 ```{r}
 #| label: counting-claims
@@ -170,10 +172,8 @@ knitr::include_graphics(OutputImage("asc_event_counts.png"))
 
 None of the 28 replicates falls inside the stated 400 to 2,000 range. Blood and
 bone marrow sit below it at 290 and 185 events. Spleen and tonsil sit above it
-at around 3,500. The word "regularly" in the quoted sentence describes the
-authors' usual practice across many experiments rather than a promise about this
-deposit. The 5 percent CV target is met in spleen and tonsil and missed in blood
-and bone marrow.
+at around 3,500. The 5 percent CV target is met in spleen and tonsil and missed
+in blood and bone marrow.
 
 ### The floor and what sits above it
 
@@ -241,11 +241,9 @@ kable(
 )
 ```
 
-This result is worse than a wrong answer. The template is wrong in both
-directions, and by a different amount in each tissue. It undercounts bone marrow
-threefold and it overcounts spleen eighteenfold. A method that is consistently
-wrong can be corrected. A method whose error changes sign between tissues cannot
-be trusted anywhere.
+The template is wrong in both directions, and by a different amount in each
+tissue. It undercounts bone marrow threefold and it overcounts spleen
+eighteenfold.
 
 ### What the gate is, read from the workspace
 
@@ -259,11 +257,8 @@ announces, and the paper says as much in its own words.
 
 ## Part 3b: where a density method actually cuts
 
-The section above shows that the template is wrong, but it does not show why,
-and the obvious explanation deserves a test rather than an assertion.
-`mindensity` was therefore run on the CD38 channel of exactly the data the
-analyst looked at, in the workspace's own scale, and its threshold was compared
-with theirs.
+`mindensity` was run on the CD38 channel of exactly the data the analyst looked
+at, in the workspace's own scale, and its threshold was compared with theirs.
 
 ```{r}
 #| label: cd38-thresholds
@@ -352,10 +347,9 @@ knitr::include_graphics(OutputImage("umap_spleen_clusters.png"))
 
 In three of the four tissues a single metacluster is over 91 percent ASC, and
 recall runs from 72 to 95 percent. In spleen a second cluster takes the combined
-recall to 97.4 percent. Blood is the weakest case at 63.2 percent purity, and
-that result is expected. With 165 ASC among 50,000 events, the population is too
-small to hold a metacluster of its own, so it shares one with its nearest
-neighbours.
+recall to 97.4 percent. Blood is the weakest case at 63.2 percent purity. With
+165 ASC among 50,000 events, the population is too small to hold a metacluster
+of its own, so it shares one with its nearest neighbours.
 
 ### How each metacluster was labelled
 
@@ -572,11 +566,8 @@ failed.
 
 ## Part 6: every claim, with a verdict
 
-The sections above measure. This one decides, so that no claim in the file is
-left without an answer. The seven claims live in
-`gating/omip43_paper_claims.csv`, each with the sentence it came from, so a
-reader can check the claim against the paper before checking the number against
-the data.
+The seven claims live in `gating/omip43_paper_claims.csv`, each with the
+sentence it came from.
 
 ```{r}
 #| label: claims-file
@@ -617,12 +608,9 @@ than counted as a failure, because the data to test it was never deposited.
 
 ### The same claims, from a population the manual gate never touched
 
-Everything above defines ASC by the gate the authors drew. That asks whether the
-paper's conclusions follow from its own analysis, which is worth knowing and is
-not the same as an independent reproduction. The population was therefore
-rebuilt from scratch. Each tissue was clustered, the clusters that carry the
-highest median CD38 were taken as the population, and the manual gate was not
-consulted at any point.
+The population was rebuilt from scratch. Each tissue was clustered, the clusters
+that carry the highest median CD38 were taken as the population, and the manual
+gate was not consulted at any point.
 
 ```{r}
 #| label: cluster-route
@@ -656,8 +644,7 @@ kable(
 
 Four of the five claims that clustering can test reproduce by clustering, with
 the same directions and comparable magnitudes as the authors' own gates. The
-fifth fails on a margin of 0.07 percentage points, and the next section explains
-why that verdict is kept rather than tuned away.
+fifth fails on a margin of 0.07 percentage points.
 
 ### Getting there took two attempts, and the first one failed
 
@@ -665,16 +652,14 @@ The first version of this route selected clusters by a score of their whole
 marker profile against a definitions file. It worked in tonsil and spleen, and
 it failed badly in bone marrow, where it called 9.44 percent of the parent ASC
 against a manual gate of 0.45, with only 4.1 percent of the selected events
-inside that gate. The numbers said where to look. Precision in bone marrow was 4
-to 7 percent while recall was 87 to 99, so the target cells were found and then
-diluted in a cluster far too large to be ASC. That is not a clustering problem.
-It is the rule that decides which cluster to keep.
+inside that gate. Precision in bone marrow was 4 to 7 percent while recall was
+87 to 99, so the target cells were found and then diluted in a cluster far too
+large to be ASC.
 
 Forty-eight configurations were then measured across all four tissues. They
 varied the number of metaclusters, whether scatter channels join the clustering,
 whether channels are scaled, and the selection rule. Each configuration was
-ranked on its worst tissue rather than on its average, because an average hides
-a total failure.
+ranked on its worst tissue rather than on its average.
 
 ```{r}
 #| label: sweep-by-rule
@@ -705,8 +690,7 @@ kable(
 The selection rule decides everything, and the other three settings barely
 matter. Every profile configuration lands between 6.8 and 12.2 on its worst
 tissue. Every configuration that ranks on CD38 and takes the top one lands
-between 48.7 and 77.1. The reason is in the paper, and it is not in the
-parameters.
+between 48.7 and 77.1.
 
 > ASC also express very high levels of the ectoenzyme CD38 and are positive for the
 > TNF-family receptor CD27. Very high CD38 expression is in fact considered
@@ -749,8 +733,7 @@ Bone marrow goes from the worst tissue to the best, at 95.1 percent agreement.
 The top two clusters reproduce all five claims, and they agree less well with
 the manual gate, at a worst-tissue F1 of 69.6 against 77.1. The top one cluster
 agrees better and it loses claim 1. This report keeps the sweep winner, so claim
-1 fails on the clustering route, and the reason is worth seeing rather than
-switching to whichever rule scores better on the claim table.
+1 fails on the clustering route.
 
 Claim 1 says that ASC are rarest in blood. By the manual gate that is clear, at
 0.26 percent in blood against 0.41 in bone marrow. By the clustering route the
@@ -763,12 +746,10 @@ reproduced would have been luck rather than evidence.
 ### What this step is and is not
 
 The manual gate was used to score the configurations above, which makes this a
-calibration step rather than an independent test. A choice of method by how well
-it matches a reference is legitimate. A claim that the result is independent
-afterwards would not be. What survives that objection is the reasoning. The rule
-was not found by a search for whatever matched best. It was taken from a
-sentence in the paper, and the sweep then confirmed that every rule which
-ignores that sentence performs six times worse.
+calibration step rather than an independent test. The rule was not found by a
+search for whatever matched best. It was taken from a sentence in the paper, and
+the sweep then confirmed that every rule which ignores that sentence performs
+six times worse.
 
 ```{r}
 #| label: verdict-summary

@@ -24,6 +24,10 @@ from pathlib import Path
 # become part of the number.
 NUMBER_PATTERN = re.compile(r"\d[\d,]*(?:\.\d+)?")
 DASH_PATTERN = re.compile(r"[–—]")
+# A FlowRepository accession. A rewrite may not introduce one that the original
+# did not carry, because an invented accession points at nothing and reads as a
+# fact.
+ACCESSION_PATTERN = re.compile(r"FR-FCM-[A-Z0-9]+")
 
 
 def read_revision(path: Path, revision: str) -> str:
@@ -184,6 +188,19 @@ def main() -> int:
         problems.append(f"{len(bullets)} body lines are still bullets")
         for line in bullets[:5]:
             problems.append(f"    {line[:110]}")
+
+    def accessions(lines: list[str]) -> set[str]:
+        found: set[str] = set()
+        for line in lines:
+            found.update(ACCESSION_PATTERN.findall(line))
+        return found
+
+    new_accessions = accessions(new["body"] + new["yaml"]) - accessions(
+        old["body"] + old["yaml"] + old["chunks"] + old["captions"]
+    )
+    if new_accessions:
+        problems.append(f"accessions that are not in the original: "
+                        f"{sorted(new_accessions)}")
 
     invented = numbers_in(new["body"]) - numbers_in(
         old["body"] + old["chunks"] + old["captions"] + old["headers"]

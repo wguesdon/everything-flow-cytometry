@@ -182,6 +182,18 @@ interesting.
 
 Do not put a finding in the title. A finding belongs in the results.
 
+The `title` and the `subtitle` each stay on one line, however long. The 80
+character rule applies to prose and not to YAML, and a wrapped YAML value breaks
+the header.
+
+Never write an accession that is not already in the file. The first pass on the
+OMIP-43 report invented `FR-FCM-Z2ZG` for its Methods section. The real
+accession is `FR-FCM-ZYBP`, and the invented one points at nothing while reading
+as a fact. When a Methods section needs an accession and the prose does not
+carry one, take it from the `## Reproducing this` block, from a path under
+`gating/`, or from the folder name under `data/datasets/flowrepository/`. If you
+cannot find it, write the study name and leave the accession out.
+
 ## The introduction is not an argument for the dataset
 
 Rename the `## Why this dataset` header to `## Introduction`. The question in
