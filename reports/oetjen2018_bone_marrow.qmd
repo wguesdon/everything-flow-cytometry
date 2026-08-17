@@ -1,5 +1,5 @@
 ---
-title: "A viability channel that runs backwards, and what it costs an automated pipeline"
+title: "Automated gating of a human bone marrow panel in R"
 subtitle: "Human bone marrow by flow cytometry and by mass cytometry, FR-FCM-ZYQ9 and FR-FCM-ZYQB"
 author: "William Guesdon"
 date: today
@@ -50,16 +50,14 @@ OutputImage <- function(name) {
 verdicts <- ReadOutput("claim_verdicts.csv")
 ```
 
-## Why this dataset
+## Introduction
 
 Oetjen and colleagues profiled bone marrow from 20 healthy adults by single cell
-RNA sequencing, by mass cytometry and by flow cytometry. The flow and the mass
-files are deposited in two accessions [1]. The two deposits describe the same
-donors, and the comparison is between two technologies. The cohort spans 24 to
-84 years of age. An age trend is testable from the flow data alone.
-
-The deposit carries the depositors' own scatter gate and their own viability
-gate in a cytoflow workflow file.
+RNA sequencing, by mass cytometry and by flow cytometry [1]. The flow files are
+deposited in FR-FCM-ZYQ9 and the mass cytometry files are in FR-FCM-ZYQB. The
+cohort spans 24 to 84 years of age. This report measures marker stability under
+an automated density cut, agreement between flow and mass cytometry on T cell
+subsets, and age trends in the memory compartments.
 
 ```{r}
 #| label: coverage
@@ -127,10 +125,9 @@ container.
 
 The deposit carries a cytoflow workflow with two polygons. The first is named
 `lymphocytes` and it sits on forward scatter height against side scatter height.
-The second is named `dead_lymphocytes`. It covers the low end of the V545
-detector, which is the LIVE/DEAD channel. A fixable viability dye stains a dead
-cell brightly, so the usual rule keeps the dim events. On this deposit that rule
-keeps the debris and throws the cells away.
+The second is named `dead_lymphocytes` and it covers the low end of the V545
+detector. The LIVE/DEAD channel is a fixable viability dye. The deposited gate
+assigns live status to events above the polygon boundary.
 
 ```{r}
 #| label: gates
@@ -154,11 +151,9 @@ kable(
 )
 ```
 
-On the V545 detector the `dead_lymphocytes` polygon reaches to about 2,553 and
-no higher, so a live cell is one that sits above that value. The wrong direction
-does not produce an error message. It produces a plausible looking number. The
-pipeline reported CD45 positive cells as 4 percent of live events in a bone
-marrow sample, and it ran to completion.
+On the V545 detector the `dead_lymphocytes` polygon reaches to about 2,553.
+The pipeline reported CD45 positive cells as 4 percent of live events in a bone
+marrow sample.
 
 ```{r}
 #| label: hierarchy
@@ -204,10 +199,7 @@ the scatter gate.
 ## Part 3: whether an automated cut can be trusted here
 
 The upstream gates come from the depositors. The automated cut below them uses a
-density minimum with a two component mixture as the fallback. Twenty-two samples
-of the same tissue, stained with the same panel on the same instrument, should
-not give one marker a frequency of 1 percent in one sample and 99 percent in
-another.
+density minimum with a two component mixture as the fallback.
 
 ```{r}
 #| label: stability
@@ -240,11 +232,10 @@ kable(
 knitr::include_graphics(OutputImage("marker_spread.png"))
 ```
 
-The automated cut does not place a reliable boundary. Most marker and panel
-pairs span more than 80 percentage points across samples that should agree
-closely. The two claims that need a reliable lineage frequency from every panel,
-the order of the major populations and which population is largest, are recorded
-as not measurable by this method.
+Most marker and panel pairs span more than 80 percentage points across samples.
+The two claims that need a reliable lineage frequency from every panel, the order
+of the major populations and which population is largest, are recorded as not
+measurable by this method.
 
 The automated density cut fails here because the marker distribution has no
 reliable second mode. The tissue holds a developmental continuum.
@@ -325,8 +316,7 @@ kable(
 )
 ```
 
-The absolute differences between aspirations are small for all measures. The
-deposited files agree with the paper report of good concordance.
+The absolute differences between aspirations are small for all measures.
 
 ## Part 6: every claim, with a verdict
 
@@ -352,8 +342,6 @@ kable(
   col.names = c("Verdict", "Claims")
 )
 ```
-
-The eight claims are distributed across the verdict categories.
 
 ## Discussion
 
