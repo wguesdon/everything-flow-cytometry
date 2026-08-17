@@ -138,8 +138,7 @@ kable(
 ```
 
 The largest value names the pair of detectors that compensation actually
-moves. Inspect that pair on a plot, because an error in the matrix shows
-there first.
+moves.
 
 ```{r}
 #| label: spillover-matrix
@@ -197,7 +196,7 @@ kable(
 )
 ```
 
-Read the table as one sentence per row. The `nonDebris` row says to take
+The `nonDebris` row says to take
 `root` and, on `FSC-A` and `SSC-A`, fit a `flowClust` gate and keep the
 positive population.
 
@@ -297,7 +296,7 @@ kable(
 )
 ```
 
-Compare the two tables. The pooled CV mixes the stimulation effect into the
+The pooled CV mixes the stimulation effect into the
 spread, and the split CV does not, so it is closer to a measure of the assay
 itself.
 

@@ -149,6 +149,11 @@ new sentence that repeats the caption.
 Read the previous revision with `git show HEAD:<path>` when you are unsure what
 a table was there to show.
 
+Recovering content this way can put a method sentence back into a results
+section that you already moved into Methods. Check for that before you finish. A
+short reminder of the method is allowed where the reader needs it to follow a
+number. The same sentence appearing twice is not.
+
 ## Tools
 
 `rg` is not installed on this machine. Use `grep`. `grep -nP` is available for a
