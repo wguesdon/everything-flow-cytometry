@@ -141,7 +141,16 @@ def main() -> int:
 
     problems: list[str] = []
 
-    for part in ("yaml", "chunks", "quotes"):
+    # The paper pass rewrites the title and the subtitle. Every other YAML line
+    # must survive unchanged.
+    def yaml_body(lines: list[str]) -> list[str]:
+        return [line for line in lines
+                if not line.startswith(("title:", "subtitle:"))]
+
+    if yaml_body(new["yaml"]) != yaml_body(old["yaml"]):
+        problems.append("yaml changed outside the title and the subtitle")
+
+    for part in ("chunks", "quotes"):
         if new[part] != old[part]:
             problems.append(f"{part} changed")
             for line in set(old[part]) ^ set(new[part]):

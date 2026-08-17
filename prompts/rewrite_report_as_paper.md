@@ -98,7 +98,8 @@ repository. What you may not do is point the reader at another document in
 
 ## What you must not change
 
-1. The YAML header. Not one character.
+1. The YAML header, apart from the `title` and the `subtitle`. Every other line
+   of it stays as it is.
 2. Any ```{r} chunk. Not the code, not the label, not the chunk options. Do not
    move a chunk to another position in the file.
 3. Any `caption =` string inside a chunk, and any `fig-cap:` line.
@@ -153,6 +154,33 @@ Recovering content this way can put a method sentence back into a results
 section that you already moved into Methods. Check for that before you finish. A
 short reminder of the method is allowed where the reader needs it to follow a
 number. The same sentence appearing twice is not.
+
+## The title names the study, it does not advertise it
+
+Rewrite the `title` and the `subtitle` in the YAML header. Nothing else in the
+YAML changes.
+
+A title names the material and the question. It does not carry a verdict, a
+promise or a hook. These are the current titles and the fault in each.
+
+| Current title | Fault |
+|---|---|
+| "A viability channel that runs backwards, and what it costs an automated pipeline" | Gives away a finding as a hook, and "what it costs" promises drama. |
+| "Thirteen operators, one panel, and what centralising the analysis actually fixes" | The word "actually" argues with an imagined sceptic. |
+| "Entering a benchmark with one feature" | A story about the author rather than the study. |
+| "A deposited workspace that gates every sample, and an automated rule that keeps up" | "Keeps up" is a verdict on the work. |
+| "OMIP-39 as a positive control" | States the role the author assigned the dataset rather than what was measured. |
+| "A 35 marker spectral panel, and a published finding tested against it" | The second half describes the exercise rather than the subject. |
+
+Write the title as a paper would. Name the measurement, the material and the
+accession where it fits. "Automated gating of a PBMC panel in R" is already
+close to right and needs little.
+
+The subtitle carries the material, the accession and the design. It does not
+carry a claim about the result and it does not tell the reader what is
+interesting.
+
+Do not put a finding in the title. A finding belongs in the results.
 
 ## The introduction is not an argument for the dataset
 
