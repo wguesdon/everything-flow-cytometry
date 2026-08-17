@@ -51,31 +51,27 @@ OutputImage <- function(name) {
 }
 ```
 
-## What this report does
+## Introduction
 
-This report works through a complete flow cytometry analysis in R. It reads
-eight FCS files, applies the compensation matrix that the instrument wrote into
-them, transforms the fluorescence channels, and gates every sample with one
-openCyto template. It then reports the frequency of each population and the
-spread of those frequencies across the eight samples.
+The FlowJo Basic Tutorial provides eight FCS files acquired on an LSRII from
+two donors under four stimulation conditions. The files carry a compensation
+matrix in the `$SPILLOVER` keyword and a viability dye channel.
 
-The report does not repeat the analysis. It reads the files that
-`scripts/01_automated_gating_pbmc.R` wrote, and every number below comes from
-one run of that script, so a new render cannot change a result.
+This report applied compensation, estimated one logicle transform on the first
+sample and applied it to all eight, and gated every sample with one openCyto
+template. It reports the frequency of each population and the spread of those
+frequencies across the eight samples.
 
-### Why the gate hierarchy is a CSV
+### The gate hierarchy as a CSV
 
-The gate hierarchy is in `gating/pbmc_gating_template.csv`, not in this document
-and not in a workspace file. A gate drawn by hand lives inside a FlowJo
-workspace, and to know what a colleague did, you open their workspace and you
-look. A template is a text file. A reviewer reads it in a pull request, a
-version control system records who changed a cut point, and the same file gates
-the next experiment.
+The gate hierarchy is stored in `gating/pbmc_gating_template.csv`. A template
+is a text file that a version control system can track and a reviewer can read
+in a pull request.
 
 Maecker and colleagues sent pre-stained cells to 15 experienced laboratories.
 Local gating gave a mean CV of 20.5 percent, and central gating of the same raw
-files gave 4 percent [1]. The template is the mechanism that makes central
-gating practical, because the analysis moves instead of the analyst.
+files gave 4 percent [1]. The template makes central gating practical because
+the analysis moves instead of the analyst.
 
 ## Methods
 
@@ -275,8 +271,6 @@ knitr::include_graphics(OutputImage("population_frequencies.png"))
 
 ### Spread across the eight samples
 
-This is the number that the example exists to produce.
-
 ```{r}
 #| label: spread
 
@@ -287,9 +281,6 @@ kable(
   caption = "Mean, standard deviation and coefficient of variation of each population frequency across all eight samples."
 )
 ```
-
-That last point is the purpose of the example. Add eight analysts who draw their
-own gates on these same eight files, and the CV rises with no event changed.
 
 McNeil and colleagues measured this directly. 110 laboratories gated one shared
 set of files, they produced 110 different gating approaches, and the standard

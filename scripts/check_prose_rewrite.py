@@ -162,9 +162,14 @@ def main() -> int:
 
     # A rewrite may add a header, because the paper register asks for a Methods
     # section. It may not remove one, and it may not rename one.
-    # The paper pass renames Why this dataset to Introduction, so that one is
-    # allowed to disappear. Every other header must survive.
-    allowed_to_go = {"## Why this dataset"}
+    # The paper pass renames the headers that frame the document as an argument.
+    # Those are allowed to disappear. Every other header must survive, and an
+    # added header is reported rather than refused.
+    allowed_to_go = {
+        "## Why this dataset",
+        "## What this report does",
+        "### Why the gate hierarchy is a CSV",
+    }
     removed = [line for line in old["headers"]
                if line not in new["headers"] and line not in allowed_to_go]
     if removed:
