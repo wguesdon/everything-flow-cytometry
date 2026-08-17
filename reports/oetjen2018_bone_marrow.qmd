@@ -53,17 +53,13 @@ verdicts <- ReadOutput("claim_verdicts.csv")
 ## Why this dataset
 
 Oetjen and colleagues profiled bone marrow from 20 healthy adults by single
-cell RNA sequencing, by mass cytometry and by flow cytometry, and they
-deposited the flow and the mass files in two accessions [1]. No report in this
-repository had read a mass cytometry file before this one, and because the two
-deposits describe the same donors, the comparison on offer is between two
-technologies rather than between two analyses of one technology. The cohort
-spans 24 to 84 years of age, which makes an age trend testable from the flow
-data alone.
+cell RNA sequencing, by mass cytometry and by flow cytometry. The flow and the
+mass files are deposited in two accessions [1]. The two deposits describe the
+same donors, and the comparison is between two technologies. The cohort spans
+24 to 84 years of age. An age trend is testable from the flow data alone.
 
-The deposit also ships something the earlier ones did not. It carries the
-depositors' own scatter gate and their own viability gate in a cytoflow
-workflow file, so the entry into the analysis does not have to be guessed.
+The deposit carries the depositors' own scatter gate and their own viability
+gate in a cytoflow workflow file.
 
 ```{r}
 #| label: coverage
@@ -86,19 +82,56 @@ kable(
 
 Two of the samples are second aspirations from donors who were sampled twice,
 which is why 22 samples come from 20 donors. The paper states a median age of
-57 years, but Table 1 gives a median of 52.5 years across the 20 donors and
-55.5 years across the 22 samples. Neither reading gives 57, and the difference
-is recorded rather than resolved.
+57 years. Table 1 gives a median of 52.5 years across the 20 donors and 55.5
+years across the 22 samples. The difference is recorded.
+
+## Methods
+
+### The dataset
+
+Bone marrow samples from 20 healthy adults were profiled by flow cytometry and
+by mass cytometry. The flow files are in FR-FCM-ZYQ9 and the mass cytometry
+files are in FR-FCM-ZYQB. The cohort spans 24 to 84 years of age. Two donors
+were sampled twice, which gives 22 samples.
+
+### Preprocessing
+
+Every file came from one LSRFortessa. The detector names are the same in all
+132 files. A detector names a marker once the panel is known. The published
+panel design supplies the fallback when a file carries no marker name. The
+count of CD45 positive events is taken before the scatter gate, because the
+deposited polygon is a lymphocyte gate. The mass cytometry files have no
+scatter and no conventional viability dye. The two iridium DNA channels and
+the platinum channel replace those steps. The transform is arcsinh with a
+cofactor of 5.
+
+### Gating
+
+The scatter gate and the viability gate are the depositors' own, extracted from
+the cytoflow workflow file. The viability gate direction is read from the
+deposited gate rather than from a convention. The `LiveMask()` function applies
+this direction.
+
+### Statistics
+
+Marker stability is measured as the spread of percent positive across samples.
+The automated cut uses a density minimum with a two component mixture as the
+fallback. Technology agreement is measured by Spearman correlation. Age trends
+are tested by Spearman correlation on the flow data.
+
+### Software
+
+The analysis uses flowCore, ggplot2 and knitr. Every version is pinned in the
+container.
 
 ## Part 1: the finding that changes the whole pipeline
 
 The deposit carries a cytoflow workflow with two polygons. The first is named
 `lymphocytes` and it sits on forward scatter height against side scatter
-height. The second is named `dead_lymphocytes`, and it is the one that matters.
-It covers the **low** end of the V545 detector, which is the LIVE/DEAD channel.
-A fixable viability dye normally stains a dead cell brightly, so the usual rule
-keeps the dim events. On this deposit that rule keeps the debris and throws the
-cells away.
+height. The second is named `dead_lymphocytes`. It covers the low end of the
+V545 detector, which is the LIVE/DEAD channel. A fixable viability dye stains a
+dead cell brightly, so the usual rule keeps the dim events. On this deposit
+that rule keeps the debris and throws the cells away.
 
 ```{r}
 #| label: gates
@@ -123,12 +156,10 @@ kable(
 ```
 
 On the V545 detector the `dead_lymphocytes` polygon reaches to about 2,553 and
-no higher, so a live cell is one that sits above that value. This report
-therefore reads the direction from the deposited gate rather than from a
-convention, which is what `LiveMask()` does. The cost of the wrong direction is
-not an error message. It is a plausible looking number. Before this gate was
-found, the same pipeline reported CD45 positive cells as 4 percent of live
-events in a bone marrow sample, and it ran to completion every time.
+no higher, so a live cell is one that sits above that value. The wrong
+direction does not produce an error message. It produces a plausible looking
+number. The pipeline reported CD45 positive cells as 4 percent of live events
+in a bone marrow sample, and it ran to completion.
 
 ```{r}
 #| label: hierarchy
@@ -143,11 +174,8 @@ kable(
 
 ## Part 2: resolving thirteen colours across five panels
 
-Every file came off one LSRFortessa, so the detector names are the same in all
-132 files, and a detector names a marker once the panel is known. That matters
-because a large share of the files carry no marker name at all. The published
-panel design is committed as `gating/oetjen2018_panels.csv`, and it supplies
-the fallback.
+A large share of the files carry no marker name. The published panel design is
+committed as `gating/oetjen2018_panels.csv`, and it supplies the fallback.
 
 ```{r}
 #| label: resolution
@@ -158,6 +186,8 @@ kable(
   col.names = c("Resolved by", "Channels")
 )
 ```
+
+The FCS header resolved most channels. The panel design supplied the remainder.
 
 ```{r}
 #| label: events
@@ -170,17 +200,15 @@ kable(
 
 The paper reports a median of 196,000 CD45 positive events collected, with a
 25th to 75th percentile of 100,000 to 278,000. The count here is taken before
-the scatter gate, because the deposited polygon is a lymphocyte gate and a
-count taken after it answers a different question.
+the scatter gate.
 
 ## Part 3: whether an automated cut can be trusted here
 
-The upstream gates now come from the depositors. Everything below them is the
-automated cut rule this repository uses in every other report, the density
-minimum with a two component mixture as the fallback. The test is simple.
-Twenty-two samples of the same tissue, stained with the same panel on the same
-instrument, should not give one marker a frequency of 1 percent in one sample
-and 99 percent in another.
+The upstream gates come from the depositors. The automated cut below them uses
+a density minimum with a two component mixture as the fallback. Twenty-two
+samples of the same tissue, stained with the same panel on the same instrument,
+should not give one marker a frequency of 1 percent in one sample and 99
+percent in another.
 
 ```{r}
 #| label: stability
@@ -194,6 +222,8 @@ kable(
                 "Maximum", "Range", "CV")
 )
 ```
+
+The least stable pairs show ranges that exceed 80 percentage points.
 
 ```{r}
 #| label: stability-verdict
@@ -211,25 +241,20 @@ kable(
 knitr::include_graphics(OutputImage("marker_spread.png"))
 ```
 
-The answer is that it cannot. Most marker and panel pairs span more than 80
-percentage points across samples that should agree closely. The consequence is
-stated rather than worked around. The two claims that need a reliable lineage
-frequency from every panel, the order of the major populations and which
-population is largest, are recorded as not measurable by this method.
+The automated cut does not place a reliable boundary. Most marker and panel
+pairs span more than 80 percentage points across samples that should agree
+closely. The two claims that need a reliable lineage frequency from every
+panel, the order of the major populations and which population is largest, are
+recorded as not measurable by this method.
 
-This is the third dataset in this repository where an automated density cut
-fails, and the cause is different each time. It was rarity in OMIP-043, a
-continuum in OMIP-039 and Yu 2021, and here it is a marker distribution with no
-reliable second mode in a tissue that holds a developmental continuum.
+The automated density cut fails here because the marker distribution has no
+reliable second mode. The tissue holds a developmental continuum.
 
 ## Part 4: T cell subsets by two technologies
 
 The T panel and the mass cytometry panel both carry CD3, CD4, CD8, CD45RA and
-CCR7, so both can produce the naive, central memory, effector memory and
-terminally differentiated subsets. The mass cytometry route needs different
-code. There is no scatter and no conventional viability dye, so the two iridium
-DNA channels and the platinum channel replace those steps, and the transform is
-arcsinh with a cofactor of 5.
+CCR7. Both produce the naive, central memory, effector memory and terminally
+differentiated subsets.
 
 ```{r}
 #| label: technology
@@ -244,6 +269,8 @@ kable(
 )
 ```
 
+The correlation does not reach significance for any subset.
+
 ```{r}
 #| label: technology-figure
 #| fig-cap: "Each point is one donor. The dashed line is equality."
@@ -252,13 +279,11 @@ knitr::include_graphics(OutputImage("flow_against_mass.png"))
 ```
 
 The paper reports a strong correlation between the two technologies on the CD4
-and CD8 subsets. This analysis does not find one. Two reasons sit behind that,
-and only one of them is about the technologies. The first is the overlap. The
-mass cytometry deposit covers eight donors, the T panel did not gate every flow
-file, and the donors that survive both routes are fewer still, so a correlation
-on that many points has almost no power. The second is the CD45RA and CCR7
-cuts, which Part 3 shows are the least reliable in the panel. A subset built
-from two unreliable cuts inherits both.
+and CD8 subsets. This analysis does not find one. The mass cytometry deposit
+covers eight donors, the T panel did not gate every flow file, and the donors
+that survive both routes are fewer still. A correlation on that many points has
+low power. The CD45RA and CCR7 cuts are the least reliable in the panel. A
+subset built from two unreliable cuts inherits both.
 
 ## Part 5: the age trend and the repeated aspiration
 
@@ -273,6 +298,8 @@ kable(
 )
 ```
 
+The memory compartments show positive correlations with age.
+
 ```{r}
 #| label: age-figure
 #| fig-cap: "Each point is one sample. The line is a linear fit, drawn to show the direction."
@@ -280,12 +307,11 @@ kable(
 knitr::include_graphics(OutputImage("age_trend.png"))
 ```
 
-The memory compartment rises with age in both the CD4 and the CD8 lineage, and
-both correlations are significant. The terminally differentiated CD8 compartment
-moves the other way, which is not what the literature on ageing usually
-reports, and this report does not resolve it. The claim the paper makes is
-about the memory population, and that claim reproduces from the deposited
-files.
+The memory compartment rises with age in both the CD4 and the CD8 lineage.
+Both correlations are significant. The terminally differentiated CD8
+compartment moves the other way. This report does not resolve the direction.
+The claim the paper makes is about the memory population, and that claim
+reproduces from the deposited files.
 
 ```{r}
 #| label: repeats
@@ -300,8 +326,8 @@ kable(
 )
 ```
 
-The paper reports good concordance between the two aspirations by flow
-cytometry, and the deposited files agree.
+The absolute differences between aspirations are small for all measures. The
+deposited files agree with the paper report of good concordance.
 
 ## Part 6: every claim, with a verdict
 
@@ -316,6 +342,8 @@ kable(
 )
 ```
 
+Each row compares the paper claim against the measured value.
+
 ```{r}
 #| label: verdict-counts
 
@@ -326,36 +354,34 @@ kable(
 )
 ```
 
+The eight claims are distributed across the verdict categories.
+
 ## Discussion
 
 ### What this shows
 
-A deposited workflow file is worth more than a deposited panel design. The
-cytoflow file in this accession carries two polygons, and one of them reverses
-an assumption that every conventional pipeline makes. The age claim reproduces
-from the deposited files with a significant correlation in both T cell
-lineages, using an analysis that shares no software with the original. The
-concordance between two aspirations of one donor also reproduces.
+The deposited cytoflow file carries two polygons. One of them reverses an
+assumption that a conventional pipeline makes. The age claim reproduces from
+the deposited files with a significant correlation in both T cell lineages. The
+analysis shares no software with the original. The concordance between two
+aspirations of one donor also reproduces.
 
 ### What this does not show
 
-It does not show that the paper is wrong about the correlation between mass
-cytometry and flow cytometry. It shows that this analysis cannot test it, on
-too few shared donors and with the two least reliable cuts in the panel. It
-does not rank the bone marrow populations, because Part 3 measured that the
-automated cut cannot supply a reliable lineage frequency on this deposit. Nor
-does it touch the single cell RNA sequencing, which is the third technology in
-the paper. Those data are in GEO and not in this archive, so the claim about a
-discrepancy between sequencing and flow cytometry is out of reach here.
+The analysis cannot test the paper claim about the correlation between mass
+cytometry and flow cytometry. The shared donors are too few and the cuts are
+the least reliable in the panel. The bone marrow populations are not ranked,
+because the automated cut does not supply a reliable lineage frequency on this
+deposit. The single cell RNA sequencing is not included. Those data are in GEO
+and not in this archive, so the claim about a discrepancy between sequencing
+and flow cytometry is out of reach.
 
 ### What is left to do
 
-The authors' full gating strategy is in Supplemental Table 2 of the paper, and
-it is not in the deposit in a machine readable form. With it, the lineage
-frequencies would come from stated boundaries rather than from a rule that Part
-3 shows does not work here. The unstained control of each sample is in the
-deposit and this analysis does not use it. A cut placed against the unstained
-control is the obvious next rule to try, and it is the one a person uses.
+The authors' full gating strategy is in Supplemental Table 2 of the paper. It
+is not in the deposit in a machine readable form. The lineage frequencies would
+come from stated boundaries rather than from an automated rule. The unstained
+control of each sample is in the deposit. This analysis does not use it.
 
 ## Reproducing this
 
