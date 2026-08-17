@@ -129,6 +129,17 @@ Every sentence is a complete sentence with a subject and a verb.
 
 Vary sentence length. A methods section is plain, and plain is not uniform.
 
+## Two things the first pass got wrong
+
+Wrap every prose line at 80 characters. The rest of the repository does, and an
+unwrapped paragraph produces a diff that cannot be reviewed line by line.
+
+Leave no table and no figure without a sentence. A results section in a paper
+says what a table shows before or after it. Removing the salesmanship around a
+table is right; removing the sentence that tells the reader what the table
+contains is not. One sentence is enough, and it states the content or the
+finding, not how to feel about it.
+
 ## Tools
 
 `rg` is not installed on this machine. Use `grep`. `grep -nP` is available for a
