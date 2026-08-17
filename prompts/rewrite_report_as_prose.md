@@ -123,6 +123,11 @@ where the bullets already do. Do not add a narrator who was not there.
    change".
 5. Check every number in your prose against the bullet text you replaced.
 
+## Tools
+
+`rg` is not installed on this machine. Use `grep`. `grep -nP` is available for a
+Unicode range, which is how you find an em dash.
+
 ## Acceptance test
 
 Before you report that you are done, confirm all of these.
@@ -135,9 +140,15 @@ Before you report that you are done, confirm all of these.
 5. Every `>` block quote is byte identical to the original.
 6. Every number in the prose appears in the original file.
 7. No word from the banned vocabulary list in `AGENTS.md` appears, unless the
-   field uses it as a technical term with one exact meaning.
+   field uses it as a technical term with one exact meaning. A hit inside the
+   title of a cited paper does not count, because you may not change a citation.
 
 Report which of the seven you checked and how.
+
+The author runs `scripts/check_prose_rewrite.py` on your output afterwards. It
+compares the file with its git revision and it fails on a changed chunk, a
+changed header, a changed block quote, an em dash, a leftover bullet or a number
+that is not in the original. Your own check and that script should agree.
 
 ## Do not
 
