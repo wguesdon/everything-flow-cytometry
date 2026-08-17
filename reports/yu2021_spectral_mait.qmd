@@ -53,28 +53,26 @@ verdicts <- ReadOutput("claim_verdicts.csv")
 
 ## Why this dataset
 
-- The OMIP-039 and OMIP-043 reports both worked on one panel at a time, on a
-  conventional analyser, and they asked whether an automated method lands where
-  an expert lands.
-- Neither of them left the conventional instrument.
-- A spectral analyser is a different machine. It does not assign one detector to
-  one fluorochrome.
-- It records the emission of every fluorochrome across 64 detectors and then
-  solves for the contribution of each one, which is why a spectral panel carries
-  35 markers where a conventional panel carries 20.
-- This report uses FlowRepository FR-FCM-Z3WR, which is the flow cytometry
-  deposit of Yu and colleagues [1].
-- The paper reports that circulating mucosal-associated invariant T cells fall in
-  COVID-19, and that the fall is larger in females.
-- The files are Cytek Aurora, the panel is 35 named markers, and the deposit
-  holds 83 samples from 45 subjects.
-- The dataset was chosen because the claim can be tested. The paper states ten
-  findings that rest on the flow data alone, and Table S1 of the paper carries
-  the sex, the severity rank, the time point and the seroconversion status of
-  every sample.
-- The claims live in `gating/yu2021_paper_claims.csv` with the sentence each one
-  came from, so a reader can check the claim against the paper before the check
-  of the number against the data.
+The OMIP-039 and OMIP-043 reports both worked on one panel at a time on a
+conventional analyser, and both asked whether an automated method lands where an
+expert lands. Neither of them left the conventional instrument. A spectral
+analyser is a different machine. It does not assign one detector to one
+fluorochrome. It records the emission of every fluorochrome across 64 detectors
+and then solves for the contribution of each one, which is why a spectral panel
+carries 35 markers where a conventional panel carries 20.
+
+This report uses FlowRepository FR-FCM-Z3WR, the flow cytometry deposit of Yu
+and colleagues [1]. The paper reports that circulating mucosal-associated
+invariant T cells fall in COVID-19, and that the fall is larger in females. The
+files come from a Cytek Aurora, the panel carries 35 named markers, and the
+deposit holds 83 samples from 45 subjects.
+
+The dataset was chosen because the claim can be tested. The paper states ten
+findings that rest on the flow data alone, and Table S1 of the paper carries the
+sex, the severity rank, the time point and the seroconversion status of every
+sample. The claims live in `gating/yu2021_paper_claims.csv` with the sentence
+each one came from, so a reader can check the claim against the paper before the
+number is checked against the data.
 
 ```{r}
 #| label: panel
@@ -98,10 +96,9 @@ kable(
 )
 ```
 
-- The panel carries 35 named markers and one unnamed channel, which is the
-  viability dye.
-- That is 36 fluorescence parameters, and the paper describes itself as 36 colour
-  flow cytometry. The file and the sentence agree.
+The panel carries 35 named markers and one unnamed channel, which is the
+viability dye. That makes 36 fluorescence parameters, and the paper describes
+itself as 36 colour flow cytometry. The file and the sentence agree.
 
 ```{r}
 #| label: markers
@@ -114,28 +111,27 @@ kable(
 
 ## Part 1: what spectral changes about the pipeline
 
-- Two steps of the conventional pipeline do not apply here, and one new step
-  does.
-- Compensation does not apply. SpectroFlo unmixed the data before export, so the
-  files carry one column per fluorochrome and no spillover matrix.
-- The keyword `APPLY COMPENSATION` reads `FALSE` in all 83 files.
-- The compensation work of the OMIP-039 report has nothing to act on, and the
-  pipeline starts at the transform.
-- The viability channel does not carry a marker name.
-- `FluorescenceChannels()` selects a channel only when `$PnS` is set, which is
-  correct for a conventional panel and wrong here, because the first gate of the
-  hierarchy uses that channel.
-- `SpectralChannels()` keeps every channel that is not scatter and not time, so
-  the transform covers the viability dye.
-- The new step is the cohort. This analysis compares 83 samples across 12
-  acquisition dates, so a gate that moves between samples moves the answer.
+Two steps of the conventional pipeline do not apply here, and one new step
+does. Compensation does not apply, because SpectroFlo unmixed the data before
+export, so the files carry one column per fluorochrome and no spillover matrix.
+The keyword `APPLY COMPENSATION` reads `FALSE` in all 83 files. The compensation
+work of the OMIP-039 report has nothing to act on, and the pipeline starts at
+the transform.
+
+The viability channel does not carry a marker name. `FluorescenceChannels()`
+selects a channel only when `$PnS` is set, which is correct for a conventional
+panel and wrong here, because the first gate of the hierarchy uses that channel.
+`SpectralChannels()` keeps every channel that is not scatter and not time, so
+the transform covers the viability dye.
+
+The new step is the cohort. This analysis compares 83 samples across 12
+acquisition dates, so a gate that moves between samples moves the answer.
 
 ## Part 2: the cohort, and where the grouping comes from
 
-- The FCS files carry a subject code and a day. They carry no sex and no
-  severity.
-- Table S1 of the paper carries both, and it keys on the same subject code that
-  the file name uses.
+The FCS files carry a subject code and a day, but no sex and no severity. Table
+S1 of the paper carries both, and it keys on the same subject code that the file
+name uses.
 
 ```{r}
 #| label: cohort
@@ -148,26 +144,22 @@ kable(
 )
 ```
 
-- All 83 files match a metadata row, and the metadata marks exactly 83 samples as
-  included in the flow analysis.
-- The join is therefore complete in both directions, and
-  `gating/yu2021_sample_metadata.csv` records it.
-- Read the subject column against the sample column. There are 83 samples and 45
-  subjects, so a subject contributes up to five samples.
-- Every test below treats a sample as independent, and the paper appears to do
-  the same.
-- That treatment inflates the apparent precision, and the discussion returns to
-  it.
+All 83 files match a metadata row, and the metadata marks exactly 83 samples as
+included in the flow analysis, so the join is complete in both directions.
+`gating/yu2021_sample_metadata.csv` records it. Set the subject column against
+the sample column and the 83 samples collapse to 45 subjects, with one subject
+contributing up to five samples. Every test below treats a sample as
+independent, and the paper appears to do the same. That treatment inflates the
+apparent precision, and the discussion returns to it.
 
 ## Part 3: one cut for the cohort, and the marker where that fails
 
-- An openCyto template fits every gate per sample. That is right when the
-  question is about one file.
-- It is wrong here, because a cut that moves with the sample changes a frequency
-  for a reason that is not biology, and every claim in this paper is a comparison
-  between samples.
-- The cut points were therefore fitted once, on a pooled subsample of all 83
-  files, and the same cut gates every sample.
+An openCyto template fits every gate per sample, which is right when the
+question is about one file. It is wrong here, because a cut that moves with the
+sample changes a frequency for a reason that is not biology, and every claim in
+this paper is a comparison between samples. The cut points were therefore fitted
+once, on a pooled subsample of all 83 files, and the same cut gates every
+sample.
 
 ```{r}
 #| label: cuts
@@ -181,19 +173,18 @@ kable(
 )
 ```
 
-- Six of the seven marker cuts sit on a real minimum of the pooled density.
-- CD3 has a minimum at 3.32, CD8 at 3.29, CCR7 at 3.23 and CD161 at 3.37, and
-  each of them sits between two clear peaks.
-- CD45RA has no such minimum inside the CD8 gate.
-- The only minima of its density are at 0.08 and 0.74, which sit in the far
-  negative tail where almost no events are, and a gate placed there calls 94
-  percent of CD8 T cells positive.
-- The consequence is that the central memory and effector memory gates hold no
-  events at all.
-- The same reagent does resolve on CD4 T cells, where the density has a minimum
-  at 2.54. That value is used for CD8 T cells as well.
-- It is a choice, it is recorded as a choice in the source column above, and Part
-  5 measures what the choice changes.
+Six of the seven marker cuts sit on a real minimum of the pooled density. CD3
+has a minimum at 3.32, CD8 at 3.29, CCR7 at 3.23 and CD161 at 3.37, and each of
+them sits between two clear peaks. CD45RA has no such minimum inside the CD8
+gate. The only minima of its density are at 0.08 and 0.74, which sit in the far
+negative tail where almost no events are. A gate placed there calls 94 percent
+of CD8 T cells positive, and the central memory and effector memory gates hold
+no events at all.
+
+The same reagent does resolve on CD4 T cells, where the density has a minimum at
+2.54, and that value is used for CD8 T cells as well. It is a choice, it is
+recorded as a choice in the source column above, and Part 5 measures what the
+choice changes.
 
 ```{r}
 #| label: hierarchy
@@ -216,29 +207,25 @@ cat(sprintf(
 ))
 ```
 
-- Two numbers say that the gates are in a sensible place.
-- CD8 T cells are 32 percent of CD3 positive cells, which is the expected
-  fraction in blood.
-- CD161hi cells are 9.1 percent of CD8 T cells, which is the range that the
-  literature reports for MAIT cells.
-- One number says that a gate is not in a sensible place. NK cells are 16.5
-  percent of CD45 positive cells, which is about half of the CD3 negative parent,
-  and B cells, monocytes and dendritic cells also live there.
-- The CD56 cut at 2.12 is too permissive.
-- That gate feeds claim 10 alone, which asks only whether NK cells carry more
-  CD56 than CD8 T cells, and a permissive gate makes that comparison harder
-  rather than easier.
-- No other number in this report depends on it.
+Two numbers say that the gates are in a sensible place. CD8 T cells are 32
+percent of CD3 positive cells, which is the expected fraction in blood, and
+CD161hi cells are 9.1 percent of CD8 T cells, which is the range that the
+literature reports for MAIT cells. One number says that a gate is not in a
+sensible place. NK cells are 16.5 percent of CD45 positive cells, which is about
+half of the CD3 negative parent, and B cells, monocytes and dendritic cells also
+live there. The CD56 cut at 2.12 is too permissive.
+
+That gate feeds claim 10 alone, which asks only whether NK cells carry more CD56
+than CD8 T cells, and a permissive gate makes that comparison harder rather than
+easier. No other number in this report depends on it.
 
 ### What CD161hi is, and is not
 
-- The panel carries no Va7.2, so it cannot identify a MAIT cell by the invariant
-  T cell receptor.
-- The paper reads MAIT cells as CD8 positive CD161hi T cells, and it validates
-  that surrogate with single cell RNA sequencing, where the CD161hi cluster
-  co-expresses `KLRB1`, `CD3D`, `CD8A` and `TRAV1-2`.
-- This report tests the flow claims only. It inherits the surrogate and it does
-  not check it.
+The panel carries no Va7.2, so it cannot identify a MAIT cell by the invariant T
+cell receptor. The paper reads MAIT cells as CD8 positive CD161hi T cells, and
+it validates that surrogate with single cell RNA sequencing, where the CD161hi
+cluster co-expresses `KLRB1`, `CD3D`, `CD8A` and `TRAV1-2`. This report tests
+the flow claims only. It inherits the surrogate and does not check it.
 
 ## Part 4: the paper's claims against its own data
 
@@ -277,20 +264,19 @@ kable(
 )
 ```
 
-- Eight of the ten claims reproduce and two are partly reproduced.
-- The two partial ones are claims 5 and 6, which are the only claims about time
-  points, and the next section is about them.
-- Read the direction column and the p column as two different questions.
-- The p value is the test the paper itself used, which is Mann-Whitney for a two
-  group comparison and Spearman for a correlation.
-- A direction can be right while the test is not significant, and claims 2, 4 and
-  7 are exactly that.
-- Claim 9 also sits above 0.05, and there the absence of a difference is the
-  claim itself.
-- Eight of the ten claims are directional, so their verdict compares the
-  direction found against the direction stated.
-- Claims 5 and 6 are not directional, and this report made the mistake of
-  treating them as though they were before it corrected itself.
+Eight of the ten claims reproduce and two are partly reproduced. The two partial
+ones are claims 5 and 6, which are the only claims about time points, and the
+next section is about them.
+
+Read the direction column and the p column as two different questions. The p
+value is the test the paper itself used, Mann-Whitney for a two group comparison
+and Spearman for a correlation. A direction can be right while the test is not
+significant, and claims 2, 4 and 7 are exactly that. Claim 9 also sits above
+0.05, and there the absence of a difference is the claim itself. Eight of the
+ten claims are directional, so their verdict compares the direction found
+against the direction stated. Claims 5 and 6 are not directional, and this
+report made the mistake of treating them as though they were before it corrected
+itself.
 
 ### The headline claim
 
@@ -301,12 +287,11 @@ kable(
 knitr::include_graphics(OutputImage("cd161hi_by_severity.png"))
 ```
 
-- CD161hi cells fall as severity rises, with a Spearman rho of -0.236 and a p of
-  0.031 across 83 samples. That is the title of the paper's Figure 1.
-- The sex difference is larger than the severity difference.
-- Healthy females carry a median of 30.1 percent CD161hi cells among CD8 T cells
-  and healthy males carry 6.3 percent.
-- By the hospitalized group the two values are 2.5 and 3.3 percent.
+CD161hi cells fall as severity rises, with a Spearman rho of -0.236 and a p of
+0.031 across 83 samples. That is the title of the paper's Figure 1. The sex
+difference is larger than the severity difference. Healthy females carry a
+median of 30.1 percent CD161hi cells among CD8 T cells and healthy males carry
+6.3 percent. By the hospitalized group the two values are 2.5 and 3.3 percent.
 
 ```{r}
 #| label: slope-figure
@@ -315,27 +300,25 @@ knitr::include_graphics(OutputImage("cd161hi_by_severity.png"))
 knitr::include_graphics(OutputImage("cd161hi_slope_by_sex.png"))
 ```
 
-- The female slope is about four times the male slope.
-- The paper writes that females had a more dramatic loss of peripheral CD161hi
-  cells compared with males, and the deposited data says the same thing.
+The female slope is about four times the male slope. The paper writes that
+females had a more dramatic loss of peripheral CD161hi cells compared with
+males, and the deposited data says the same thing.
 
 ### The two claims about time points, and a mistake this report made
 
-- Claim 5 states that the greater abundance of CD161hi cells in females was lost
-  at early and middle time points but not in late disease.
-- The first version of this analysis tested that claim by a question about which
-  sex was numerically higher in each window.
-- Females came out higher in all three windows, so the claim was reported as
-  failing.
-- That test was wrong, and the paper says so in the legend of its Figure 2, which
-  states that significance was determined by a Mann-Whitney test and that an
-  asterisk means p below 0.05.
-- A difference that is lost is one that stops being significant. It keeps a
-  direction while it is lost.
-- A question about which sex is higher answers a question the paper never asked,
-  and it reports a failure whenever an effect shrinks without a reversal, which
-  is the normal way an effect disappears.
-- The test now compares the significance pattern instead.
+Claim 5 states that the greater abundance of CD161hi cells in females was lost
+at early and middle time points but not in late disease. The first version of
+this analysis tested that claim by asking which sex was numerically higher in
+each window. Females came out higher in all three windows, so the claim was
+reported as failing.
+
+That test was wrong, and the paper says so in the legend of its Figure 2, which
+states that significance was determined by a Mann-Whitney test and that an
+asterisk means p below 0.05. A difference that is lost is one that stops being
+significant. It keeps a direction while it is lost. A question about which sex
+is higher answers a question the paper never asked, and it reports a failure
+whenever an effect shrinks without a reversal, which is the normal way an effect
+disappears. The test now compares the significance pattern instead.
 
 ```{r}
 #| label: timepoint-figure
@@ -344,15 +327,13 @@ knitr::include_graphics(OutputImage("cd161hi_slope_by_sex.png"))
 knitr::include_graphics(OutputImage("cd161hi_by_timepoint.png"))
 ```
 
-- Two of the three windows match the paper exactly.
-- The difference is not significant at early, with a p of 0.625, and not
-  significant at middle, with a p of 0.824, which is what the paper means by
-  lost.
-- At late the paper found a significant difference and this analysis finds a p of
-  0.065, which misses the threshold by 0.015.
-- Claim 5 is therefore partly reproduced, and the part that fails is one window
-  that lands just outside significance rather than a pattern that runs the wrong
-  way.
+Two of the three windows match the paper exactly. The difference is not
+significant at early, with a p of 0.625, and not significant at middle, with a p
+of 0.824, which is what the paper means by lost. At late the paper found a
+significant difference and this analysis finds a p of 0.065, which misses the
+threshold by 0.015. Claim 5 is therefore partly reproduced, and the part that
+fails is one window that lands just outside significance rather than a pattern
+that runs the wrong way.
 
 ```{r}
 #| label: memory-figure
@@ -361,42 +342,42 @@ knitr::include_graphics(OutputImage("cd161hi_by_timepoint.png"))
 knitr::include_graphics(OutputImage("memory_by_timepoint.png"))
 ```
 
-- Claim 6 is the same shape of statement about the memory compartment, and it
-  comes out the same way once it is tested on the same criterion.
-- Males sit above females in every window.
-- The difference is significant at early, with a p of 0.025, and at late, with a
-  p of 0.009, and it is not significant at middle, with a p of 0.198.
-- Both time point claims therefore land two windows out of three, and each one
-  misses a different window. Neither miss is a reversal.
+Claim 6 is the same shape of statement about the memory compartment, and it
+comes out the same way once it is tested on the same criterion. Males sit above
+females in every window. The difference is significant at early, with a p of
+0.025, and at late, with a p of 0.009, and it is not significant at middle, with
+a p of 0.198. Both time point claims therefore land two windows out of three,
+and each one misses a different window. Neither miss is a reversal.
 
 ### Whether the miss is ours
 
-- Three explanations were tested before the claims were reported as partial.
-- The first explanation is the inclusion rule. The paper's Figure 2E is about
-  time after symptom onset, which only an infected person has, and the time
-  windows in Table S1 also carry 18 samples from exposed contacts who were never
-  infected.
-- The late window is 11 exposed against 13 infected.
-- A test restricted to the 53 confirmed COVID-19 samples does not rescue either
-  claim. It weakens every window, because it removes a third of the samples, and
-  the late p for claim 5 moves from 0.065 to 0.225.
-- The second explanation is the repeated sampling. One value per subject per
-  window, so that nobody counts more than once, leaves both claims where they
-  are. The late p for claim 5 moves from 0.065 to 0.073.
-- The third explanation is the time window definition. The paper sets early at 14
-  days or less, middle at 15 to 21 days and late at over 21 days.
-- The `timepoint` column of Table S1 matches that rule on every one of the 68
-  samples that carries a day count, with no sample on the wrong side of a
-  boundary. The windows are the authors' own.
-- None of the three changes the answer, so the remaining gap is between a p of
-  0.065 in 24 samples and a p below 0.05 in the authors' own analysis.
+Three explanations were tested before the claims were reported as partial. The
+first is the inclusion rule. The paper's Figure 2E is about time after symptom
+onset, which only an infected person has, and the time windows in Table S1 also
+carry 18 samples from exposed contacts who were never infected. The late window
+is 11 exposed against 13 infected. A test restricted to the 53 confirmed
+COVID-19 samples does not rescue either claim. It weakens every window, because
+it removes a third of the samples, and the late p for claim 5 moves from 0.065
+to 0.225.
+
+The second explanation is the repeated sampling. One value per subject per
+window, so that nobody counts more than once, leaves both claims where they are.
+The late p for claim 5 moves from 0.065 to 0.073.
+
+The third is the time window definition. The paper sets early at 14 days or
+less, middle at 15 to 21 days and late at over 21 days. The `timepoint` column
+of Table S1 matches that rule on every one of the 68 samples that carries a day
+count, with no sample on the wrong side of a boundary. The windows are the
+authors' own.
+
+None of the three changes the answer, so the remaining gap is between a p of
+0.065 in 24 samples and a p below 0.05 in the authors' own analysis.
 
 ## Part 5: what the CD45RA choice changes
 
-- Three of the ten claims are about the memory compartment, and the memory
-  compartment rests on the CD45RA cut, which Part 3 established is a choice
-  rather than a fit.
-- The analysis therefore runs again at every cut from 2.4 to 4.2.
+Three of the ten claims are about the memory compartment, and the memory
+compartment rests on the CD45RA cut, which Part 3 established is a choice rather
+than a fit. The analysis therefore runs again at every cut from 2.4 to 4.2.
 
 ```{r}
 #| label: sweep
@@ -417,20 +398,17 @@ kable(
 knitr::include_graphics(OutputImage("cd45ra_sweep.png"))
 ```
 
-- The memory frequency moves from 55.5 to 65.3 percent across the range, which is
-  a large change in the number.
-- No verdict changes.
-- That is the useful result. The cut point is not measurable from the data, and
-  it does not matter, because all three claims are comparisons between two groups
-  gated at the same place.
-- A cut that is wrong by the same amount in both groups cancels.
+The memory frequency moves from 55.5 to 65.3 percent across the range, which is
+a large change in the number. No verdict changes. That is the useful result. The
+cut point is not measurable from the data, and it does not matter, because all
+three claims are comparisons between two groups gated at the same place. A cut
+that is wrong by the same amount in both groups cancels.
 
 ## Part 6: clustering as a second route
 
-- Sequential gating asks how many cells fall inside a boundary.
-- Clustering asks how many groups are in the data.
-- The second question needs no hierarchy, so it is a genuine second route to the
-  same population.
+Sequential gating asks how many cells fall inside a boundary. Clustering asks
+how many groups are in the data. The second question needs no hierarchy, so it
+is a genuine second route to the same population.
 
 ```{r}
 #| label: umap
@@ -448,18 +426,17 @@ knitr::include_graphics(OutputImage("umap_markers.png"))
 
 ### Fifteen metaclusters on all leucocytes cannot find MAIT cells
 
-- The first attempt clustered every live CD45 positive event into 15
-  metaclusters, and it looked for the CD161 high cluster among the CD8 T cell
-  clusters.
-- It selected a metacluster of 484 events whose brightest marker was CD56, at a
-  median of 4.41, and whose CD161 median of 2.66 ranked fifth of the fifteen
-  clusters.
-- That is an NK cell cluster and not a MAIT cluster.
-- The reason is the size of the population. CD161hi cells are 9 percent of CD8 T
-  cells, which is under 2 percent of the CD45 positive parent, and a rare
-  population is absorbed by a neighbouring metacluster when the number of
-  metaclusters is fixed in advance.
-- The OMIP-039 report met the same failure on the NK subsets.
+The first attempt clustered every live CD45 positive event into 15 metaclusters
+and looked for the CD161 high cluster among the CD8 T cell clusters. It selected
+a metacluster of 484 events whose brightest marker was CD56, at a median of
+4.41, and whose CD161 median of 2.66 ranked fifth of the fifteen clusters. That
+is an NK cell cluster, not a MAIT cluster.
+
+The reason is the size of the population. CD161hi cells are 9 percent of CD8 T
+cells, which is under 2 percent of the CD45 positive parent, and a rare
+population is absorbed by a neighbouring metacluster when the number of
+metaclusters is fixed in advance. The OMIP-039 report met the same failure on
+the NK subsets.
 
 ### Clustering inside the CD8 gate does find them
 
@@ -473,9 +450,8 @@ kable(
 )
 ```
 
-- The margin is not a close call.
-- The MAIT metacluster is chosen by the highest median CD161, and no cluster is
-  named by eye.
+The margin is not a close call. The MAIT metacluster is chosen by the highest
+median CD161, and no cluster is named by eye.
 
 ```{r}
 #| label: route-comparison
@@ -498,99 +474,93 @@ kable(
 )
 ```
 
-- The metacluster holds 9.14 percent of the pooled CD8 gate and the gate holds a
-  median of 9.13 percent.
-- The two routes agree at a Spearman rho of 0.959 across the 83 samples, and they
-  reached that number by different means.
-- One route fitted a boundary on one marker. The other route grouped events in
-  eight dimensions and it never saw a gate.
-- All five claims come out the same way by both routes. Four reproduce and claim
-  5 is partly reproduced, and it misses on the same window for the same reason.
-- The clustering route gives the late window a p of 0.065, which is the value the
-  gating route gives it to three decimal places.
-- That agreement is worth more than either number alone.
-- The late window misses significance under a boundary fitted on one marker and
-  under a metacluster fitted in eight dimensions, so the miss is a property of
-  these 24 samples and not of the gate.
+The metacluster holds 9.14 percent of the pooled CD8 gate and the gate holds a
+median of 9.13 percent. The two routes agree at a Spearman rho of 0.959 across
+the 83 samples, and they reached that number by different means. One route
+fitted a boundary on one marker. The other grouped events in eight dimensions
+and never saw a gate.
+
+All five claims come out the same way by both routes. Four reproduce and claim 5
+is partly reproduced, and it misses on the same window for the same reason. The
+clustering route gives the late window a p of 0.065, which is the value the
+gating route gives it to three decimal places. That agreement is worth more than
+either number alone. The late window misses significance under a boundary fitted
+on one marker and under a metacluster fitted in eight dimensions, so the miss is
+a property of these 24 samples and not of the gate.
 
 ## Discussion
 
 ### What this shows
 
-- A published finding from a 35 marker spectral panel reproduces from the
-  deposited files, with an analysis that shares no code and no software with the
-  original.
-- The authors used FlowJo and Omiq. This analysis used flowCore, FlowSOM and one
-  CSV of cut points.
-- Eight of ten claims come out as the paper states them, and the central one
-  comes out by two independent routes that agree at rho 0.959.
-- The two partial claims are the two about time points, and each lands two
-  windows out of three. Neither miss is a reversal.
-- Claim 5 needs a significant difference at late and finds p 0.065, and claim 6
-  needs one at middle and finds p 0.198.
+A published finding from a 35 marker spectral panel reproduces from the
+deposited files, with an analysis that shares no code and no software with the
+original. The authors used FlowJo and Omiq. This analysis used flowCore, FlowSOM
+and one CSV of cut points. Eight of ten claims come out as the paper states
+them, and the central one comes out by two independent routes that agree at rho
+0.959.
+
+The two partial claims are the two about time points, and each lands two windows
+out of three. Neither miss is a reversal. Claim 5 needs a significant difference
+at late and finds p 0.065, and claim 6 needs one at middle and finds p 0.198.
 
 ### The failure that was ours
 
-- The first version of this report said that claim 5 did not reproduce, because
-  females were numerically higher in all three windows.
-- That was a mistake in the test, and not a finding about the data.
-- The paper states its criterion in the legend of its Figure 2, which is a
-  Mann-Whitney test with an asterisk at p below 0.05, and a difference that is
-  lost is one that stops being significant rather than one that reverses.
-- The lesson generalises past this dataset. A claim of the form "the difference
-  disappeared" is a claim about detectability.
-- A claim about direction guarantees a false failure, because an effect that
-  shrinks to nothing still points somewhere.
-- The claims file now records the criterion for each claim next to the sentence
-  it came from, so the encoding is reviewable rather than buried in the test.
+The first version of this report said that claim 5 did not reproduce, because
+females were numerically higher in all three windows. That was a mistake in the
+test, not a finding about the data. The paper states its criterion in the legend
+of its Figure 2, which is a Mann-Whitney test with an asterisk at p below 0.05,
+and a difference that is lost is one that stops being significant rather than
+one that reverses.
+
+The lesson generalises past this dataset. A claim of the form "the difference
+disappeared" is a claim about detectability. A claim about direction guarantees
+a false failure, because an effect that shrinks to nothing still points
+somewhere. The claims file now records the criterion for each claim next to the
+sentence it came from, so the encoding is reviewable rather than buried in the
+test.
 
 ### Where the fragility sits
 
-- The OMIP-039 report ended with the statement that a gate on a bimodal marker is
-  robust and a gate on a continuum is a decision.
-- This dataset gives a cleaner example of the same point, because it separates
-  the two cases inside one panel.
-- CD3, CD8, CCR7 and CD161 are bimodal, their cuts were fitted from the pooled
-  density, and the analysis inherits nothing from the analyst at those four
-  gates.
-- CD45RA is a continuum, its cut cannot be fitted, and the analysis inherits a
-  number that a person chose.
-- The sweep in Part 5 then shows that the chosen number changes the frequency by
-  ten percentage points and changes no conclusion.
-- That result is worth separating from the general worry about gating.
-- A cut point matters when the reported quantity is a frequency. It cancels when
-  the reported quantity is a comparison between two groups gated at the same
-  place.
+The OMIP-039 report ended with the statement that a gate on a bimodal marker is
+a fit and a gate on a continuum is a decision. This dataset gives a cleaner
+example of the same point, because it separates the two cases inside one panel.
+CD3, CD8, CCR7 and CD161 are bimodal, their cuts were fitted from the pooled
+density, and the analysis inherits nothing from the analyst at those four gates.
+CD45RA is a continuum, its cut cannot be fitted, and the analysis inherits a
+number that a person chose. The sweep in Part 5 then shows that the chosen
+number changes the frequency by ten percentage points and changes no conclusion.
+
+That result is worth separating from the general worry about gating. A cut point
+matters when the reported quantity is a frequency. It cancels when the reported
+quantity is a comparison between two groups gated at the same place.
 
 ### What this does not show
 
-- It does not show that the paper is right. It shows that the numbers in the
-  paper follow from the files the authors deposited.
-- A shared error in the panel, in the staining or in the cohort would survive
-  this check untouched.
-- It does not test the MAIT surrogate. Every number here is CD161hi within CD8 T
-  cells, because the panel has no Va7.2, and whether that population is MAIT
-  cells rests on the sequencing in the paper.
-- The 83 samples come from 45 subjects, and every test treats a sample as
-  independent. A subject who contributes five samples counts five times.
-- That treatment inflates the precision of every p value in Part 4, and it
-  affects the claims about time points most, because those windows are built from
-  repeated sampling of the same people.
-- A mixed model with a subject random effect is the correct test, and it is not
-  run here.
-- The normal group holds five females and five males.
-- The largest effect in the report, a median of 30.1 percent against 6.3 percent,
-  rests on those ten samples. The direction is clear and ten people do not settle
-  the magnitude.
+It does not show that the paper is right. It shows that the numbers in the paper
+follow from the files the authors deposited, and a shared error in the panel, in
+the staining or in the cohort would survive this check untouched. Nor does it
+test the MAIT surrogate. Every number here is CD161hi within CD8 T cells,
+because the panel has no Va7.2, and whether that population is MAIT cells rests
+on the sequencing in the paper.
+
+The 83 samples come from 45 subjects, and every test treats a sample as
+independent. A subject who contributes five samples counts five times. That
+treatment inflates the precision of every p value in Part 4, and it affects the
+claims about time points most, because those windows are built from repeated
+sampling of the same people. A mixed model with a subject random effect is the
+correct test, and it is not run here.
+
+The normal group holds five females and five males. The largest effect in the
+report, a median of 30.1 percent against 6.3 percent, rests on those ten
+samples. The direction is clear and ten people do not settle the magnitude.
 
 ### What is left to do
 
-- The dataset carries 12 acquisition dates between 29 May 2020 and 16 September
-  2020, and no batch correction was applied.
-- CytoNorm is the tool for that, and it is not in the container, because it is on
-  GitHub only and not on Bioconductor.
-- CytoNorm would test whether the severity correlation survives batch correction,
-  and that is the next check this analysis needs.
+The dataset carries 12 acquisition dates between 29 May 2020 and 16 September
+2020, and no batch correction was applied. CytoNorm is the tool for that, and it
+is not in the container, because it is on GitHub only and not on Bioconductor.
+CytoNorm would test whether the severity correlation survives batch correction,
+and that is the next check this analysis needs.
 
 ## Reproducing this
 
@@ -610,9 +580,9 @@ podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
   quarto render reports/yu2021_spectral_mait.qmd
 ```
 
-- The clinical grouping comes from Table S1 of the paper.
-- It is derived into `gating/yu2021_sample_metadata.csv`, which is committed, so
-  the join does not depend on a download.
+The clinical grouping comes from Table S1 of the paper. It is derived into
+`gating/yu2021_sample_metadata.csv`, which is committed, so the join does not
+depend on a download.
 
 ```{r}
 #| label: session-info
