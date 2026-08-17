@@ -1,5 +1,5 @@
 ---
-title: "Entering a benchmark with one feature"
+title: "Sample classification in the FlowCAP II challenges"
 subtitle: "The FlowCAP II sample classification challenges, FR-FCM-ZZZV and FR-FCM-ZZZU"
 author: "William Guesdon"
 date: today
@@ -51,18 +51,15 @@ verdicts <- ReadOutput("claim_verdicts.csv")
 scores <- ReadOutput("scores.csv")
 ```
 
-## Why this dataset
+## Introduction
 
-The FlowCAP II benchmark tests a claim about an algorithm. FlowCAP II asked
-whether a computational pipeline can read a class label out of a set of FCS
-files, handing every entrant half of the labels for training and scoring them on
-the half it held back [1]. Two of the three challenge datasets are in this
-archive, and both carry the labels and the split that the benchmark used.
+The FlowCAP II benchmark tested whether computational pipelines can read class
+labels from FCS files. Each entrant received half of the labels for training and
+was scored on the held back half [1]. Two of the three challenge datasets are in
+this archive, and both carry the labels and the split that the benchmark used.
 
-The benchmark answered its own question in two opposite ways. Many algorithms
-classified the HVTN samples perfectly, and none of them classified the HEUvsUE
-samples at all. A report that reproduces only one of those two results has not
-reproduced the paper.
+This report applies a single feature rule to both deposits and scores the
+results on the held out half.
 
 ```{r}
 #| label: hvtn-design
@@ -123,15 +120,6 @@ The analysis uses flowCore, ggplot2, and knitr. Every version is pinned in the
 container.
 
 ## Part 1: the rule that enters the benchmark
-
-The rule that enters the benchmark is the simplest one that can compete. It
-scores every gated feature on the training half alone, takes the single best
-one, places a threshold on it, and applies that threshold unchanged to the half
-that was held back. Nothing about the held out samples takes part in the feature
-choice or in the threshold.
-
-A one feature rule cannot hide behind its own complexity. It names the
-population it used, which is exactly what the paper's own discussion turns on.
 
 ### The cytokine gate is the part that had to change
 
@@ -241,12 +229,10 @@ knitr::include_graphics(OutputImage("hvtn_selected_feature.png"))
 ```
 
 On the HVTN challenge one feature classifies the held out half at an accuracy
-near 0.8, well short of the perfect scores that six named algorithms reached and
-a long way above a coin. The rule selected CD4 interleukin 4 rather than CD4
-interleukin 2. The paper reports that four of the eight methods which named
-their features chose one containing CD4 interleukin 2, so the claim about the
-selected feature is recorded as not reproduced even though the population itself
-separates the two antigens.
+near 0.8. Six named algorithms reached perfect scores. The rule selected CD4
+interleukin 4 rather than CD4 interleukin 2. The paper reports that four of the
+eight methods which named their features chose one containing CD4 interleukin 2.
+The claim about the selected feature is recorded as not reproduced.
 
 On the HEUvsUE challenge the same rule reaches an accuracy of 0.875 on the
 training half and 0.538 on the half it had not seen.
@@ -262,11 +248,10 @@ kable(
 )
 ```
 
-That collapse is the paper's own sentence, measured. The training half looks
-classifiable and the held out half is not. The paper draws the conclusion that
-these samples may be unclassifiable on the basis of the markers used; this
-analysis cannot settle that, and it does reproduce the pattern the conclusion
-rests on.
+The training half reaches an accuracy of 0.875 and the held out half reaches
+0.538. The paper concludes that these samples may be unclassifiable on the basis
+of the markers used. This analysis reproduces the pattern and cannot settle that
+question.
 
 ## Part 4: every claim, with a verdict
 
@@ -290,9 +275,6 @@ kable(
   col.names = c("Verdict", "Claims")
 )
 ```
-
-The claim verdicts determine which findings of the original paper are reproduced
-by this analysis.
 
 ## Discussion
 
