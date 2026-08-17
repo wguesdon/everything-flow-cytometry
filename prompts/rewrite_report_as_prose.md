@@ -128,6 +128,20 @@ where the bullets already do. Do not add a narrator who was not there.
 `rg` is not installed on this machine. Use `grep`. `grep -nP` is available for a
 Unicode range, which is how you find an em dash.
 
+## Work in passes on a long file
+
+Reading the whole file and then planning the whole rewrite fails on the longer
+reports. The session ends after the reads and it writes nothing.
+
+Edit as you go instead. Take one section, rewrite it, call the edit tool, and
+move to the next section. On a file over 25 KB, split the work at the part
+headers and treat each part as its own pass.
+
+## One session at a time
+
+Two of these runs in parallel will cut one of them off without an error message.
+The author runs them one after another.
+
 ## Acceptance test
 
 Before you report that you are done, confirm all of these.
