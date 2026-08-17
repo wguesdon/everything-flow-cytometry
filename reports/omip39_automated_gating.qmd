@@ -49,23 +49,80 @@ OutputImage <- function(name) {
 
 ## Why this dataset
 
-The PBMC report showed that an automated template gates a whole experiment from
-one text file. What it did not show was whether the template lands where an
-expert lands, because there was nothing to compare against. OMIP-39 fixes that.
-It is a published panel for human adaptive NKG2C+ natural killer cells [1], and
-its FlowRepository deposit ships the FlowJo workspace that the authors used, so
-the manual result does not come from this project. The same donor file is gated
-twice, once by the authors in FlowJo and once here by an openCyto template, and
-the two frequencies sit side by side.
+OMIP-39 is a published panel for human adaptive NKG2C+ natural killer cells
+[1]. The FlowRepository deposit includes the FlowJo workspace that the authors
+used, so the manual gates come from the original analysis rather than from this
+project. The same donor file is gated twice, once by the authors in FlowJo and
+once by an openCyto template, and the two frequencies are compared.
 
-The deposit also ships twelve single stained controls, so the analysis computes
-compensation from scratch instead of taking it from the file. That computation
-turned out to be the part with the finding in it.
+The deposit also includes twelve single stained controls, so compensation is
+computed from scratch instead of taken from the file.
 
 The report has five parts. They are compensation computed from the controls,
-automated gating from a template, that template compared against the published
-manual gates, the paper's own claims tested against the deposited data, and
-clustering as a third route to the same populations.
+automated gating from a template, comparison of that template against the
+published manual gates, the paper's own claims tested against the deposited
+data, and clustering as a third route to the same populations.
+
+## Methods
+
+### The dataset
+
+OMIP-39 is a published panel for human adaptive NKG2C+ natural killer cells
+[1]. The FlowRepository deposit includes the FlowJo workspace that the authors
+used, and twelve single stained controls. One donor file was gated by the
+authors in FlowJo and by an openCyto template.
+
+### Preprocessing
+
+Compensation is computed from the twelve single stained controls instead of
+taken from the file. Each control file carries one stain, and the stain is
+matched to a detector in the panel from the marker names the FCS files carry.
+The matcher runs four passes: exact string match, case and punctuation
+normalised, separator removal, and antibody name alone. A spillover value is a
+ratio between the signal a fluorochrome puts into its own detector and the
+signal it puts into another one, and both terms need a positive population to
+measure. The positive fraction is measured against a threshold set at the
+99.9th percentile of the unstained control.
+
+The computation is scored against the matrix that the instrument stored for
+this experiment. The stored matrix was built from the same controls by the
+acquisition software. The computation runs under every combination of method,
+pregate, and normFilter arguments. The analysis uses `method = "median"` in
+`flowStats::spillover_ng()`, and `ComputeSpilloverFromControls()` carries that
+as its default.
+
+### Gating
+
+The template mirrors the hierarchy that the authors published. The four
+quadrant populations are built as two one dimensional gates, on CD56 and on
+CD3 separately, combined with a boolean. The FlowJo workspace drew one
+quadrant gate, which sets both cut points at once. The comparison covers the
+seven named parent populations. The mapping between the two naming schemes is
+recorded in a file.
+
+Each of the seven paper claims is tested twice, by two routes that share no
+gating decision. The deposited workspace holds 64 boolean populations under
+each NKG2C branch. A boolean set partitions its parent, so the frequency of
+one marker is the sum of the counts where that marker is positive. That
+derivation uses only the gates the authors drew.
+
+Clustering groups events without a hierarchy. The clustering runs on the
+lymphocyte gate only. Each metacluster is scored against a definitions file
+that gives the expected sign of each marker, and the best scoring definition
+wins. The score is a weighted mean over the markers a definition names.
+
+### Statistics
+
+The tolerance for agreement between manual and automated gating was set at
+five percentage points. The singlet gate uses `openCyto::singletGate`, which
+fits a regression of FSC-H on FSC-A and cuts at a fixed distance. The CD3 cut
+uses `mindensity`, which places the cut at the lowest density point between
+two peaks.
+
+### Software
+
+The analysis used ggplot2, openCyto, flowStats, and knitr. Every version is
+pinned in the container.
 
 ```{r}
 #| label: dataset
@@ -81,12 +138,6 @@ kable(
 
 ### Matching controls to channels
 
-Every control file carries one stain, and that stain names one detector in the
-panel. FlowJo makes a person do this matching in its interface, while here the
-matching is derived from the marker names that the FCS files already carry. The
-matcher runs four passes, and each pass exists because a real file broke the
-pass before it.
-
 ```{r}
 #| label: match-passes
 
@@ -95,22 +146,16 @@ colnames(passes) <- c("pass", "controls")
 kable(passes, caption = "How many controls each matching pass resolved.")
 ```
 
-Read the passes as a ladder of tolerance. `exact` compares the two strings
-character for character, and `normalised` ignores case and punctuation.
-`collapsed` removes every separator, which is what resolves `CD2 PerCP-Cy55` on
-the control against `CD2 PerCPCy55` in the panel. `antibody` matches on the
-antibody name alone and ignores the fluorochrome, which is what resolves
-`Zombie auqa CD14 CD19` against `Zombie aqua CD14 CD19`. That last pair is a
-typo in the panel. Because the matcher reports which pass it used, a weaker
-match is visible rather than silent.
+The matching passes resolve controls in order of string similarity. `exact`
+compares the two strings character for character, and `normalised` ignores case
+and punctuation. `collapsed` removes every separator, which resolves `CD2
+PerCP-Cy55` on the control against `CD2 PerCPCy55` in the panel. `antibody`
+matches on the antibody name alone and ignores the fluorochrome, which resolves
+`Zombie auqa CD14 CD19` against `Zombie aqua CD14 CD19`. The last pair is a
+typo in the panel. The matcher reports which pass it used, so a weaker match is
+visible.
 
 ### Whether each control can support an estimate
-
-A spillover value is a ratio between the signal a fluorochrome puts into its own
-detector and the signal it puts into another one, and both terms need a positive
-population to measure. A bead control is almost entirely positive. A cell
-control is not, because a marker that sits on a minority of cells leaves most
-events negative.
 
 ```{r}
 #| label: control-quality
@@ -124,28 +169,17 @@ kable(
 )
 ```
 
-Two results come out of this table. Every control reads brightest on the
-detector it was matched to, so the matching above is correct and the channel
-assignment is not the problem anywhere in this dataset. Four controls are
-positive on under 20 percent of their events, with NKp30 positive on 3.5 percent
-and NKG2C on 7.0 percent. Those two values are real biology, because NKG2C marks
-a small adaptive NK subset and that subset is the point of the paper. The two
-controls are still poor compensation controls.
+Every control reads brightest on the detector it was matched to, so the
+matching is correct. Four controls are positive on under 20 percent of their
+events, with NKp30 positive on 3.5 percent and NKG2C on 7.0 percent. Those
+two values reflect the biology, because NKG2C marks a small adaptive NK subset
+and that subset is the point of the paper. The two controls are still poor
+compensation controls.
 
 ### The finding: mode against median
 
-`flowStats::spillover_ng()` defaults to `method = "mode"`. On a bead control the
-mode is the positive peak, because nearly every event is positive. On a cell
-control for a rare marker the mode is the negative peak, and the ratio it
-produces does not describe spillover at all. This behaviour was not obvious from
-the code. It appeared as a spillover value of 164 percent, which is not physical
-for that pair, so the cause had to be found.
-
-The measurement below runs the computation under every combination of the three
-relevant arguments, and it scores each result against the matrix that the
-instrument stored for this experiment. The stored matrix is a fair reference. It
-was built from these same controls, by the acquisition software, with an
-operator who checked it.
+A spillover value of 164 percent appeared for one pair, which is not physical,
+so the cause was investigated.
 
 ```{r}
 #| label: method-sweep
@@ -161,20 +195,12 @@ kable(
 )
 ```
 
-Read the first row and the third row against each other. Both pregate and both
-filter, and only the summary statistic differs. The mode gives a correlation of
-0.619 with the stored matrix, and it produces two impossible values. The median
-gives 0.975 and it produces none. The two impossible values under the mode came
-from NKG2C and NKG2A, which the quality table above flags as positive on 7.0
-percent and 17.2 percent of events, so the failure and the diagnostic point at
-the same two controls. Three configurations returned no usable estimate at all,
-and the table records that instead of dropping the row.
-
-The analysis therefore uses `method = "median"`, and
-`ComputeSpilloverFromControls()` carries that as its default with this
-measurement in its documentation. The rule to take away is narrower than "use
-median". Use the mode when the controls are beads, and check the positive
-fraction before you trust either.
+The mode gives a correlation of 0.619 with the stored matrix, and it produces
+two values above 100 percent. The median gives 0.975 and it produces none. The
+two values above 100 percent under the mode came from NKG2C and NKG2A, which
+the quality table flags as positive on 7.0 percent and 17.2 percent of events.
+Three configurations returned no usable estimate, and the table records that
+instead of dropping the row.
 
 ### The computed matrix
 
@@ -214,13 +240,9 @@ kable(
 The two matrices agree closely in the middle and they disagree at the top. The
 largest gap is BV510 into the violet 450/50 detector. Both matrices agree that
 this pair carries the largest spillover in the panel, and they disagree on its
-size. That residual is worth naming rather than smoothing over. It is not
-resolved here, and a real experiment would settle it by a plot of that one pair
-before the choice of a matrix.
+size. The residual is not resolved here.
 
 ## Part 2: automated gating
-
-The template mirrors the hierarchy that the authors published.
 
 ```{r}
 #| label: template
@@ -235,13 +257,6 @@ kable(
 )
 ```
 
-The four quadrant populations are built differently from the way the analyst
-built them. FlowJo drew one quadrant gate, which sets both cut points at once.
-The template fits two one dimensional gates, on CD56 and on CD3 separately, and
-it then combines them with a boolean. The populations are defined the same way
-and the cut points are found independently, so a difference between the two
-results can come from that alone.
-
 ```{r}
 #| label: automated-tree
 #| fig-cap: "The hierarchy the template produced."
@@ -250,11 +265,6 @@ knitr::include_graphics(OutputImage("automated_tree.png"))
 ```
 
 ## Part 3: the comparison
-
-The published workspace holds 163 populations, and most of them are boolean
-combinations of six markers below the CD56dim branch. This comparison covers the
-seven named parent populations, which is where a difference means something. The
-mapping between the two naming schemes is a judgement, so it lives in a file.
 
 ```{r}
 #| label: population-map
@@ -293,27 +303,24 @@ knitr::include_graphics(OutputImage("comparison_scatter.png"))
 ### Where they agree and where they do not
 
 Four of the seven populations agree within five percentage points, a tolerance
-that was set as a judgement before the numbers were read and that is not a
-published standard. The disagreement is not spread evenly. It starts at the
-singlet gate, where the analyst kept 96.5 percent of viable events and the
-template kept 86.7 percent. `openCyto::singletGate` fits a regression of FSC-H
-on FSC-A and cuts at a fixed distance from it, while the analyst drew a polygon
-by eye and drew it wider. Everything below inherits that difference. The
-template throws away roughly a tenth more events at the singlet step, and it
-counts the populations below out of a smaller and slightly different parent. The
-lymphocyte gate then differs by 5.7 points in the same direction. By the CD56
-against CD3 split the two methods are close again on the small populations, at
-2.5 points and 1.4 points, and further apart on the largest one at 6.0 points.
+set before the numbers were read and not a published standard. The
+disagreement starts at the singlet gate, where the analyst kept 96.5 percent
+of viable events and the template kept 86.7 percent. `openCyto::singletGate`
+fits a regression of FSC-H on FSC-A and cuts at a fixed distance from it,
+while the analyst drew a polygon by eye and drew it wider. Everything below
+inherits that difference. The template throws away roughly a tenth more events
+at the singlet step, and it counts the populations below out of a smaller and
+slightly different parent. The lymphocyte gate then differs by 5.7 points in
+the same direction. By the CD56 against CD3 split the two methods are close
+again on the small populations, at 2.5 points and 1.4 points, and further
+apart on the largest one at 6.0 points.
 
 ## Part 4: reproducing the paper
 
-The comparison above asks whether two analyses of one file agree. It does not
-ask whether the paper's conclusions hold. That is a different question, and the
-deposited data can answer it. OMIP-039 makes seven directional claims about how
-CD56dim NKG2C+ NK cells differ from CD56dim NKG2C- NK cells, and it states one
-composite phenotype as prototypic for adaptive NK cells. Each claim is recorded
-in a file with the sentence it came from, so a reader can check the claim
-against the paper before the check of the number against the data.
+OMIP-039 makes seven directional claims about how CD56dim NKG2C+ NK cells
+differ from CD56dim NKG2C- NK cells, and it states one composite phenotype as
+prototypic for adaptive NK cells. Each claim is recorded in a file with the
+sentence it came from.
 
 ```{r}
 #| label: claims-file
@@ -328,14 +335,7 @@ kable(
 )
 ```
 
-Each claim is tested twice, by two routes that share no gating decision.
-
 ### Route 1: the authors' own gates
-
-The deposited workspace holds 64 boolean populations under each NKG2C branch,
-which is Figure 1C. A boolean set partitions its parent, so the frequency of one
-marker is the sum of the counts where that marker is positive. That derivation
-uses only the gates the authors drew, and it adds nothing.
 
 ```{r}
 #| label: claims-manual
@@ -351,8 +351,8 @@ kable(
 )
 ```
 
-All six frequency claims hold, and the differences are large. NKG2A falls by
-41.8 percentage points and ILT2 rises by 21.7.
+All six frequency claims hold. NKG2A falls by 41.8 percentage points and ILT2
+rises by 21.7.
 
 ### Figure 1C, the prototypic adaptive phenotype
 
@@ -416,13 +416,6 @@ knitr::include_graphics(OutputImage("claims_plot.png"))
 
 ## Part 5: clustering, a third route
 
-Gating asks how many cells fall inside a boundary. Clustering asks how many
-groups are in the data and what each one expresses. The second question needs no
-hierarchy, so a population that nobody thought to gate can still appear. Gating
-removes debris, dead cells and doublets first, and the clustering runs on the
-lymphocyte gate only. A cluster of debris is not a finding, and it stretches the
-embedding so that everything else is squeezed into a corner.
-
 ```{r}
 #| label: umap-cell-types
 #| fig-cap: "UMAP of the lymphocyte gate, coloured by the annotated cell type."
@@ -431,11 +424,6 @@ knitr::include_graphics(OutputImage("umap_cell_types.png"))
 ```
 
 ### How a cluster gets a name
-
-No cluster is named by eye. Each metacluster is scored against a definitions
-file that gives the expected sign of each marker, and the best scoring
-definition wins. The margin to the runner up is reported, so a close call is
-visible.
 
 ```{r}
 #| label: cluster-annotation
@@ -451,12 +439,9 @@ kable(
 )
 ```
 
-The score is a weighted mean over the markers a definition names, and it is not
-a sum. That distinction is not cosmetic. Under a sum, a definition is rewarded
-for naming more markers alone. The adaptive NK definition names eight markers
-and the T cell definition names two, so the adaptive label won every cluster,
-including the one that holds 88 percent of the file. The mean removes that
-effect.
+The adaptive NK definition names eight markers and the T cell definition names
+two, so the adaptive label won every cluster, including the one that holds 88
+percent of the file. The mean removes that effect.
 
 ```{r}
 #| label: cluster-heatmap
@@ -495,21 +480,17 @@ knitr::include_graphics(OutputImage("three_way_comparison.png"))
 ```
 
 Clustering tracks automated gating closely on the largest population, and it
-undercounts the small NK subsets. That is the expected failure mode. A rare
-population is absorbed into a neighbouring metacluster, because the number of
-metaclusters is chosen in advance and 12 is a guess. The three columns disagree
-most where the population is smallest, which is also where the biology of this
-paper sits. That result is worth stating plainly, rather than presenting the
-agreement on T cells as though it settled the matter.
+undercounts the small NK subsets. A rare population is absorbed into a
+neighbouring metacluster, because the number of metaclusters is chosen in
+advance and 12 is a guess. The three columns disagree most where the
+population is smallest.
 
 ## Discussion: where the three routes disagree, and why
 
-The table above is easy to read as three roughly similar answers. It is more
-useful read as three specific disagreements, and each one has a different cause.
+The three routes disagree on specific populations, and each disagreement has a
+different cause.
 
 ### The NK compartment is not where they disagree
-
-Ask first how many NK cells there are, before you ask how to divide them.
 
 ```{r}
 #| label: nk-total
@@ -524,11 +505,9 @@ kable(
 ```
 
 Automated gating and clustering land within 0.13 percentage points of each
-other, at 5.79 against 5.92, and they reached that number by completely
-different means. One route fitted a boundary on two markers. The other route
-grouped events in eight dimensions and it never saw a gate. Agreement between
-two methods that share no machinery is worth more than agreement between two
-runs of the same one. Manual gating puts the number 2.5 points higher, at 8.25.
+other, at 5.79 against 5.92, and they reached that number by different means.
+One route fitted a boundary on two markers. The other route grouped events in
+eight dimensions. Manual gating puts the number 2.5 points higher, at 8.25.
 
 ### Disagreement 1: the CD3 cut point moves cells between compartments
 
@@ -549,8 +528,7 @@ number.
 
 ### Disagreement 2: the bright and dim split is unreliable in both automated routes
 
-This is the largest disagreement in the report, and neither automated route
-handles it well.
+The bright and dim split is the largest disagreement in the table.
 
 | Route | CD56bright, percent of NK cells |
 |---|---|
@@ -558,15 +536,13 @@ handles it well.
 | Automated gating | 1.9, which is 0.112 of 5.79 |
 | Clustering | 51.7, which is 3.058 of 5.92 |
 
-CD56bright NK cells are usually a small minority of blood NK cells, so a value
-near 2 percent is low and a value above 50 percent is not credible. The two
+CD56bright NK cells are usually a small minority of blood NK cells. The two
 automated routes fail in opposite directions on the same split. The automated
 gate fails because CD56bright and CD56dim are one continuous distribution rather
 than two separated peaks, so a density based cut has no clear minimum to find.
 The clustering fails for a related reason. The definitions file scores CD56 with
 a doubled weight for `high`, and any metacluster with above average CD56
-attracts that label, bright or not. This is why the CD56dim subsets look as
-though clustering lost them. It did not. The events are in the CD56bright label
+attracts that label, bright or not. The events are in the CD56bright label
 instead, and the compartment total is intact.
 
 ### What follows for the paper's conclusions
@@ -600,9 +576,8 @@ once the right summary statistic was used, and it is not in the directional
 claims, which survived every route. It is in two cut points on continuous
 distributions, CD3 and CD56, where a small change in a boundary moves a large
 number of cells. A gate on a bimodal marker holds steady. A gate on a continuum
-is a decision, and a report should record it as one. In this repository it is
-recorded. The cut sits in a CSV that a reviewer can read and a version control
-system can diff.
+is a decision. The cut sits in a CSV that a reviewer can read and a version
+control system can diff.
 
 ## Reproducing this
 
