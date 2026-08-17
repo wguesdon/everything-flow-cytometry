@@ -81,11 +81,11 @@ The matcher runs four passes: exact string match, case and punctuation
 normalised, separator removal, and antibody name alone. A spillover value is a
 ratio between the signal a fluorochrome puts into its own detector and the
 signal it puts into another one, and both terms need a positive population to
-measure. The positive fraction is measured against a threshold set at the
-99.9th percentile of the unstained control.
+measure. The positive fraction is measured against a threshold set at the 99.9th
+percentile of the unstained control.
 
-The computation is scored against the matrix that the instrument stored for
-this experiment. The stored matrix was built from the same controls by the
+The computation is scored against the matrix that the instrument stored for this
+experiment. The stored matrix was built from the same controls by the
 acquisition software. The computation runs under every combination of method,
 pregate, and normFilter arguments. The analysis uses `method = "median"` in
 `flowStats::spillover_ng()`, and `ComputeSpilloverFromControls()` carries that
@@ -93,31 +93,31 @@ as its default.
 
 ### Gating
 
-The template mirrors the hierarchy that the authors published. The four
-quadrant populations are built as two one dimensional gates, on CD56 and on
-CD3 separately, combined with a boolean. The FlowJo workspace drew one
-quadrant gate, which sets both cut points at once. The comparison covers the
-seven named parent populations. The mapping between the two naming schemes is
-recorded in a file.
+The template mirrors the hierarchy that the authors published. The four quadrant
+populations are built as two one dimensional gates, on CD56 and on CD3
+separately, combined with a boolean. The FlowJo workspace drew one quadrant
+gate, which sets both cut points at once. The comparison covers the seven named
+parent populations. The mapping between the two naming schemes is recorded in a
+file.
 
 Each of the seven paper claims is tested twice, by two routes that share no
-gating decision. The deposited workspace holds 64 boolean populations under
-each NKG2C branch. A boolean set partitions its parent, so the frequency of
-one marker is the sum of the counts where that marker is positive. That
-derivation uses only the gates the authors drew.
+gating decision. The deposited workspace holds 64 boolean populations under each
+NKG2C branch. A boolean set partitions its parent, so the frequency of one
+marker is the sum of the counts where that marker is positive. That derivation
+uses only the gates the authors drew.
 
 Clustering groups events without a hierarchy. The clustering runs on the
-lymphocyte gate only. Each metacluster is scored against a definitions file
-that gives the expected sign of each marker, and the best scoring definition
-wins. The score is a weighted mean over the markers a definition names.
+lymphocyte gate only. Each metacluster is scored against a definitions file that
+gives the expected sign of each marker, and the best scoring definition wins.
+The score is a weighted mean over the markers a definition names.
 
 ### Statistics
 
-The tolerance for agreement between manual and automated gating was set at
-five percentage points. The singlet gate uses `openCyto::singletGate`, which
-fits a regression of FSC-H on FSC-A and cuts at a fixed distance. The CD3 cut
-uses `mindensity`, which places the cut at the lowest density point between
-two peaks.
+The tolerance for agreement between manual and automated gating was set at five
+percentage points. The singlet gate uses `openCyto::singletGate`, which fits a
+regression of FSC-H on FSC-A and cuts at a fixed distance. The CD3 cut uses
+`mindensity`, which places the cut at the lowest density point between two
+peaks.
 
 ### Software
 
@@ -151,8 +151,8 @@ compares the two strings character for character, and `normalised` ignores case
 and punctuation. `collapsed` removes every separator, which resolves `CD2
 PerCP-Cy55` on the control against `CD2 PerCPCy55` in the panel. `antibody`
 matches on the antibody name alone and ignores the fluorochrome, which resolves
-`Zombie auqa CD14 CD19` against `Zombie aqua CD14 CD19`. The last pair is a
-typo in the panel. The matcher reports which pass it used, so a weaker match is
+`Zombie auqa CD14 CD19` against `Zombie aqua CD14 CD19`. The last pair is a typo
+in the panel. The matcher reports which pass it used, so a weaker match is
 visible.
 
 ### Whether each control can support an estimate
@@ -169,12 +169,11 @@ kable(
 )
 ```
 
-Every control reads brightest on the detector it was matched to, so the
-matching is correct. Four controls are positive on under 20 percent of their
-events, with NKp30 positive on 3.5 percent and NKG2C on 7.0 percent. Those
-two values reflect the biology, because NKG2C marks a small adaptive NK subset
-and that subset is the point of the paper. The two controls are still poor
-compensation controls.
+Every control reads brightest on the detector it was matched to, so the matching
+is correct. Four controls are positive on under 20 percent of their events, with
+NKp30 positive on 3.5 percent and NKG2C on 7.0 percent. Those two values reflect
+the biology, because NKG2C marks a small adaptive NK subset and that subset is
+the point of the paper. The two controls are still poor compensation controls.
 
 ### The finding: mode against median
 
@@ -197,10 +196,10 @@ kable(
 
 The mode gives a correlation of 0.619 with the stored matrix, and it produces
 two values above 100 percent. The median gives 0.975 and it produces none. The
-two values above 100 percent under the mode came from NKG2C and NKG2A, which
-the quality table flags as positive on 7.0 percent and 17.2 percent of events.
-Three configurations returned no usable estimate, and the table records that
-instead of dropping the row.
+two values above 100 percent under the mode came from NKG2C and NKG2A, which the
+quality table flags as positive on 7.0 percent and 17.2 percent of events. Three
+configurations returned no usable estimate, and the table records that instead
+of dropping the row.
 
 ### The computed matrix
 
@@ -303,22 +302,21 @@ knitr::include_graphics(OutputImage("comparison_scatter.png"))
 ### Where they agree and where they do not
 
 Four of the seven populations agree within five percentage points, a tolerance
-set before the numbers were read and not a published standard. The
-disagreement starts at the singlet gate, where the analyst kept 96.5 percent
-of viable events and the template kept 86.7 percent. `openCyto::singletGate`
-fits a regression of FSC-H on FSC-A and cuts at a fixed distance from it,
-while the analyst drew a polygon by eye and drew it wider. Everything below
-inherits that difference. The template throws away roughly a tenth more events
-at the singlet step, and it counts the populations below out of a smaller and
-slightly different parent. The lymphocyte gate then differs by 5.7 points in
-the same direction. By the CD56 against CD3 split the two methods are close
-again on the small populations, at 2.5 points and 1.4 points, and further
-apart on the largest one at 6.0 points.
+set before the numbers were read and not a published standard. The disagreement
+starts at the singlet gate, where the analyst kept 96.5 percent of viable events
+and the template kept 86.7 percent. `openCyto::singletGate` fits a regression of
+FSC-H on FSC-A and cuts at a fixed distance from it, while the analyst drew a
+polygon by eye and drew it wider. Everything below inherits that difference. The
+template throws away roughly a tenth more events at the singlet step, and it
+counts the populations below out of a smaller and slightly different parent. The
+lymphocyte gate then differs by 5.7 points in the same direction. By the CD56
+against CD3 split the two methods are close again on the small populations, at
+2.5 points and 1.4 points, and further apart on the largest one at 6.0 points.
 
 ## Part 4: reproducing the paper
 
-OMIP-039 makes seven directional claims about how CD56dim NKG2C+ NK cells
-differ from CD56dim NKG2C- NK cells, and it states one composite phenotype as
+OMIP-039 makes seven directional claims about how CD56dim NKG2C+ NK cells differ
+from CD56dim NKG2C- NK cells, and it states one composite phenotype as
 prototypic for adaptive NK cells. Each claim is recorded in a file with the
 sentence it came from.
 
@@ -482,8 +480,8 @@ knitr::include_graphics(OutputImage("three_way_comparison.png"))
 Clustering tracks automated gating closely on the largest population, and it
 undercounts the small NK subsets. A rare population is absorbed into a
 neighbouring metacluster, because the number of metaclusters is chosen in
-advance and 12 is a guess. The three columns disagree most where the
-population is smallest.
+advance and 12 is a guess. The three columns disagree most where the population
+is smallest.
 
 ## Discussion: where the three routes disagree, and why
 
@@ -512,8 +510,8 @@ eight dimensions. Manual gating puts the number 2.5 points higher, at 8.25.
 ### Disagreement 1: the CD3 cut point moves cells between compartments
 
 The automated template calls 93.3 percent of lymphocytes CD3 positive. The
-manual analysis assigns 85.1 percent to CD56- CD3+ and 3.6 percent to
-CD56+ CD3+, so it calls 88.8 percent CD3 positive. A CD3 gate set 4.5 percentage
+manual analysis assigns 85.1 percent to CD56- CD3+ and 3.6 percent to CD56+
+CD3+, so it calls 88.8 percent CD3 positive. A CD3 gate set 4.5 percentage
 points lower does not lose cells; it moves them. The cells leave the NK
 compartment and they arrive in the T cell compartment, which is exactly the
 pattern in the table. T cells rise from 85.1 to 91.1, NKT-like cells fall from
@@ -619,6 +617,7 @@ model for harmonizing flow cytometry in clinical trials. Nat Immunol
 2010;11(11):975-978. PMID 20959798.
 
 [3] Finak G, Frelinger J, Jiang W, Newell EW, Ramey J, Davis MM, Kalams SA, De
-Rosa SC, Gottardo R. OpenCyto: an open source infrastructure for scalable, robust,
-reproducible, and automated, end-to-end flow cytometry data analysis. PLoS Comput
-Biol 2014;10(8):e1003806. PMID 25167361. doi:10.1371/journal.pcbi.1003806.
+Rosa SC, Gottardo R. OpenCyto: an open source infrastructure for scalable,
+robust, reproducible, and automated, end-to-end flow cytometry data analysis.
+PLoS Comput Biol 2014;10(8):e1003806. PMID 25167361.
+doi:10.1371/journal.pcbi.1003806.

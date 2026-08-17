@@ -54,29 +54,66 @@ OutputImage <- function(name) {
 ## What this report does
 
 This report works through a complete flow cytometry analysis in R. It reads
-eight FCS files, applies the compensation matrix that the instrument wrote
-into them, transforms the fluorescence channels, and gates every sample with
-one openCyto template. It then reports the frequency of each population and
-the spread of those frequencies across the eight samples.
+eight FCS files, applies the compensation matrix that the instrument wrote into
+them, transforms the fluorescence channels, and gates every sample with one
+openCyto template. It then reports the frequency of each population and the
+spread of those frequencies across the eight samples.
 
 The report does not repeat the analysis. It reads the files that
-`scripts/01_automated_gating_pbmc.R` wrote, and every number below comes
-from one run of that script, so a new render cannot change a result.
+`scripts/01_automated_gating_pbmc.R` wrote, and every number below comes from
+one run of that script, so a new render cannot change a result.
 
 ### Why the gate hierarchy is a CSV
 
-The gate hierarchy is in `gating/pbmc_gating_template.csv`, not in this
-document and not in a workspace file. A gate drawn by hand lives inside a
-FlowJo workspace, and to know what a colleague did, you open their workspace
-and you look. A template is a text file. A reviewer reads it in a pull
-request, a version control system records who changed a cut point, and the
-same file gates the next experiment.
+The gate hierarchy is in `gating/pbmc_gating_template.csv`, not in this document
+and not in a workspace file. A gate drawn by hand lives inside a FlowJo
+workspace, and to know what a colleague did, you open their workspace and you
+look. A template is a text file. A reviewer reads it in a pull request, a
+version control system records who changed a cut point, and the same file gates
+the next experiment.
 
-Maecker and colleagues sent pre-stained cells to 15 experienced
-laboratories. Local gating gave a mean CV of 20.5 percent, and central
-gating of the same raw files gave 4 percent [1]. The template is the
-mechanism that makes central gating practical, because the analysis moves
-instead of the analyst.
+Maecker and colleagues sent pre-stained cells to 15 experienced laboratories.
+Local gating gave a mean CV of 20.5 percent, and central gating of the same raw
+files gave 4 percent [1]. The template is the mechanism that makes central
+gating practical, because the analysis moves instead of the analyst.
+
+## Methods
+
+### The dataset
+
+The design has two donors and four stimulation conditions, where `NS` means not
+stimulated and `PI` means stimulated with PMA and ionomycin. The files were
+acquired on an LSRII on 18 January 2013, and they come from the FlowJo Basic
+Tutorial.
+
+### Preprocessing
+
+These files carry the matrix in the FCS `$SPILLOVER` keyword, which the
+acquisition software wrote from single stained controls, and the analysis reads
+that matrix and applies it. One transform is estimated on the first sample and
+applied to all eight, because a per sample estimate would move a gate between
+samples for a reason that has nothing to do with the biology.
+
+### Gating
+
+The template fixes the method and the channels, but it does not fix the cut
+point. openCyto fits every gate on every sample separately, so a sample whose
+distribution sits slightly differently still gets its own boundary. The
+`nonDebris` row says to take `root` and, on `FSC-A` and `SSC-A`, fit a
+`flowClust` gate and keep the positive population.
+
+### Statistics
+
+The coefficient of variation holds the biological difference between two donors,
+the difference between four stimulation conditions, and the technical spread of
+the assay. It holds no analyst variation, because one template gated every
+sample. The pooled CV mixes the stimulation effect into the spread, and the
+split CV does not, so it is closer to a measure of the assay itself.
+
+### Software
+
+The analysis used flowCore, flowWorkspace, openCyto, ggcyto, ggplot2 and knitr.
+Every version is pinned in the container.
 
 ## The dataset
 
@@ -89,11 +126,6 @@ kable(
   caption = "The eight files, with the design parsed from the file names."
 )
 ```
-
-The design has two donors and four stimulation conditions, where `NS` means
-not stimulated and `PI` means stimulated with PMA and ionomycin. The files
-were acquired on an LSRII on 18 January 2013, and they come from the FlowJo
-Basic Tutorial.
 
 ```{r}
 #| label: event-counts
@@ -112,18 +144,16 @@ kable(panel, caption = "Detectors and markers. A row with no marker is scatter o
 ```
 
 Two properties of this panel decide what the analysis can do. There is a
-viability dye, so the analysis excludes dead cells instead of keeping them,
-and there is `FSC-H` beside `FSC-A`, so the analysis excludes doublets. A
-panel with only `FSC-A` cannot gate singlets at all, and a doublet then
-counts as a cell in every population below it.
+viability dye, so the analysis excludes dead cells instead of keeping them, and
+there is `FSC-H` beside `FSC-A`, so the analysis excludes doublets. A panel with
+only `FSC-A` cannot gate singlets at all, and a doublet then counts as a cell in
+every population below it.
 
 ## Compensation
 
-Spillover is the light from one fluorochrome that a second detector also
-reads. The relationship is linear, so the correction multiplies the measured
-values by the inverse of the spillover matrix. These files carry the matrix
-in the FCS `$SPILLOVER` keyword, which the acquisition software wrote from
-single stained controls, and the analysis reads that matrix and applies it.
+Spillover is the light from one fluorochrome that a second detector also reads.
+The relationship is linear, so the correction multiplies the measured values by
+the inverse of the spillover matrix.
 
 ```{r}
 #| label: spillover-top
@@ -137,8 +167,7 @@ kable(
 )
 ```
 
-The largest value names the pair of detectors that compensation actually
-moves.
+The largest value names the pair of detectors that compensation actually moves.
 
 ```{r}
 #| label: spillover-matrix
@@ -155,19 +184,18 @@ kable(
 
 ### Doing this without a stored matrix
 
-When the file carries no matrix, compute one from single stained controls
-with `flowStats::spillover_ng()`. In Python the equivalent is a
-`flowkit.Matrix` built from the controls. The common mistake is to
-compensate with a matrix from a different acquisition day, and that mistake
-produces a population that does not exist.
+When the file carries no matrix, compute one from single stained controls with
+`flowStats::spillover_ng()`. In Python the equivalent is a `flowkit.Matrix`
+built from the controls. The common mistake is to compensate with a matrix from
+a different acquisition day, and that mistake produces a population that does
+not exist.
 
 ## Transformation
 
-Fluorescence data spans several orders of magnitude, and after compensation
-it holds negative values, which a log transform cannot represent. The
-logicle transform is linear near zero and logarithmic above it, so the
-negative population stays visible and the positive population stays
-separated.
+Fluorescence data spans several orders of magnitude, and after compensation it
+holds negative values, which a log transform cannot represent. The logicle
+transform is linear near zero and logarithmic above it, so the negative
+population stays visible and the positive population stays separated.
 
 ```{r}
 #| label: transform-channels
@@ -176,10 +204,6 @@ channels <- readLines(file.path(kOutputDir, "transformed_channels.txt"))
 cat("Transformed channels:\n")
 cat(paste0("  ", channels, collapse = "\n"))
 ```
-
-One transform is estimated on the first sample and applied to all eight,
-because a per sample estimate would move a gate between samples for a reason
-that has nothing to do with the biology.
 
 ## The gating template
 
@@ -196,15 +220,6 @@ kable(
 )
 ```
 
-The `nonDebris` row says to take
-`root` and, on `FSC-A` and `SSC-A`, fit a `flowClust` gate and keep the
-positive population.
-
-The template fixes the method and the channels, but it does not fix the cut
-point. openCyto fits every gate on every sample separately, so a sample
-whose distribution sits slightly differently still gets its own boundary.
-That is the difference between a template and a copied gate.
-
 ```{r}
 #| label: gating-tree
 #| fig-cap: "The gate hierarchy that the template produced."
@@ -214,8 +229,8 @@ knitr::include_graphics(OutputImage("gating_tree.png"))
 
 ## The gates
 
-Each figure shows one gate on the first sample, and the fitted boundary is
-drawn on the data it was fitted to.
+Each figure shows one gate on the first sample, and the fitted boundary is drawn
+on the data it was fitted to.
 
 ```{r}
 #| label: gate-figures
@@ -273,17 +288,13 @@ kable(
 )
 ```
 
-The coefficient of variation here holds the biological difference between
-two donors, the difference between four stimulation conditions, and the
-technical spread of the assay. It holds no analyst variation, because one
-template gated every sample. That last point is the purpose of the example.
-Add eight analysts who draw their own gates on these same eight files, and
-the CV rises with no event changed.
+That last point is the purpose of the example. Add eight analysts who draw their
+own gates on these same eight files, and the CV rises with no event changed.
 
-McNeil and colleagues measured this directly. 110 laboratories gated one
-shared set of files, they produced 110 different gating approaches, and the
-standard deviations were 2.5 to 25 times larger under laboratory specific
-gating than under a consensus protocol [2].
+McNeil and colleagues measured this directly. 110 laboratories gated one shared
+set of files, they produced 110 different gating approaches, and the standard
+deviations were 2.5 to 25 times larger under laboratory specific gating than
+under a consensus protocol [2].
 
 ```{r}
 #| label: spread-by-condition
@@ -295,10 +306,6 @@ kable(
   caption = "The same statistics, split by stimulation condition. Splitting removes the between condition difference from the spread."
 )
 ```
-
-The pooled CV mixes the stimulation effect into the
-spread, and the split CV does not, so it is closer to a measure of the assay
-itself.
 
 ## Reproducing this
 
@@ -334,9 +341,10 @@ model for harmonizing flow cytometry in clinical trials. Nat Immunol
 gating. Cytometry A 2013;83A:728-38. PMID 23788464.
 
 [3] Finak G, Frelinger J, Jiang W, Newell EW, Ramey J, Davis MM, Kalams SA, De
-Rosa SC, Gottardo R. OpenCyto: an open source infrastructure for scalable, robust,
-reproducible, and automated, end-to-end flow cytometry data analysis. PLoS Comput
-Biol 2014;10(8):e1003806. PMID 25167361. doi:10.1371/journal.pcbi.1003806.
+Rosa SC, Gottardo R. OpenCyto: an open source infrastructure for scalable,
+robust, reproducible, and automated, end-to-end flow cytometry data analysis.
+PLoS Comput Biol 2014;10(8):e1003806. PMID 25167361.
+doi:10.1371/journal.pcbi.1003806.
 
 [4] Van Gassen S, et al. FlowSOM: Using self-organizing maps for visualization and
 interpretation of cytometry data. Cytometry A 2015. PMID 25573116.

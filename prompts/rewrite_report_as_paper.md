@@ -154,6 +154,54 @@ section that you already moved into Methods. Check for that before you finish. A
 short reminder of the method is allowed where the reader needs it to follow a
 number. The same sentence appearing twice is not.
 
+## The introduction is not an argument for the dataset
+
+Rename the `## Why this dataset` header to `## Introduction`. The question in
+that header is the problem. A paper does not justify its choice of material to
+the reader; it states what is known, what the material is, and what was tested.
+
+The introduction says three things and stops.
+
+1. What the source study reported, with its citation.
+2. What the deposit contains.
+3. What this report measured.
+
+It does not say that the dataset was well chosen, that the data are clean, that
+the claim can be tested, or what a reader should count as success.
+
+These sentences are in the current files and every one of them has to go.
+
+| Sentence | Why it goes |
+|---|---|
+| "The analysis reproduces the paper's findings as closely as the deposited data allows." | A claim about the quality of the work rather than a result. |
+| "A report that reproduces only one of those two results has not reproduced the paper." | Tells the reader what counts as success. |
+| "The benchmark answered its own question in two opposite ways." | Editorial framing of a result that the results section reports. |
+| "The input is clean and the human boundaries are published." | An evaluation of the material. State what the files carry instead. |
+| "The dataset was chosen because the claim can be tested." | Justifies the choice. |
+| "That combination makes this dataset the fair test of the approach." | Same, with a superlative attached. |
+
+## Do not editorialise inside a results section
+
+A results section states what was measured and what the measurement was. Three
+habits in the current text break that.
+
+The first is defending the source paper. The OMIP-43 report currently writes
+that the word "regularly" in a quoted sentence "describes the authors' usual
+practice across many experiments rather than a promise about this deposit".
+That is advocacy on the authors' behalf. Report the count against the stated
+range, and if the wording matters, say that the sentence does not quantify
+"regularly".
+
+The second is teaching. "The two numbers in that sentence are linked by
+arithmetic" explains to the reader that arithmetic is about to happen. Give the
+arithmetic. A count of rare events follows a Poisson distribution, the relative
+spread is `1 / sqrt(n)`, and that is 5 percent at 400 events.
+
+The third is commentary on the analysis itself. Sentences that say a finding is
+useful, expected, surprising, worth stating or worth recording are commentary. A
+result that surprised the analyst can be reported as unexpected once, in the
+discussion, where a paper puts it. It does not belong in the results.
+
 ## Tools
 
 `rg` is not installed on this machine. Use `grep`. `grep -nP` is available for a

@@ -99,15 +99,16 @@ used by the FlowCAP II benchmark.
 Every channel is transformed with an arcsinh at a fixed cofactor. A logicle
 transform estimated per file was not used because a threshold taken from a
 subject's control must be applied to that subject's stimulated file, and the two
-files must sit on one scale. The logicle estimator refuses some files of the HVTN
-deposit at every decade count.
+files must sit on one scale. The logicle estimator refuses some files of the
+HVTN deposit at every decade count.
 
 ### Gating
 
-The cytokine gate uses the unstimulated control of each subject. The threshold is
-placed at the 99.9th percentile of the control and applied to the stimulated file
-of the same subject. The HVTN deposit provides two negative controls per subject.
-One sets the threshold and the other measures the background at that threshold.
+The cytokine gate uses the unstimulated control of each subject. The threshold
+is placed at the 99.9th percentile of the control and applied to the stimulated
+file of the same subject. The HVTN deposit provides two negative controls per
+subject. One sets the threshold and the other measures the background at that
+threshold.
 
 ### Statistics
 
@@ -124,13 +125,13 @@ container.
 ## Part 1: the rule that enters the benchmark
 
 The rule that enters the benchmark is the simplest one that can compete. It
-scores every gated feature on the training half alone, takes the single best one,
-places a threshold on it, and applies that threshold unchanged to the half that
-was held back. Nothing about the held out samples takes part in the feature
+scores every gated feature on the training half alone, takes the single best
+one, places a threshold on it, and applies that threshold unchanged to the half
+that was held back. Nothing about the held out samples takes part in the feature
 choice or in the threshold.
 
-A one feature rule cannot hide behind its own complexity. It names the population
-it used, which is exactly what the paper's own discussion turns on.
+A one feature rule cannot hide behind its own complexity. It names the
+population it used, which is exactly what the paper's own discussion turns on.
 
 ### The cytokine gate is the part that had to change
 
@@ -188,15 +189,16 @@ knitr::include_graphics(OutputImage("env_against_gag.png"))
 ```
 
 The paper reports that manual gating identified the CD4 interleukin 2 population
-as discriminative, with the Env stimulated samples systematically higher than the
-Gag stimulated ones. The deposit says the same. CD4 interleukin 2 is higher in
-Env in 37 of the 47 paired subjects, and the paired test gives p below 0.001.
+as discriminative, with the Env stimulated samples systematically higher than
+the Gag stimulated ones. The deposit says the same. CD4 interleukin 2 is higher
+in Env in 37 of the 47 paired subjects, and the paired test gives p below 0.001.
 
 Three other features separate the two antigens as well, and one of them does it
 more strongly. CD8 interferon gamma is the most significant of the eight, and it
 runs the other way, with the Gag samples higher. The paper names one population
-because manual gating looked at one population. An automated sweep over all eight
-finds that population, and it also finds the three the paper does not mention.
+because manual gating looked at one population. An automated sweep over all
+eight finds that population, and it also finds the three the paper does not
+mention.
 
 ## Part 3: the two challenges, scored the way the benchmark scored them
 
@@ -241,10 +243,10 @@ knitr::include_graphics(OutputImage("hvtn_selected_feature.png"))
 On the HVTN challenge one feature classifies the held out half at an accuracy
 near 0.8, well short of the perfect scores that six named algorithms reached and
 a long way above a coin. The rule selected CD4 interleukin 4 rather than CD4
-interleukin 2. The paper reports that four of the eight methods which named their
-features chose one containing CD4 interleukin 2, so the claim about the selected
-feature is recorded as not reproduced even though the population itself separates
-the two antigens.
+interleukin 2. The paper reports that four of the eight methods which named
+their features chose one containing CD4 interleukin 2, so the claim about the
+selected feature is recorded as not reproduced even though the population itself
+separates the two antigens.
 
 On the HEUvsUE challenge the same rule reaches an accuracy of 0.875 on the
 training half and 0.538 on the half it had not seen.
@@ -310,8 +312,8 @@ after Env stimulation in 37 of 47 subjects.
 
 Six named algorithms reached an F-measure of 1.0 on the HVTN challenge, and this
 rule reaches 0.77. The gap is the rule and not the data. One feature and one
-threshold cannot combine evidence, and the eight features here disagree with each
-other. CD4 interleukin 4 and CD4 interleukin 2 both favour Env while CD8
+threshold cannot combine evidence, and the eight features here disagree with
+each other. CD4 interleukin 4 and CD4 interleukin 2 both favour Env while CD8
 interferon gamma favours Gag, so a method that reads all three at once has
 information that a method reading one of them does not.
 
@@ -322,14 +324,15 @@ single feature rule cannot combine evidence from multiple features.
 
 This report does not enter the benchmark properly. FlowCAP scored a submission
 against its own held out labels under a protocol, and this report scores itself.
-The AML challenge, which is the third dataset and the one the paper treats as the
-practical use case, is not in this archive.
+The AML challenge, which is the third dataset and the one the paper treats as
+the practical use case, is not in this archive.
 
 The HEUvsUE deposit carries no training and testing split, so this report makes
-one by alternating individuals. That split is deterministic and stated, and it is
-not the split the benchmark used. Fifteen of the 44 infants also lack a complete
-feature vector, because a lineage gate did not resolve in at least one of their
-seven files. That leaves a small test set and it widens every interval in Part 3.
+one by alternating individuals. That split is deterministic and stated, and it
+is not the split the benchmark used. Fifteen of the 44 infants also lack a
+complete feature vector, because a lineage gate did not resolve in at least one
+of their seven files. That leaves a small test set and it widens every interval
+in Part 3.
 
 ### What is left to do
 
@@ -358,8 +361,8 @@ podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
   quarto render reports/flowcap2_challenges.qmd
 ```
 
-Both deposits carry their own label file in `attachments/`, so the class of every
-sample travels with the data. The claims live in
+Both deposits carry their own label file in `attachments/`, so the class of
+every sample travels with the data. The claims live in
 `gating/flowcap2_paper_claims.csv`, each with the sentence it came from.
 
 ```{r}
@@ -371,8 +374,8 @@ sessionInfo()
 ## References
 
 [1] Aghaeepour N, Finak G, FlowCAP Consortium, DREAM Consortium, Hoos H, Mosmann
-TR, Brinkman R, Gottardo R, Scheuermann RH. Critical assessment of automated flow
-cytometry data analysis techniques. Nat Methods 2013;10(3):228-238. PMID
+TR, Brinkman R, Gottardo R, Scheuermann RH. Critical assessment of automated
+flow cytometry data analysis techniques. Nat Methods 2013;10(3):228-238. PMID
 23396282. PMC3906045. doi:10.1038/nmeth.2365.
 
 [2] Spearman P, Lally MA, Elizaga M, Montefiori D, Tomaras GD, McElrath MJ, Hural

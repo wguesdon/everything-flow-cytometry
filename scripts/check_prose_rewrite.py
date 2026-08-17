@@ -149,7 +149,11 @@ def main() -> int:
 
     # A rewrite may add a header, because the paper register asks for a Methods
     # section. It may not remove one, and it may not rename one.
-    removed = [line for line in old["headers"] if line not in new["headers"]]
+    # The paper pass renames Why this dataset to Introduction, so that one is
+    # allowed to disappear. Every other header must survive.
+    allowed_to_go = {"## Why this dataset"}
+    removed = [line for line in old["headers"]
+               if line not in new["headers"] and line not in allowed_to_go]
     if removed:
         problems.append(f"{len(removed)} headers were removed or renamed")
         for line in removed:

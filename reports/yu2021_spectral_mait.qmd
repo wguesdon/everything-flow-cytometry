@@ -54,9 +54,9 @@ verdicts <- ReadOutput("claim_verdicts.csv")
 ## Why this dataset
 
 A conventional analyser assigns one detector to one fluorochrome. A spectral
-analyser records the emission of every fluorochrome across 64 detectors and
-then solves for the contribution of each one, which is why a spectral panel
-carries 35 markers where a conventional panel carries 20.
+analyser records the emission of every fluorochrome across 64 detectors and then
+solves for the contribution of each one, which is why a spectral panel carries
+35 markers where a conventional panel carries 20.
 
 This report uses FlowRepository FR-FCM-Z3WR, the flow cytometry deposit of Yu
 and colleagues [1]. The paper reports that circulating mucosal-associated
@@ -538,11 +538,11 @@ test.
 ### Where the fragility sits
 
 A gate on a bimodal marker is a fit and a gate on a continuum is a decision.
-This dataset separates the two cases inside one panel. CD3, CD8, CCR7 and
-CD161 are bimodal, their cuts were fitted from the pooled density, and the
-analysis inherits nothing from the analyst at those four gates. CD45RA is a
-continuum, its cut cannot be fitted, and the analysis inherits a number that a
-person chose. The sweep in Part 5 then shows that the chosen number changes the
+This dataset separates the two cases inside one panel. CD3, CD8, CCR7 and CD161
+are bimodal, their cuts were fitted from the pooled density, and the analysis
+inherits nothing from the analyst at those four gates. CD45RA is a continuum,
+its cut cannot be fitted, and the analysis inherits a number that a person
+chose. The sweep in Part 5 then shows that the chosen number changes the
 frequency by ten percentage points and changes no conclusion.
 
 A cut point matters when the reported quantity is a frequency. It cancels when
