@@ -1,6 +1,6 @@
 ---
-title: "OMIP-39 as a positive control"
-subtitle: "Computed compensation, three routes to the same populations, and the paper reproduced from its own data"
+title: "Automated gating, compensation and clustering of the OMIP-39 NK cell panel"
+subtitle: "Manual versus automated gating, and reproduction of published claims"
 author: "William Guesdon"
 date: today
 format:
@@ -47,21 +47,16 @@ OutputImage <- function(name) {
 }
 ```
 
-## Why this dataset
+## Introduction
 
-OMIP-39 is a published panel for human adaptive NKG2C+ natural killer cells
-[1]. The FlowRepository deposit includes the FlowJo workspace that the authors
-used, so the manual gates come from the original analysis rather than from this
-project. The same donor file is gated twice, once by the authors in FlowJo and
-once by an openCyto template, and the two frequencies are compared.
+Hammer and Romagnani published a panel for human adaptive NKG2C+ natural killer
+cells [1]. The FlowRepository deposit includes the FlowJo workspace the authors
+used, twelve single stained controls, and one donor file.
 
-The deposit also includes twelve single stained controls, so compensation is
-computed from scratch instead of taken from the file.
-
-The report has five parts. They are compensation computed from the controls,
-automated gating from a template, comparison of that template against the
-published manual gates, the paper's own claims tested against the deposited
-data, and clustering as a third route to the same populations.
+This report compares frequencies from the published manual gates against an
+openCyto template, tests seven directional claims from the paper, and runs
+clustering on the lymphocyte gate. Compensation is computed from the twelve
+controls.
 
 ## Methods
 
@@ -378,9 +373,6 @@ cat(sprintf(
 ))
 ```
 
-That ratio is the central claim of the paper, computed from the data that the
-authors deposited alongside it.
-
 ### Route 2: the automated template
 
 ```{r}
@@ -480,8 +472,8 @@ knitr::include_graphics(OutputImage("three_way_comparison.png"))
 Clustering tracks automated gating closely on the largest population, and it
 undercounts the small NK subsets. A rare population is absorbed into a
 neighbouring metacluster, because the number of metaclusters is chosen in
-advance and 12 is a guess. The three columns disagree most where the population
-is smallest.
+advance and 12 was set without a prior estimate. The three columns disagree most
+where the population is smallest.
 
 ## Discussion: where the three routes disagree, and why
 
