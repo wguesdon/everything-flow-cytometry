@@ -156,8 +156,16 @@ Comprehensive Immune Monitoring of Clinical Trials to Advance Human Immunotherap
 | Claim | Patients with graft versus host disease carry fewer CD27 negative B cells and fewer naive CD4 T cells |
 | Attachments | None. There is no workspace and no clinical table in the deposit |
 
-The claim needs the disease status of each patient, and the deposit does not carry it. The status must
-be read from the paper before this dataset can be used.
+The claim needs the disease status of each patient, and the deposit does not carry it.
+
+The paper does not carry it either, in the part of it that this archive can reach. The full text was
+retrieved from Europe PMC on 2026-08-17. It states that 3 of the 15 patients had graft versus host
+disease and it names Table S2 for the subject details. Table S2 sits inside a single supplementary
+document that the open access XML does not include, so the deposit cannot be split into the two groups
+the claim compares.
+
+Three of fifteen is also a small group for a comparison of frequencies. This accession stays open
+until the supplementary table is in hand.
 
 ## The recommendation, as it stood
 
