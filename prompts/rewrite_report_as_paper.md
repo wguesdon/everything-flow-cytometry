@@ -134,11 +134,20 @@ Vary sentence length. A methods section is plain, and plain is not uniform.
 Wrap every prose line at 80 characters. The rest of the repository does, and an
 unwrapped paragraph produces a diff that cannot be reviewed line by line.
 
-Leave no table and no figure without a sentence. A results section in a paper
-says what a table shows before or after it. Removing the salesmanship around a
-table is right; removing the sentence that tells the reader what the table
-contains is not. One sentence is enough, and it states the content or the
-finding, not how to feel about it.
+Leave no table and no figure without a sentence, and do not pad one either. A
+sentence next to a table must add something the caption does not say. The
+finding, the magnitude, or the reason the table is in the report all qualify. A
+sentence that restates the caption is filler, and filler is worse than silence.
+
+Most of these sentences already exist in the bullet or prose version of the file.
+Where the original said something like "The largest value names the pair of
+detectors that compensation actually moves. Inspect that pair on a plot", the
+first sentence is content and the second is an instruction to the reader. Keep
+the content and drop the instruction. Do not delete the whole pair and write a
+new sentence that repeats the caption.
+
+Read the previous revision with `git show HEAD:<path>` when you are unsure what
+a table was there to show.
 
 ## Tools
 
