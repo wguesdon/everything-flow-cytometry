@@ -3,7 +3,7 @@
 
 The rewrite may change body text and nothing else. This script compares a
 working tree file with a git revision of the same file and reports every
-difference that the brief in `prompts/rewrite_report_as_prose.md` forbids.
+difference that the briefs in `prompts/` forbid.
 
 Run it after a rewrite and before a commit:
 
@@ -140,11 +140,24 @@ def main() -> int:
 
     problems: list[str] = []
 
-    for part in ("yaml", "chunks", "quotes", "headers"):
+    for part in ("yaml", "chunks", "quotes"):
         if new[part] != old[part]:
             problems.append(f"{part} changed")
             for line in set(old[part]) ^ set(new[part]):
                 problems.append(f"    {line[:110]}")
+
+    # A rewrite may add a header, because the paper register asks for a Methods
+    # section. It may not remove one, and it may not rename one.
+    removed = [line for line in old["headers"] if line not in new["headers"]]
+    if removed:
+        problems.append(f"{len(removed)} headers were removed or renamed")
+        for line in removed:
+            problems.append(f"    {line[:110]}")
+    added = [line for line in new["headers"] if line not in old["headers"]]
+    if added:
+        print(f"  headers added: {len(added)}")
+        for line in added:
+            print(f"      {line[:110]}")
 
     dashes = [line for line in new["body"] if DASH_PATTERN.search(line)]
     if dashes:
@@ -169,6 +182,14 @@ def main() -> int:
     print(f"  body lines: {len(old['body'])} before, {len(new['body'])} after")
     print(f"  code chunks: {len(new['chunks'])}, unchanged: "
           f"{new['chunks'] == old['chunks']}")
+    cross = [line for line in new["body"]
+             if re.search(r"this repository|earlier report|other report|"
+                          r"PBMC report|OMIP-0?39 report|OMIP-0?43 report",
+                          line, re.IGNORECASE)]
+    if cross:
+        problems.append(f"{len(cross)} body lines still point at another report")
+        for line in cross[:5]:
+            problems.append(f"    {line[:110]}")
     if not problems:
         print("  clean")
         return 0
