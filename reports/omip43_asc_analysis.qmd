@@ -49,40 +49,32 @@ OutputImage <- function(name) {
 
 ## Why this dataset
 
-- OMIP-043 identifies antibody secreting cells, historically called plasma cells,
-  across four human tissues [1].
-- Its target population is defined as CD38 high and CD27 positive, and the word
-  "high" decides everything that follows.
-- CD38 high is the bright end of one continuous distribution rather than a
-  separated peak, so a method that looks for a dip between two peaks has to be
-  checked rather than trusted.
-- The dataset is also unusually good for a check of arithmetic. The authors state
-  their design target in counting terms, and both halves of that sentence can be
-  tested against the data they deposited.
-- The aim is to reproduce the paper's findings as closely as the deposited data
-  allows.
-- The report works through the manual gates, the counting claims, automated
-  gating and how it behaves, the evidence for why it behaves that way,
-  clustering, the phenotype claims, and finally a verdict on every claim in one
-  table.
+OMIP-043 identifies antibody secreting cells, historically called plasma
+cells, across four human tissues [1]. The target population is defined as CD38
+high and CD27 positive, and the word "high" decides everything that follows.
+CD38 high is the bright end of one continuous distribution rather than a
+separated peak, so a method that looks for a dip between two peaks has to be
+checked rather than trusted.
+
+The dataset is also unusually good for a check of arithmetic, because the
+authors state their design target in counting terms and both halves of that
+sentence can be tested against the data they deposited. The aim of this report
+is to reproduce the paper's findings as closely as the deposited data allows.
 
 ### What the replicates are
 
-- Each tissue group holds seven files that share one `$SRC` and one acquisition
-  date of 3 August 2017.
-- They are replicate acquisitions of one preparation per tissue, and they are not
-  seven donors.
-- That is the useful case here. Donor variation is absent by construction, so the
-  spread across the seven files measures acquisition and analysis and nothing
-  else.
-- It is the Maecker design in miniature, on one bench instead of fifteen
-  laboratories.
+Each tissue group holds seven files that share one `$SRC` and one acquisition
+date, 3 August 2017. They are replicate acquisitions of one preparation per
+tissue, not seven donors, and that is what makes the dataset useful here.
+Donor variation is absent by construction, so the spread across the seven
+files measures acquisition and analysis and nothing else. It is the Maecker
+design in miniature, run on one bench instead of fifteen laboratories.
 
 ## Part 1: the manual gates
 
-- The deposited workspace gates seven populations in sequence. They are a time
-  gate, a viability gate, a permissive scatter gate, two singlet gates, a dump
-  gate for CD3, CD14, CD15 and CD193, and finally the ASC gate.
+The deposited workspace gates seven populations in sequence. They are a time
+gate, a viability gate, a permissive scatter gate, two singlet gates, a dump
+gate for CD3, CD14, CD15 and CD193, and finally the ASC gate.
 
 ```{r}
 #| label: manual-counts
@@ -98,23 +90,21 @@ kable(
 )
 ```
 
-- The frequencies span an order of magnitude between tissues, from 0.23 percent
-  in blood to 3.5 percent in spleen.
-- Within a tissue the seven replicates agree closely, which is what replicate
-  acquisitions of one tube should do.
+The frequencies span an order of magnitude between tissues, from 0.23 percent
+in blood to 3.5 percent in spleen. Within a tissue the seven replicates agree
+closely, which is what replicate acquisitions of one tube should do.
 
 ## Part 2: the counting claims
 
-- The paper states its design target directly.
+The paper states its design target directly.
 
 > We targeted a 5% coefficient of variation (CV), which resulted in regularly
 > collecting 400-2,000 events in the ASC gate.
 
-- Those two numbers are one claim, because arithmetic relates them.
-- A count of rare events follows a Poisson distribution, so the relative spread
-  from counting alone is `1 / sqrt(n)`.
-- At 400 events that spread is exactly 5 percent, which is where the paper's
-  lower bound comes from.
+The two numbers in that sentence are one claim, because arithmetic relates
+them. A count of rare events follows a Poisson distribution, so the relative
+spread from counting alone is `1 / sqrt(n)`. At 400 events that spread is
+exactly 5 percent, which is where the paper's lower bound comes from.
 
 ```{r}
 #| label: counting-claims
@@ -136,24 +126,24 @@ kable(
 knitr::include_graphics(OutputImage("asc_event_counts.png"))
 ```
 
-- Not one of the 28 replicates falls inside the stated 400 to 2,000 range.
-- Blood and bone marrow sit below it at 290 and 185 events, and spleen and tonsil
-  sit above it at around 3,500.
-- That result is worth stating carefully, because it is not an error in the
-  paper.
-- The sentence says "regularly", which describes the authors' usual practice
-  across many experiments rather than a promise about this particular deposit.
-- The 5 percent CV target is met where the count is high enough, in spleen and
-  tonsil, and it is missed in blood and bone marrow where the cells are rarest.
-- The target describes an aim, and this deposit shows where the aim is hard to
-  reach.
+Not one of the 28 replicates falls inside the stated 400 to 2,000 range. Blood
+and bone marrow sit below it at 290 and 185 events, and spleen and tonsil sit
+above it at around 3,500.
+
+The mismatch is not an error in the paper, and it deserves a careful reading.
+The sentence says "regularly", which describes the authors' usual practice
+across many experiments rather than a promise about this particular deposit.
+The 5 percent CV target itself is met where the count is high enough, in
+spleen and tonsil, and it is missed in blood and bone marrow where the cells
+are rarest. The target describes an aim, and this deposit shows where the aim
+is hard to reach.
 
 ### The floor and what sits above it
 
-- The Poisson CV is a floor. No amount of care in the laboratory goes below it,
-  because it is the spread of the counting itself.
-- The measured CV across the seven replicates includes that floor plus pipetting,
-  staining, acquisition and the gate.
+The Poisson CV is a floor. No amount of care in the laboratory goes below it,
+because it is the spread of the counting itself. The measured CV across the
+seven replicates includes that floor plus pipetting, staining, acquisition and
+the gate.
 
 ```{r}
 #| label: spread
@@ -175,23 +165,22 @@ kable(
 knitr::include_graphics(OutputImage("cv_comparison.png"))
 ```
 
-- Read the last column.
-- In blood, bone marrow and spleen the measured spread sits above the counting
-  floor, so something other than counting contributes to it.
-- In tonsil the measured CV of 1.17 percent falls below the Poisson floor of 1.73
-  percent, and the excess is reported as missing rather than as a negative
-  number.
-- A measured spread below the counting floor is not possible for independent
-  samples.
-- It means that the seven tonsil files are not independent, which fits what they
-  are. They are repeated acquisitions from one tube, where the same cells can be
-  sampled more than once and the counts are correlated.
-- The arithmetic detected the study design.
+Read the last column. In blood, bone marrow and spleen the measured spread
+sits above the counting floor, so something other than counting contributes to
+it. In tonsil the measured CV of 1.17 percent falls below the Poisson floor of
+1.73 percent, and the excess is reported as missing rather than as a negative
+number.
+
+A measured spread below the counting floor is not possible for independent
+samples, so the seven tonsil files are not independent. That fits what they
+are. They are repeated acquisitions from one tube, where the same cells can be
+sampled more than once and the counts are correlated. The arithmetic detected
+the study design.
 
 ## Part 3: automated gating, and why it fails
 
-- The template mirrors the manual hierarchy, with `mindensity` for the viability
-  and dump gates and two sequential `mindensity` gates to reach CD38 high.
+The template mirrors the manual hierarchy, with `mindensity` for the viability
+and dump gates and two sequential `mindensity` gates to reach CD38 high.
 
 ```{r}
 #| label: template
@@ -219,32 +208,29 @@ kable(
 )
 ```
 
-- This result is worse than a wrong answer.
-- The template is wrong in both directions and by a different amount in each
-  tissue. It undercounts bone marrow threefold and it overcounts spleen
-  eighteenfold.
-- A method that is consistently wrong can be corrected.
-- A method whose error changes sign between tissues cannot be trusted anywhere.
+This result is worse than a wrong answer. The template is wrong in both
+directions, and by a different amount in each tissue. It undercounts bone
+marrow threefold and it overcounts spleen eighteenfold. A method that is
+consistently wrong can be corrected. A method whose error changes sign between
+tissues cannot be trusted anywhere.
 
 ### What the gate is, read from the workspace
 
-- The manual ASC gate is a `rectangleGate` on CD38 from 141.8 to 209.1 and on
-  CD27 from 109.7 to 211.3.
-- A human placed a box, and used knowledge of where these cells sit.
-- That is a threshold decision and not a boundary that the data announces.
-- The paper says as much in its own words.
+The manual ASC gate is a `rectangleGate` on CD38 from 141.8 to 209.1 and on
+CD27 from 109.7 to 211.3. A human placed that box, using knowledge of where
+these cells sit. It is a threshold decision and not a boundary that the data
+announces, and the paper says as much in its own words.
 
 > On-scale display of CD38high events is critical for ASC identification, and can
 > be difficult for the untrained eye.
 
 ## Part 3b: where a density method actually cuts
 
-- The section above shows that the template is wrong.
-- It does not show why, and the obvious explanation is worth a test rather than
-  an assertion.
-- `mindensity` was therefore run on the CD38 channel of exactly the data the
-  analyst looked at, in the workspace's own scale, and its threshold was compared
-  with theirs.
+The section above shows that the template is wrong, but it does not show why,
+and the obvious explanation deserves a test rather than an assertion.
+`mindensity` was therefore run on the CD38 channel of exactly the data the
+analyst looked at, in the workspace's own scale, and its threshold was
+compared with theirs.
 
 ```{r}
 #| label: cd38-thresholds
@@ -260,21 +246,18 @@ kable(
 )
 ```
 
-- This table corrects the simple story.
-- In spleen the two methods almost agree, at 144.2 against 141.8, which gives
-  3.48 percent of events above the cut against 3.59 percent.
-- A single density gate on CD38 would have been close to right there.
-- In the other three tissues `mindensity` cuts far too low, at 80, 73 and 84
-  against analyst thresholds of 124, 128 and 142.
-- It keeps 27, 35 and 14 percent of events where the analyst kept 3.1, 0.8 and
-  0.9 percent.
-- The method is therefore not blind.
-- It succeeds where the target population is abundant enough to bend the density
-  curve, which in spleen means 3.3 percent of events.
-- It fails where the population is rare, which in the other three tissues means
-  0.3 to 0.9 percent.
-- The rarer the cell, the less of a feature it leaves for a density method to
-  find, and this is a rare cell panel.
+The table corrects the simple story. In spleen the two methods almost agree,
+at 144.2 against 141.8, which gives 3.48 percent of events above the cut
+against 3.59 percent. A single density gate on CD38 would have been close to
+right there. In the other three tissues `mindensity` cuts far too low, at 80,
+73 and 84 against analyst thresholds of 124, 128 and 142. It keeps 27, 35 and
+14 percent of events where the analyst kept 3.1, 0.8 and 0.9 percent.
+
+The method is therefore not blind. It succeeds where the target population is
+abundant enough to bend the density curve, which in spleen means 3.3 percent
+of events, and it fails where the population is rare, which in the other three
+tissues means 0.3 to 0.9 percent. The rarer the cell, the less of a feature it
+leaves for a density method to find, and this is a rare cell panel.
 
 ```{r}
 #| label: cd38-density
@@ -283,9 +266,9 @@ kable(
 knitr::include_graphics(OutputImage("cd38_density.png"))
 ```
 
-- The figure shows what the arithmetic says.
-- There is one large mode and a long shoulder, and `mindensity` finds the dip
-  between negative and positive rather than the start of the bright tail.
+The figure shows what the arithmetic says. There is one large mode and a long
+shoulder, and `mindensity` finds the dip between negative and positive rather
+than the start of the bright tail.
 
 ```{r}
 #| label: cd38-biaxial
@@ -294,18 +277,17 @@ knitr::include_graphics(OutputImage("cd38_density.png"))
 knitr::include_graphics(OutputImage("cd38_cd27_biaxial.png"))
 ```
 
-- Note also that the analyst's gate has an upper bound on both markers.
-- A density threshold has no upper bound at all, so the two gates are not the
-  same object even where the lower edges agree.
+The analyst's gate also has an upper bound on both markers. A density
+threshold has no upper bound at all, so the two gates are not the same object
+even where the lower edges agree.
 
 ## Part 4: clustering recovers what gating missed
 
-- Clustering does not need a valley.
-- It groups events by their position in all seven markers at once, and ASC differ
-  from everything around them on several of those markers together. They are CD38
-  bright, CD27 positive, CD20 low and side scatter high.
-- The manual gate is used here only to score the result. The clustering never
-  sees it.
+Clustering does not need a valley. It groups events by their position in all
+seven markers at once, and ASC differ from everything around them on several
+of those markers together. They are CD38 bright, CD27 positive, CD20 low and
+side scatter high. The manual gate is used here only to score the result, and
+the clustering never sees it.
 
 ```{r}
 #| label: clustering
@@ -335,22 +317,22 @@ knitr::include_graphics(OutputImage("umap_spleen_manual.png"))
 knitr::include_graphics(OutputImage("umap_spleen_clusters.png"))
 ```
 
-- In three of the four tissues a single metacluster is over 91 percent ASC.
-- Recall runs from 72 to 95 percent, and in spleen a second cluster takes the
-  combined recall to 97.4 percent.
-- Blood is the weakest case at 63.2 percent purity, and that result is expected.
-- With 165 ASC among 50,000 events, the population is too small to hold a
-  metacluster of its own and it shares one with its nearest neighbours.
+In three of the four tissues a single metacluster is over 91 percent ASC, and
+recall runs from 72 to 95 percent. In spleen a second cluster takes the
+combined recall to 97.4 percent. Blood is the weakest case at 63.2 percent
+purity, and that result is expected. With 165 ASC among 50,000 events, the
+population is too small to hold a metacluster of its own, so it shares one
+with its nearest neighbours.
 
 ### How each metacluster was labelled
 
-- Purity and recall say whether a cluster matches the manual gate.
-- They do not say what any cluster is. FlowSOM returns fifteen numbered groups
-  and nothing else.
-- No cluster was named by eye. The rule is in a file and it runs in four steps.
-- Step 1 is to write down what each cell type looks like. The definitions file
-  gives the expected sign of each marker for each type, as `pos`, `neg`, `high`,
-  or blank when the marker does not take part.
+Purity and recall say whether a cluster matches the manual gate. They do not
+say what any cluster is, and FlowSOM returns fifteen numbered groups and
+nothing else. No cluster was named by eye. The naming rule lives in a file and
+runs in four steps, and the first step is to write down what each cell type
+looks like. The definitions file gives the expected sign of each marker for
+each type, as `pos`, `neg`, `high`, or blank when the marker does not take
+part.
 
 ```{r}
 #| label: definitions
@@ -379,8 +361,8 @@ kable(
 )
 ```
 
-- The reasoning behind each row is kept in the file itself, in a `note` column
-  left out of the table above for width.
+The reasoning behind each row is kept in the file itself, in a `note` column
+that the table above leaves out for width.
 
 ```{r}
 #| label: definition-notes
@@ -392,16 +374,14 @@ kable(
 )
 ```
 
-- Five markers do the labelling.
-- The clustering itself used seven markers, and it added cytoplasmic
-  immunoglobulin and HLA-DR, so the scaled table below carries two columns that
-  the score does not read.
-- Those two columns are shown because they help a reader judge a label even when
-  the rule ignores them.
-- Step 2 is to take the median of every marker in every cluster, and to scale it.
-  Each marker is rescaled to run from 0 to 1 across the fifteen clusters, so a
-  bright marker and a dim one carry equal weight. The score reads this table and
-  not the raw medians.
+Five markers do the labelling. The clustering itself used seven, adding
+cytoplasmic immunoglobulin and HLA-DR, so the scaled table below carries two
+columns that the score does not read. Those two are shown because they help a
+reader judge a label even when the rule ignores them. The second step takes
+the median of every marker in every cluster and scales it. Each marker is
+rescaled to run from 0 to 1 across the fifteen clusters, so a bright marker
+and a dim one carry equal weight, and the score reads this table rather than
+the raw medians.
 
 ```{r}
 #| label: scaled-expression
@@ -414,17 +394,16 @@ kable(
 )
 ```
 
-- Step 3 is to score every cluster against every definition. For each marker the
-  definition names, add the scaled value where it expects `pos`, add twice the
-  scaled value where it expects `high`, and add one minus the scaled value where
-  it expects `neg`. Then divide by the total weight.
-- The division matters. An earlier version summed instead, which rewards a
-  definition for the number of markers it names rather than for the fit, and the
-  label with the longest marker list then wins clusters it has no business
-  winning.
-- Step 4 is to take the best score, and to record how close the second was. That
-  gap is the margin, and it is the part of the output that says how much to trust
-  the label.
+The third step scores every cluster against every definition. For each marker
+the definition names, the rule adds the scaled value where it expects `pos`,
+twice the scaled value where it expects `high`, and one minus the scaled value
+where it expects `neg`, then divides by the total weight. The division
+matters. An earlier version summed instead, which rewards a definition for the
+number of markers it names rather than for the fit, and the label with the
+longest marker list then wins clusters it has no business winning. The last
+step takes the best score and records how close the second was. That gap is
+the margin, and it is the part of the output that says how much to trust the
+label.
 
 ```{r}
 #| label: cluster-annotation
@@ -442,51 +421,51 @@ kable(
 
 ### Whether the labels are any good
 
-- The last two columns check each other, and they were produced without any
-  shared information.
-- The label comes from marker expression against a definitions file.
-- The final column comes from a gate an analyst drew in FlowJo.
-- Cluster 4 is labelled antibody secreting cells with a margin of 0.409, and the
-  manual gate calls 91.7 percent of its events ASC.
-- Cluster 3 gets the same label with a margin of 0.136, and the gate agrees on
-  60.3 percent.
-- Two independent routes reach the same conclusion.
-- Read the scaled table for cluster 4 and the label is obvious without any
-  arithmetic. CD38 is at 1.00, CD27 is at 1.00, and CD20 is at 0.02.
-- That is the highest CD38 in the panel, CD27 positive, and CD20 switched off,
-  which is the paper's definition of an ASC.
-- Five of the fifteen labels carry a margin below 0.1, and a reader should treat
-  those as undecided rather than as answers.
-- Two of those five are informative. Cluster 12 has CD19 at 0.93 and CD20 at
-  0.90, with IgD at 0.06 and CD27 at 0.12, so it is a B cell that is neither IgD
-  positive nor CD27 positive.
-- Cluster 14 has IgD at 0.78 and CD27 at 0.64, so it is positive for both.
-- Neither state is in the definitions file, and the low margins are the method
-  that reports the gap rather than hides it.
-- Cluster 7 is the one clear error. It is labelled antibody secreting cells and
-  the manual gate calls 0.7 percent of it ASC. Its margin is 0.045, so the label
-  is wrong and the margin says so.
+The last two columns check each other, and they were produced without any
+shared information. The label comes from marker expression scored against a
+definitions file, and the final column comes from a gate an analyst drew in
+FlowJo. Cluster 4 is labelled antibody secreting cells with a margin of 0.409,
+and the manual gate calls 91.7 percent of its events ASC. Cluster 3 gets the
+same label with a margin of 0.136, and the gate agrees on 60.3 percent. Two
+independent routes reach the same conclusion.
+
+Read the scaled table for cluster 4 and the label is obvious without any
+arithmetic. CD38 is at 1.00, CD27 is at 1.00, and CD20 is at 0.02. That is the
+highest CD38 in the panel, CD27 positive, and CD20 switched off, which is the
+paper's definition of an ASC.
+
+Five of the fifteen labels carry a margin below 0.1, and a reader should treat
+those as undecided rather than as answers. Two of the five are informative.
+Cluster 12 has CD19 at 0.93 and CD20 at 0.90, with IgD at 0.06 and CD27 at
+0.12, so it is a B cell that is neither IgD positive nor CD27 positive.
+Cluster 14 has IgD at 0.78 and CD27 at 0.64, so it is positive for both.
+Neither state is in the definitions file, and the low margins are the method
+reporting the gap rather than hiding it.
+
+Cluster 7 is the one clear error. It is labelled antibody secreting cells and
+the manual gate calls 0.7 percent of it ASC. Its margin is 0.045, so the label
+is wrong and the margin says so.
 
 ### What had to be corrected
 
-- The first version of the definitions file required memory B cells to be
-  positive for cytoplasmic immunoglobulin and for HLA-DR.
-- On this panel the FITC channel carries cytoplasmic Ig, which is high on ASC and
-  low elsewhere, and HLA-DR varies.
-- Those two requirements pulled the memory B score down far enough that cluster
-  13 was labelled non-B by a margin of 0.007. That cluster is 16.7 percent of the
-  file, with CD19 at 0.96, CD20 at 0.77, CD27 at 0.74 and IgD at 0.14.
-- The definitions were cut back to the markers that actually define these
-  subsets, which are CD19, CD20, IgD, CD27 and CD38.
-- Cluster 13 is now labelled memory B cells with a margin of 0.240.
-- That correction is worth a record rather than a quiet application. The method
-  did not fail there. The definitions did, and the margin of 0.007 flagged it
-  before anyone looked at the biology.
-- Compare the frequency the clustering produces with the manual value. Spleen
-  gives 4.03 percent against 3.34, tonsil gives 0.77 against 0.86, and bone
-  marrow gives 0.43 against 0.45.
-- Those values are within a factor of 1.2. The template was out by a factor of
-  18.
+The first version of the definitions file required memory B cells to be
+positive for cytoplasmic immunoglobulin and for HLA-DR. On this panel the FITC
+channel carries cytoplasmic Ig, which is high on ASC and low elsewhere, and
+HLA-DR varies. Those two requirements pulled the memory B score down far
+enough that cluster 13 was labelled non-B by a margin of 0.007, on a cluster
+that holds 16.7 percent of the file with CD19 at 0.96, CD20 at 0.77, CD27 at
+0.74 and IgD at 0.14. The definitions were cut back to the markers that
+actually define these subsets, which are CD19, CD20, IgD, CD27 and CD38, and
+cluster 13 is now labelled memory B cells with a margin of 0.240.
+
+The correction is recorded here rather than applied quietly, because the
+method did not fail in that first run. The definitions did, and the margin of
+0.007 flagged it before anyone looked at the biology.
+
+Set against the manual values, the frequencies the clustering produces are
+close. Spleen gives 4.03 percent against 3.34, tonsil gives 0.77 against 0.86,
+and bone marrow gives 0.43 against 0.45. Those values are within a factor of
+1.2. The template was out by a factor of 18.
 
 ## Part 5: the phenotype claims
 
@@ -502,19 +481,18 @@ kable(
 )
 ```
 
-- The paper warns about the scatter position of these cells.
+The paper warns about the scatter position of these cells.
 
 > ASC contain more cytoplasm due to their active production of antibody, and thus
 > do not cluster with a typical low-side scatter "lymphocyte" gate.
 
-- The claim reproduces in all four tissues. ASC scatter 1.8 to 2.7 times more
-  light than the cells around them.
-- This claim has a direct consequence for automated gating, and it is the reason
-  the template above uses a permissive `boundary` gate on scatter rather than a
-  `flowClust` lymphocyte gate.
-- A conventional lymphocyte gate would have removed much of the target population
-  before any marker was looked at, and the analysis would have run to completion
-  and reported a number.
+The claim reproduces in all four tissues. ASC scatter 1.8 to 2.7 times more
+light than the cells around them. The claim also has a direct consequence for
+automated gating, and it is the reason the template above uses a permissive
+`boundary` gate on scatter rather than a `flowClust` lymphocyte gate. A
+conventional lymphocyte gate would have removed much of the target population
+before any marker was looked at, and the analysis would have run to completion
+and reported a number.
 
 ```{r}
 #| label: cd20
@@ -530,8 +508,8 @@ kable(
 > Mature B cells express the phosphoglycoproteins CD19 and CD20, and on
 > differentiation to ASCs, CD20 is downregulated.
 
-- The claim reproduces in all four tissues, with the difference from 7 to 38
-  units.
+The claim reproduces in all four tissues, with the difference from 7 to 38
+units.
 
 ```{r}
 #| label: tissue-variation
@@ -554,22 +532,21 @@ kable(
 
 > The ratio of CD19+ to CD19- on ASC varies by tissue niche.
 
-- CD19 varies across tissues among ASC, from 127 in bone marrow to 165 in tonsil.
-- The direction matches the literature the paper cites, where CD19 negative ASC
-  are enriched in bone marrow.
-- The paper also names Ki67 as a marker that varies by tissue.
-- That claim cannot be tested here, because the PE channel in these deposited
-  files carries HLA-DR and not Ki67. The paper describes both as options for that
-  channel.
-- The claim is recorded as not measurable rather than as failed.
+CD19 varies across tissues among ASC, from 127 in bone marrow to 165 in
+tonsil, and the direction matches the literature the paper cites, where CD19
+negative ASC are enriched in bone marrow. The paper also names Ki67 as a
+marker that varies by tissue. That claim cannot be tested here, because the PE
+channel in these deposited files carries HLA-DR and not Ki67. The paper
+describes both as options for that channel. The claim is recorded as not
+measurable rather than as failed.
 
 ## Part 6: every claim, with a verdict
 
-- The sections above measure. This one decides, so that no claim in the file is
-  left without an answer.
-- The seven claims live in `gating/omip43_paper_claims.csv`, each with the
-  sentence it came from, so a reader can check the claim against the paper before
-  the check of the number against the data.
+The sections above measure. This one decides, so that no claim in the file is
+left without an answer. The seven claims live in
+`gating/omip43_paper_claims.csv`, each with the sentence it came from, so a
+reader can check the claim against the paper before checking the number
+against the data.
 
 ```{r}
 #| label: claims-file
@@ -595,30 +572,28 @@ kable(
 )
 ```
 
-- Five of the seven claims reproduce cleanly.
-- The two that do not are both counting claims, and neither is a failure of the
-  biology.
-- Claim 2 fails outright, because no replicate falls in the stated 400 to 2,000
-  range.
-- Claim 3 is met in spleen and tonsil and missed in blood and bone marrow.
-- Both claims come from the same sentence, and both track the same thing, which
-  is how rare the cells are in a given tissue.
-- One claim could not be tested at all. The paper names Ki67 alongside CD19 and
-  HLA-DR as markers that vary between tissues, and the PE channel in these
-  deposited files carries HLA-DR rather than Ki67.
-- The paper describes both as options for that channel.
-- The claim is recorded here as not measurable rather than counted as a failure,
-  because the data to test it was never deposited.
+Five of the seven claims reproduce cleanly. The two that do not are both
+counting claims, and neither is a failure of the biology. Claim 2 fails
+outright, because no replicate falls in the stated 400 to 2,000 range. Claim 3
+is met in spleen and tonsil and missed in blood and bone marrow. Both claims
+come from the same sentence, and both track the same thing, which is how rare
+the cells are in a given tissue.
+
+One claim could not be tested at all. The paper names Ki67 alongside CD19 and
+HLA-DR as markers that vary between tissues, but the PE channel in these
+deposited files carries HLA-DR rather than Ki67. The paper describes both as
+options for that channel, so the claim is recorded here as not measurable
+rather than counted as a failure, because the data to test it was never
+deposited.
 
 ### The same claims, from a population the manual gate never touched
 
-- Everything above defines ASC by the gate the authors drew.
-- That asks whether the paper's conclusions follow from its own analysis, which
-  is worth knowing and is not the same as an independent reproduction.
-- The population was therefore rebuilt from scratch.
-- Each tissue was clustered, and the clusters that carry the highest median CD38
-  were taken as the population.
-- The manual gate was not consulted at any point.
+Everything above defines ASC by the gate the authors drew. That asks whether
+the paper's conclusions follow from its own analysis, which is worth knowing
+and is not the same as an independent reproduction. The population was
+therefore rebuilt from scratch. Each tissue was clustered, the clusters that
+carry the highest median CD38 were taken as the population, and the manual
+gate was not consulted at any point.
 
 ```{r}
 #| label: cluster-route
@@ -634,11 +609,10 @@ kable(
 )
 ```
 
-- All four tissues land close. Bone marrow gives 0.42 percent against 0.45,
-  spleen gives 2.90 against 3.34, tonsil gives 0.68 against 0.86, and blood gives
-  0.49 against 0.33.
-- Agreement on which individual events are selected runs from 64.5 percent in
-  blood to 95.1 percent in bone marrow.
+All four tissues land close. Bone marrow gives 0.42 percent against 0.45,
+spleen gives 2.90 against 3.34, tonsil gives 0.68 against 0.86, and blood
+gives 0.49 against 0.33. Agreement on which individual events are selected
+runs from 64.5 percent in blood to 95.1 percent in bone marrow.
 
 ```{r}
 #| label: both-routes
@@ -651,28 +625,27 @@ kable(
 )
 ```
 
-- Four of the five claims that clustering can test reproduce by clustering, with
-  the same directions and comparable magnitudes as the authors' own gates.
-- The fifth fails on a margin of 0.07 percentage points, and the next section
-  explains why that verdict is kept rather than tuned away.
+Four of the five claims that clustering can test reproduce by clustering, with
+the same directions and comparable magnitudes as the authors' own gates. The
+fifth fails on a margin of 0.07 percentage points, and the next section
+explains why that verdict is kept rather than tuned away.
 
 ### Getting there took two attempts, and the first one failed
 
-- The first version of this route selected clusters by a score of their whole
-  marker profile against a definitions file.
-- It worked in tonsil and spleen and it failed badly in bone marrow, where it
-  called 9.44 percent of the parent ASC against a manual gate of 0.45, with only
-  4.1 percent of the selected events inside that gate.
-- The numbers said where to look. Precision in bone marrow was 4 to 7 percent
-  while recall was 87 to 99, so the target cells were found and then diluted in a
-  cluster far too large to be ASC.
-- That is not a clustering problem. It is the rule that decides which cluster to
-  keep.
-- Forty-eight configurations were then measured across all four tissues. They
-  varied the number of metaclusters, whether scatter channels join the
-  clustering, whether channels are scaled, and the selection rule.
-- Each configuration was ranked on its worst tissue rather than on its average,
-  because an average hides a total failure.
+The first version of this route selected clusters by a score of their whole
+marker profile against a definitions file. It worked in tonsil and spleen, and
+it failed badly in bone marrow, where it called 9.44 percent of the parent ASC
+against a manual gate of 0.45, with only 4.1 percent of the selected events
+inside that gate. The numbers said where to look. Precision in bone marrow was
+4 to 7 percent while recall was 87 to 99, so the target cells were found and
+then diluted in a cluster far too large to be ASC. That is not a clustering
+problem. It is the rule that decides which cluster to keep.
+
+Forty-eight configurations were then measured across all four tissues. They
+varied the number of metaclusters, whether scatter channels join the
+clustering, whether channels are scaled, and the selection rule. Each
+configuration was ranked on its worst tissue rather than on its average,
+because an average hides a total failure.
 
 ```{r}
 #| label: sweep-by-rule
@@ -700,21 +673,20 @@ kable(
 )
 ```
 
-- The selection rule decides everything, and the other three settings barely
-  matter.
-- Every profile configuration lands between 6.8 and 12.2 on its worst tissue.
-- Every configuration that ranks on CD38 and takes the top one lands between 48.7
-  and 77.1.
-- The reason is in the paper, and it is not in the parameters.
+The selection rule decides everything, and the other three settings barely
+matter. Every profile configuration lands between 6.8 and 12.2 on its worst
+tissue. Every configuration that ranks on CD38 and takes the top one lands
+between 48.7 and 77.1. The reason is in the paper, and it is not in the
+parameters.
 
 > ASC also express very high levels of the ectoenzyme CD38 and are positive for the
 > TNF-family receptor CD27. Very high CD38 expression is in fact considered
 > adequate for basic identification of ASC.
 
-- The population is defined by one marker at an extreme value, and not by the
-  shape of a profile.
-- Three clusters are worse than one cluster, at a best worst-tissue F1 of 10.0,
-  because the third admits a population that is positive without being extreme.
+The population is defined by one marker at an extreme value, and not by the
+shape of a profile. Three clusters are worse than one, at a best worst-tissue
+F1 of 10.0, because the third admits a population that is positive without
+being extreme.
 
 ```{r}
 #| label: sweep-top
@@ -741,35 +713,34 @@ kable(
 )
 ```
 
-- Bone marrow goes from the worst tissue to the best, at 95.1 percent agreement.
+Bone marrow goes from the worst tissue to the best, at 95.1 percent agreement.
 
 ### The trade-off the sweep exposed
 
-- The top two clusters reproduce all five claims, and they agree less well with
-  the manual gate, at a worst-tissue F1 of 69.6 against 77.1.
-- The top one cluster agrees better and it loses claim 1.
-- The report keeps the sweep winner, so claim 1 fails on the clustering route.
-- The reason is worth seeing, rather than a switch to whichever rule scores
-  better on the claim table.
-- Claim 1 says that ASC are rarest in blood. By the manual gate that is clear,
-  at 0.26 percent in blood against 0.41 in bone marrow.
-- By the clustering route the two values are 0.49 and 0.42, so bone marrow comes
-  out marginally lower and the ordering flips.
-- The two tissues are 0.07 percentage points apart. That gap is smaller than the
-  difference between the clustering route and the manual gate in either tissue on
-  its own, so the method cannot resolve it, and a verdict of reproduced would
-  have been luck rather than evidence.
+The top two clusters reproduce all five claims, and they agree less well with
+the manual gate, at a worst-tissue F1 of 69.6 against 77.1. The top one
+cluster agrees better and it loses claim 1. This report keeps the sweep
+winner, so claim 1 fails on the clustering route, and the reason is worth
+seeing rather than switching to whichever rule scores better on the claim
+table.
+
+Claim 1 says that ASC are rarest in blood. By the manual gate that is clear,
+at 0.26 percent in blood against 0.41 in bone marrow. By the clustering route
+the two values are 0.49 and 0.42, so bone marrow comes out marginally lower
+and the ordering flips. The two tissues sit 0.07 percentage points apart. That
+gap is smaller than the difference between the clustering route and the manual
+gate in either tissue on its own, so the method cannot resolve it, and a
+verdict of reproduced would have been luck rather than evidence.
 
 ### What this step is and is not
 
-- The manual gate was used to score the configurations above, which makes this a
-  calibration step rather than an independent test.
-- A choice of method by how well it matches a reference is legitimate.
-- A claim that the result is independent afterwards would not be.
-- What survives that objection is the reasoning. The rule was not found by a
-  search for whatever matched best.
-- It was taken from a sentence in the paper, and the sweep then confirmed that
-  every rule which ignores that sentence performs six times worse.
+The manual gate was used to score the configurations above, which makes this a
+calibration step rather than an independent test. A choice of method by how
+well it matches a reference is legitimate. A claim that the result is
+independent afterwards would not be. What survives that objection is the
+reasoning. The rule was not found by a search for whatever matched best. It
+was taken from a sentence in the paper, and the sweep then confirmed that
+every rule which ignores that sentence performs six times worse.
 
 ```{r}
 #| label: verdict-summary
@@ -783,69 +754,67 @@ kable(summary_table, caption = "The seven claims, summarised.")
 
 ### The failure is silent, which is the part that matters
 
-- The template ran to completion on every tissue.
-- It raised no error, it produced a population, and it reported a percentage.
-- Nothing in the output said that the CD38 high gate had kept everything handed
-  to it.
-- That is the risk in an automated pipeline, and it is worse than a crash. A
-  crash stops you. A number does not.
-- The check that caught it here is cheap and general. Compare the automated
-  result against a gate somebody drew by hand, on the same file, before you trust
-  the pipeline on files nobody has looked at.
+The template ran to completion on every tissue. It raised no error, it
+produced a population, and it reported a percentage. Nothing in the output
+said that the CD38 high gate had kept everything handed to it. That is the
+risk in an automated pipeline, and it is worse than a crash. A crash stops
+you. A number does not.
+
+The check that caught it here is cheap and general. Compare the automated
+result against a gate somebody drew by hand, on the same file, before you
+trust the pipeline on files nobody has looked at.
 
 ### Rarity is what breaks the density method
 
-- Part 3b separates two explanations that are easy to confuse.
-- The first explanation is that CD38 high has no density valley at all. That is
-  not quite true. In spleen a single `mindensity` cut lands at 144.2 against the
-  analyst's 141.8, and it keeps 3.48 percent of events against their 3.59
-  percent.
-- The second explanation is that the population must be abundant enough to leave
-  a feature in the density curve. That is what the data supports.
-- Spleen holds 3.3 percent ASC and the method works.
-- Blood, bone marrow and tonsil hold 0.3 to 0.9 percent, and the cut falls 40 to
-  60 units too low, so it keeps 14 to 35 percent of events instead of about 1 to
-  3 percent.
-- The rule is therefore not that density gating cannot find a bright tail.
-- The rule is that a density method needs the population to be common enough to
-  bend the curve, and a rare cell panel is precisely the case where it is not.
+Part 3b separates two explanations that are easy to confuse. The first is that
+CD38 high has no density valley at all. That is not quite true. In spleen a
+single `mindensity` cut lands at 144.2 against the analyst's 141.8, and it
+keeps 3.48 percent of events against their 3.59 percent. The second
+explanation is that the population must be abundant enough to leave a feature
+in the density curve, and that is what the data supports. Spleen holds 3.3
+percent ASC and the method works. Blood, bone marrow and tonsil hold 0.3 to
+0.9 percent, and the cut falls 40 to 60 units too low, so it keeps 14 to 35
+percent of events instead of about 1 to 3 percent.
+
+The rule is therefore not that density gating cannot find a bright tail. The
+rule is that a density method needs the population to be common enough to bend
+the curve, and a rare cell panel is precisely the case where it is not.
 
 ### Why clustering does better here
 
-- Clustering never looks for a valley on one axis.
-- It groups events by their position across all seven markers at once, and ASC
-  differ from their neighbours on four of them together. They are CD38 bright,
-  CD27 positive, CD20 low and side scatter high.
-- That is why the clustering route lands within a factor of 1.5 of the manual
-  value in all four tissues, including bone marrow at 0.42 percent against 0.45,
-  where the density gate was out by threefold in the other direction.
-- The two automated routes therefore do not fail together. The density gate
-  failed in three tissues of four, and the clustering route failed in none once
-  its selection rule matched the paper's own definition.
-- It took two attempts to get there, and the first attempt failed in bone marrow
-  for a reason worth carrying forward.
-- A rare population does not claim a cluster of its own, so the rule that picks
-  which cluster to keep matters more than the clustering parameters.
-- Across all 48 configurations, every rule that scored the whole marker profile
-  stayed below an F1 of 12.2 on its worst tissue. Every rule that ranked on CD38
-  and took the top cluster reached 48.7 or better.
+Clustering never looks for a valley on one axis. It groups events by their
+position across all seven markers at once, and ASC differ from their
+neighbours on four of them together. They are CD38 bright, CD27 positive, CD20
+low and side scatter high. That is why the clustering route lands within a
+factor of 1.5 of the manual value in all four tissues, including bone marrow
+at 0.42 percent against 0.45, where the density gate was out by threefold in
+the other direction. The two automated routes do not fail together. The
+density gate failed in three tissues of four, and the clustering route failed
+in none once its selection rule matched the paper's own definition.
+
+It took two attempts to get there, and the first attempt failed in bone marrow
+for a reason worth carrying forward. A rare population does not claim a
+cluster of its own, so the rule that picks which cluster to keep matters more
+than the clustering parameters. Across all 48 configurations, every rule that
+scored the whole marker profile stayed below an F1 of 12.2 on its worst
+tissue, and every rule that ranked on CD38 and took the top cluster reached
+48.7 or better.
 
 ### What this shows and what it does not
 
-- It shows that an automated template can fail silently on a published panel,
-  that the failure tracks how rare the target population is, and that a different
-  automated method recovers the same cells without hand tuning.
-- It does not show that clustering is safe. The selection rule that made it work
-  was chosen with the manual gate in hand, so this is a calibrated method rather
-  than an independent one, and blood still agrees on only 64.5 percent of the
-  events it selects.
-- It does not measure analyst variation. Seven replicate acquisitions of one tube
-  are not seven analysts, and the tonsil result where the measured CV fell below
-  the Poisson floor shows that those replicates are not fully independent of one
-  another.
-- What the arithmetic did show is worth keeping. A measured spread that falls
-  below the counting floor is a statement about the study design rather than
-  about the biology, and one line of Poisson arithmetic was enough to see it.
+What this analysis shows is that an automated template can fail silently on a
+published panel, that the failure tracks how rare the target population is,
+and that a different automated method recovers the same cells without hand
+tuning. It does not show that clustering is safe. The selection rule that made
+it work was chosen with the manual gate in hand, so this is a calibrated
+method rather than an independent one, and blood still agrees on only 64.5
+percent of the events it selects. It does not measure analyst variation
+either. Seven replicate acquisitions of one tube are not seven analysts, and
+the tonsil result, where the measured CV fell below the Poisson floor, shows
+that those replicates are not fully independent of one another. What the
+arithmetic did show is worth keeping. A measured spread that falls below the
+counting floor is a statement about the study design rather than about the
+biology, and one line of Poisson arithmetic was enough to see it.
 
 ## Reproducing this
 
