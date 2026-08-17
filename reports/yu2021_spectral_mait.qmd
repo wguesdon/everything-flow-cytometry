@@ -1,6 +1,6 @@
 ---
-title: "A 35 marker spectral panel, and a published finding tested against it"
-subtitle: "Cytek Aurora data from 83 COVID-19 samples, one cut point for the cohort, and the claims of Yu 2021 checked by two routes"
+title: "MAIT cell frequencies in COVID-19 from a 35 marker spectral panel"
+subtitle: "FlowRepository FR-FCM-Z3WR, 83 samples from 45 subjects, ten published claims tested by gating and clustering"
 author: "William Guesdon"
 date: today
 format:
@@ -51,7 +51,7 @@ measures <- ReadOutput("sample_measures.csv")
 verdicts <- ReadOutput("claim_verdicts.csv")
 ```
 
-## Why this dataset
+## Introduction
 
 A conventional analyser assigns one detector to one fluorochrome. A spectral
 analyser records the emission of every fluorochrome across 64 detectors and then
@@ -64,12 +64,10 @@ invariant T cells fall in COVID-19, and that the fall is larger in females. The
 files come from a Cytek Aurora, the panel carries 35 named markers, and the
 deposit holds 83 samples from 45 subjects.
 
-The dataset was chosen because the claim can be tested. The paper states ten
-findings that rest on the flow data alone, and Table S1 of the paper carries the
-sex, the severity rank, the time point and the seroconversion status of every
-sample. The claims live in `gating/yu2021_paper_claims.csv` with the sentence
-each one came from, so a reader can check the claim against the paper before the
-number is checked against the data.
+The paper states ten findings that rest on the flow data alone, and Table S1 of
+the paper carries the sex, the severity rank, the time point and the
+seroconversion status of every sample. Each claim was tested against the
+deposited files.
 
 ```{r}
 #| label: panel
@@ -226,17 +224,12 @@ cat(sprintf(
 ))
 ```
 
-Two numbers say that the gates are in a sensible place. CD8 T cells are 32
-percent of CD3 positive cells, which is the expected fraction in blood, and
-CD161hi cells are 9.1 percent of CD8 T cells, which is the range that the
-literature reports for MAIT cells. One number says that a gate is not in a
-sensible place. NK cells are 16.5 percent of CD45 positive cells, which is about
-half of the CD3 negative parent, and B cells, monocytes and dendritic cells also
-live there. The CD56 cut at 2.12 is too permissive.
-
-That gate feeds claim 10 alone, which asks only whether NK cells carry more CD56
-than CD8 T cells, and a permissive gate makes that comparison harder rather than
-easier. No other number in this report depends on it.
+CD8 T cells are 32 percent of CD3 positive cells, which is the expected fraction
+in blood, and CD161hi cells are 9.1 percent of CD8 T cells, which is the range
+that the literature reports for MAIT cells. NK cells are 16.5 percent of CD45
+positive cells, which is about half of the CD3 negative parent, and B cells,
+monocytes and dendritic cells also live there. The CD56 cut at 2.12 is too
+permissive.
 
 ### What CD161hi is, and is not
 
@@ -284,8 +277,7 @@ kable(
 ```
 
 Eight of the ten claims reproduce and two are partly reproduced. The two partial
-ones are claims 5 and 6, which are the only claims about time points, and the
-next section is about them.
+ones are claims 5 and 6, which are the only claims about time points.
 
 The p value is the test the paper itself used, Mann-Whitney for a two group
 comparison and Spearman for a correlation. A direction can be right while the
@@ -333,10 +325,8 @@ reported as failing.
 That test was wrong, and the paper says so in the legend of its Figure 2, which
 states that significance was determined by a Mann-Whitney test and that an
 asterisk means p below 0.05. A difference that is lost is one that stops being
-significant. It keeps a direction while it is lost. A question about which sex
-is higher answers a question the paper never asked, and it reports a failure
-whenever an effect shrinks without a reversal, which is the normal way an effect
-disappears. The test now compares the significance pattern instead.
+significant. It keeps a direction while it is lost. The test now compares the
+significance pattern instead.
 
 ```{r}
 #| label: timepoint-figure
