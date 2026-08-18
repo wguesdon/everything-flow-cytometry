@@ -165,7 +165,7 @@ The R half uses flowCore, flowStats, robustbase and ggplot2. The Python half
 uses pytometry, scanpy, anndata, readfcs, igraph, leidenalg, scikit-learn, numpy
 and pandas. Every version is pinned in the container and in `uv.lock`.
 
-## Part 1: what the deposit says about its compensation, and what the data says
+## Part 1: the compensation state of the deposited files
 
 ```{r}
 #| label: compensation-state
@@ -180,10 +180,9 @@ kable(
 ```
 
 Both files carry `APPLY COMPENSATION` set to TRUE and a 28 by 28 matrix whose
-largest off diagonal value is zero. Read on its own, that pair says the values
-were compensated at export and nothing remains to apply.
-
-The events say otherwise.
+largest off diagonal value is zero. The pair of keywords states that the values
+were compensated at export. The marker correlations show that compensation was
+not applied.
 
 ```{r}
 #| label: correlations
@@ -217,8 +216,7 @@ sit on adjacent violet detectors, correlate at 0.938 and 0.921. CD16 and the
 viability dye, on adjacent ultraviolet detectors and joined by no biology,
 correlate at 0.865 and 0.895.
 
-The identity matrix therefore records that no matrix was supplied, not that none
-is needed.
+The identity matrix records that no spillover matrix was supplied.
 
 ## Part 2: the matrix computed from the single stains
 
@@ -283,11 +281,10 @@ The cell matrix is the one applied here. It covers the viability detector, which
 no bead can stain, and a matrix that leaves that detector out cannot correct the
 spillover between it and CD16.
 
-The difference shows in the result. The bead matrix takes the median absolute
-correlation from 0.584 to 0.210 in donor 112117 and leaves CD4 with CD8 at
-0.690, because it has no row for either marker. The cell matrix takes the same
-donor to 0.167 and CD4 with CD8 to -0.311, which is the sign a mutually
-exclusive pair should carry.
+The bead matrix takes the median absolute correlation from 0.584 to 0.210 in
+donor 112117 and leaves CD4 with CD8 at 0.690, because it has no row for either
+marker. The cell matrix takes the same donor to 0.167 and CD4 with CD8 to
+-0.311. CD4 and CD8 mark mutually exclusive T cell populations.
 
 ## Part 3: the gate and the handoff
 
@@ -335,7 +332,7 @@ kable(
 )
 ```
 
-## Part 4: what a one dimensional cut does below CD3
+## Part 4: one dimensional cuts below CD3
 
 ```{r}
 #| label: one-dimensional
@@ -359,10 +356,13 @@ These five markers are the ones the labelling in Part 5 excludes by name. The
 table above is the evidence, and `gating/omip58_unusable_markers.csv` carries it
 alongside the share of T cells each subset should hold.
 
-These markers are unimodal inside CD3 positive cells. A rule that looks for a
-second mode either finds nothing, which is visible, or places the cut inside the
-negative population and returns a number, which is not. The deposit carries no
-fluorescence minus one control against which either failure could be corrected.
+These markers are unimodal inside CD3 positive cells. The cut rule tries a
+density minimum first and a two component mixture second. Every share above
+comes from the density rule, which found its minimum inside the negative
+population rather than between two modes. The mixture rule placed only the CD161
+cut, and it splits the positive population near its middle. The deposit carries
+no fluorescence minus one control against which either failure could be
+corrected.
 
 ## Part 5: the clustering
 
@@ -400,14 +400,14 @@ to 0.078 for Vδ1 and 0.055 for CD56. The markers at the bottom are largely the
 ones that defeat a one dimensional cut in Part 4, so the failure follows the
 marker rather than the method.
 
-This table is reported and not used. An earlier version of the analysis chose
-which markers could vote by putting a threshold on this column, and that
-threshold was not stable. Between two clustering runs of the same deposit, CD8
-moved from a separation of 0.236 to 0.092 and CD3 from 0.177 to 0.087, which
-changed the labels: one run put CD4 T cells at 43.8 percent of lymphocytes and
-the other put Vδ1 gamma delta T cells at 39.9 percent, a subset that is a few
-percent of blood T cells. The five markers excluded here are named in a file
-instead, with the measurement from Part 4 beside each one.
+The separation table is not used to select markers. An earlier version of the
+analysis chose which markers could vote by putting a threshold on this column,
+and that threshold was not stable. Between two clustering runs of the same
+deposit, CD8 moved from a separation of 0.236 to 0.092 and CD3 from 0.177 to
+0.087, which changed the labels: one run put CD4 T cells at 43.8 percent of
+lymphocytes and the other put Vδ1 gamma delta T cells at 39.9 percent, a subset
+that is a few percent of blood T cells. The five markers excluded here are named
+in a file instead, with the measurement from Part 4 beside each one.
 
 ```{r}
 #| label: unusable
@@ -466,7 +466,7 @@ Four populations keep fewer than two markers and are not scored at all:
 invariant natural killer T cells, both γδ subsets, and terminal natural killer
 cells.
 
-## Part 6: every claim, with a verdict
+## Part 6: the paper's claims against the measurements
 
 ```{r}
 #| label: verdicts

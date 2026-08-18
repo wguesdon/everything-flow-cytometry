@@ -138,6 +138,12 @@ def main() -> int:
     parser.add_argument("path", type=Path, help="The rewritten .qmd file")
     parser.add_argument("--revision", default="HEAD",
                         help="The git revision to compare against")
+    parser.add_argument(
+        "--allow-renamed-headers", action="store_true",
+        help=("List a removed or renamed header instead of refusing it. Use it "
+              "only when the rewrite was asked to rename headers, and read the "
+              "list. Every other check stays strict.")
+    )
     args = parser.parse_args()
 
     new = split_parts(args.path.read_text())
@@ -172,7 +178,11 @@ def main() -> int:
     }
     removed = [line for line in old["headers"]
                if line not in new["headers"] and line not in allowed_to_go]
-    if removed:
+    if removed and args.allow_renamed_headers:
+        print(f"  headers removed or renamed: {len(removed)}")
+        for line in removed:
+            print(f"      {line[:110]}")
+    elif removed:
         problems.append(f"{len(removed)} headers were removed or renamed")
         for line in removed:
             problems.append(f"    {line[:110]}")
