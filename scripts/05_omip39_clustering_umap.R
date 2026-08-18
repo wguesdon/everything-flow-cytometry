@@ -176,8 +176,13 @@ plot_data <- cbind(
     match(clustering$metacluster, annotation$cluster)
   ]
 )
+# The CSV carries a draw of the embedding for the report to plot, and without a
+# seed that draw changes on every run.
+coordinate_rows <- withr::with_seed(
+  kSeed, sample.int(nrow(plot_data), min(20000, nrow(plot_data)))
+)
 write.csv(
-  plot_data[sample.int(nrow(plot_data), min(20000, nrow(plot_data))), ],
+  plot_data[coordinate_rows, ],
   file.path(kOutputDir, "umap_coordinates.csv"),
   row.names = FALSE
 )
@@ -185,31 +190,33 @@ write.csv(
 Log("Writing figures")
 
 umap_by_type <- ggplot(plot_data, aes(x = umap_1, y = umap_2, colour = cell_type)) +
-  geom_point(size = 0.25, alpha = 0.5) +
-  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  geom_point(size = 0.35, alpha = 0.6, shape = 16) +
+  ScaleColourPublication(name = "Cell type") +
+  LegendPoints() +
   labs(
     title = "UMAP of the lymphocyte gate, coloured by the annotated cell type",
     subtitle = paste0(
-      nrow(subsample), " events, FlowSOM with ", kMetaclusters,
+      CountLabels(nrow(subsample)), " events, FlowSOM with ", kMetaclusters,
       " metaclusters, labelled from the definitions file"
     ),
-    x = "UMAP 1", y = "UMAP 2", colour = "Cell type"
+    x = "UMAP 1", y = "UMAP 2"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "umap_cell_types.png"), umap_by_type,
-       width = 10, height = 7, dpi = 150)
+  ThemeEmbedding()
+SaveFigure(umap_by_type, file.path(kOutputDir, "umap_cell_types.png"),
+  width = 10, height = 7)
 
 umap_by_cluster <- ggplot(plot_data, aes(x = umap_1, y = umap_2, colour = cluster)) +
-  geom_point(size = 0.25, alpha = 0.5) +
-  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  geom_point(size = 0.35, alpha = 0.6, shape = 16) +
+  ScaleColourPublication(name = "Metacluster") +
+  LegendPoints() +
   labs(
     title = "The same embedding, coloured by metacluster",
     subtitle = "Several metaclusters can carry one cell type label",
-    x = "UMAP 1", y = "UMAP 2", colour = "Metacluster"
+    x = "UMAP 1", y = "UMAP 2"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "umap_metaclusters.png"), umap_by_cluster,
-       width = 10, height = 7, dpi = 150)
+  ThemeEmbedding()
+SaveFigure(umap_by_cluster, file.path(kOutputDir, "umap_metaclusters.png"),
+  width = 10, height = 7)
 
 # One panel per lineage marker, so the annotation can be checked against the data.
 marker_long <- do.call(rbind, lapply(kLineageChannels, function(channel) {
@@ -223,17 +230,21 @@ marker_long <- do.call(rbind, lapply(kLineageChannels, function(channel) {
 }))
 
 umap_by_marker <- ggplot(marker_long, aes(x = umap_1, y = umap_2, colour = value)) +
-  geom_point(size = 0.15, alpha = 0.5) +
+  geom_point(size = 0.25, alpha = 0.6, shape = 16) +
   facet_wrap(~marker, ncol = 4) +
-  scale_colour_viridis_c(option = "magma") +
+  scale_colour_viridis_c(option = "viridis", name = "Intensity",
+                         guide = ColourbarGuide()) +
   labs(
     title = "The same embedding, coloured by each lineage marker",
-    subtitle = "Read this against the annotation table. A label that does not match the marker panels is wrong.",
-    x = "UMAP 1", y = "UMAP 2", colour = "Intensity"
+    subtitle = paste(
+      "Read this against the annotation table. A label that does not match",
+      "the marker panels is wrong."
+    ),
+    x = "UMAP 1", y = "UMAP 2"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "umap_markers.png"), umap_by_marker,
-       width = 14, height = 7, dpi = 150)
+  ThemeEmbedding()
+SaveFigure(umap_by_marker, file.path(kOutputDir, "umap_markers.png"),
+  width = 14, height = 7)
 
 expression_long <- do.call(rbind, lapply(kLineageChannels, function(channel) {
   data.frame(
@@ -252,17 +263,21 @@ expression_long$scaled <- stats::ave(
 )
 
 heatmap_plot <- ggplot(expression_long, aes(x = marker, y = cluster, fill = scaled)) +
-  geom_tile(colour = "white") +
-  scale_fill_viridis_c(option = "magma") +
+  geom_tile(colour = "white", linewidth = 0.3) +
+  scale_fill_viridis_c(option = "viridis", name = "Scaled\nmedian",
+                       guide = ColourbarGuide()) +
   labs(
     title = "Median marker expression per metacluster",
-    subtitle = "Scaled to run from 0 to 1 within each marker. This table drives the annotation.",
-    x = NULL, y = "Metacluster", fill = "Scaled\nmedian"
+    subtitle = paste(
+      "Scaled to run from 0 to 1 within each marker.",
+      "This table drives the annotation."
+    ),
+    x = NULL, y = "Metacluster"
   ) +
-  theme_minimal() +
+  ThemePublication() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave(file.path(kOutputDir, "cluster_heatmap.png"), heatmap_plot,
-       width = 10, height = 6, dpi = 150)
+SaveFigure(heatmap_plot, file.path(kOutputDir, "cluster_heatmap.svg"),
+  width = 10, height = 6)
 
 Log("Wrote four figures")
 
@@ -371,13 +386,14 @@ route_plot <- ggplot(
 ) +
   geom_col(position = position_dodge(width = 0.8), width = 0.75) +
   coord_flip() +
+  ScaleFillPublication(name = "Route") +
   labs(
     title = "Manual gating, automated gating and clustering on one file",
     subtitle = "Percent of the lymphocyte gate. All three read the same events.",
-    x = NULL, y = "Percent of lymphocytes", fill = "Route"
+    x = NULL, y = "Percent of lymphocytes"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "three_way_comparison.png"), route_plot,
-       width = 10, height = 6, dpi = 150)
+  ThemePublication()
+SaveFigure(route_plot, file.path(kOutputDir, "three_way_comparison.svg"),
+  width = 10, height = 6)
 
 Log("Done. Output is in", kOutputDir)

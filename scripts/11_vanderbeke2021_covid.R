@@ -21,6 +21,7 @@ suppressPackageStartupMessages({
   library(withr)
 })
 
+source(file.path("R", "figures.R"))
 source(file.path("R", "harmonisation.R"))
 source(file.path("R", "spectral.R"))
 source(file.path("R", "naive_memory.R"))
@@ -410,8 +411,7 @@ Say("\n  verdicts: ",
 Say("\nPart 6: figures")
 
 Save <- function(plot, name, width = 9, height = 6) {
-  ggplot2::ggsave(file.path(kOutputDir, name), plot, width = width,
-                  height = height, dpi = 150)
+  SaveFigure(plot, file.path(kOutputDir, name), width = width, height = height)
 }
 
 long <- do.call(rbind, lapply(kShared, function(measure) {
@@ -430,8 +430,8 @@ Save(
     facet_wrap(~measure, scales = "free") +
     labs(x = "The deposited gates, percent", y = "The automated rule, percent",
          colour = NULL) +
-    theme_bw(),
-  "arm_comparison.png", width = 10, height = 7
+    ThemePublication(),
+  "arm_comparison.svg", width = 10, height = 7
 )
 
 group_long <- do.call(rbind, lapply(kTested, function(measure) {
@@ -454,9 +454,9 @@ Save(
     facet_wrap(~measure, scales = "free_y") +
     scale_fill_manual(values = c(manual = "#2166AC", automated = "#1B7837")) +
     labs(x = NULL, y = "Percent", fill = NULL) +
-    theme_bw() +
+    ThemePublication() +
     theme(axis.text.x = element_text(angle = 20, hjust = 1)),
-  "measures_by_group.png", width = 10, height = 7
+  "measures_by_group.svg", width = 10, height = 7
 )
 
 pd1_long <- do.call(rbind, lapply(pd1_columns, function(column) {
@@ -469,8 +469,8 @@ Save(
     geom_boxplot(fill = "#B2182B") +
     coord_flip() +
     labs(x = NULL, y = "PD-1 positive, percent of the subset") +
-    theme_bw(),
-  "pd1_by_subset.png", width = 8, height = 5
+    ThemePublication(),
+  "pd1_by_subset.svg", width = 8, height = 5
 )
 
 Say("\nDone. Every table is in ", kOutputDir)

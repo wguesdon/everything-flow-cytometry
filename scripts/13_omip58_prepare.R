@@ -20,6 +20,7 @@ suppressPackageStartupMessages({
   library(robustbase)
 })
 
+source(file.path("R", "figures.R"))
 source(file.path("R", "io.R"))
 source(file.path("R", "compensation.R"))
 source(file.path("R", "spillover_compute.R"))
@@ -123,8 +124,8 @@ print(agreement, row.names = FALSE)
 heatmap <- PlotSpilloverHeatmap(
   spillover, title = "OMIP-058 spillover, computed from the cell controls"
 )
-ggsave(file.path(kOutputDir, "spillover_heatmap.png"), heatmap,
-       width = 9, height = 8, dpi = 150)
+SaveFigure(heatmap, file.path(kOutputDir, "spillover_heatmap.svg"), width = 9,
+  height = 8)
 
 # ---------------------------------------------------------------------------
 # Part 3. What compensation does to the marker correlations.

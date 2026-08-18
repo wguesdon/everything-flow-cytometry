@@ -238,3 +238,31 @@ test_that("UnstainedThreshold stops when the channel is absent", {
   flowCore::write.FCS(flowCore::flowFrame(values, parameters), path)
   expect_error(UnstainedThreshold(path, "V510-A"), "no channel called 'V510-A'")
 })
+
+test_that("PlotGateTree places a child under its own parent", {
+  counts <- data.frame(
+    population = c("root", "a", "a1", "b", "b1"),
+    parent = c(NA, "root", "a", "root", "b"),
+    events = c(100L, 60L, 30L, 40L, 20L),
+    percent_of_parent = c(100, 60, 50, 40, 50),
+    stringsAsFactors = FALSE
+  )
+  plot <- PlotGateTree(counts)
+  nodes <- plot$layers[[2]]$data
+  y <- stats::setNames(nodes$y, nodes$population)
+
+  # The walk is root, a, a1, b, b1, so the whole of branch a sits above b.
+  expect_true(y[["a"]] > y[["a1"]])
+  expect_true(y[["a1"]] > y[["b"]])
+  expect_true(y[["b"]] > y[["b1"]])
+  expect_equal(unname(y[["root"]]), -1)
+})
+
+test_that("PlotGateTree names a population whose parent is absent", {
+  counts <- data.frame(
+    population = c("root", "orphan"), parent = c(NA, "missing"),
+    events = c(10L, 5L), percent_of_parent = c(100, 50),
+    stringsAsFactors = FALSE
+  )
+  expect_error(PlotGateTree(counts), "orphan")
+})

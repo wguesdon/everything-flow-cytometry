@@ -259,13 +259,17 @@ sweep_plot <- ggplot(sweep, aes(x = reorder(configuration, f1), y = f1,
                                 fill = tissue)) +
   geom_col(position = position_dodge(width = 0.85), width = 0.8) +
   coord_flip() +
+  ScaleFillPublication(name = "Tissue") +
   labs(
     title = "Recovering antibody secreting cells by clustering",
-    subtitle = "F1 against the manual gate. A configuration is only usable if it works on every tissue.",
-    x = NULL, y = "F1, percent", fill = "Tissue"
+    subtitle = paste(
+      "F1 against the manual gate. A configuration is only usable if it works",
+      "on every tissue."
+    ),
+    x = NULL, y = "F1, percent"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "clustering_sweep.png"), sweep_plot,
-       width = 10, height = 8, dpi = 150)
+  ThemePublication()
+SaveFigure(sweep_plot, file.path(kOutputDir, "clustering_sweep.svg"),
+  width = 10, height = 8)
 
 Log("Done. Output is in", kOutputDir)

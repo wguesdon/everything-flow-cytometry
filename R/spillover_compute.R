@@ -375,19 +375,24 @@ PlotSpilloverHeatmap <- function(spillover,
     ggplot2::aes(x = to, y = from, fill = pmin(percent, max_percent))
   ) +
     ggplot2::geom_tile(colour = "white", linewidth = 0.3) +
-    ggplot2::geom_text(ggplot2::aes(label = label), size = 2.4) +
+    ggplot2::geom_text(ggplot2::aes(label = label), size = 2.6,
+                       colour = "grey15", family = FigureFont()) +
     ggplot2::scale_fill_gradient(
       low = "#f7f7f7", high = "#b2182b",
       name = "Spillover,\npercent",
-      limits = c(0, max_percent)
+      limits = c(0, max_percent),
+      guide = ColourbarGuide()
     ) +
     ggplot2::labs(
       title = title,
-      subtitle = "The diagonal is dropped. A value is the percentage of the row detector that the column detector also reads.",
+      subtitle = paste(
+        "The diagonal is dropped. A value is the percentage of the row",
+        "detector\nthat the column detector also reads."
+      ),
       x = "Into detector",
       y = "From detector"
     ) +
-    ggplot2::theme_minimal() +
+    ThemePublication() +
     ggplot2::theme(
       axis.text.x = ggplot2::element_text(angle = 90, hjust = 1, vjust = 0.5),
       panel.grid = ggplot2::element_blank()

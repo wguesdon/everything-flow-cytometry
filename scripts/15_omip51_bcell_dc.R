@@ -25,8 +25,8 @@ suppressPackageStartupMessages({
   library(uwot)
 })
 
-for (module in c("io", "compensation", "spillover_compute", "naive_memory",
-                 "panels", "clustering", "omip51")) {
+for (module in c("figures", "io", "compensation", "spillover_compute",
+                 "naive_memory", "panels", "clustering", "omip51")) {
   source(file.path("R", paste0(module, ".R")))
 }
 
@@ -132,12 +132,11 @@ agreement <- data.frame(
 Write(agreement, "spillover_agreement.csv")
 print(agreement, row.names = FALSE)
 
-ggsave(
-  file.path(kOutputDir, "spillover_heatmap.png"),
-  PlotSpilloverHeatmap(spillover,
-                       title = "OMIP-051 spillover, from the cell controls"),
-  width = 9, height = 8, dpi = 150
+spillover_figure <- PlotSpilloverHeatmap(
+  spillover, title = "OMIP-051 spillover, from the cell controls"
 )
+SaveFigure(spillover_figure, file.path(kOutputDir, "spillover_heatmap.svg"),
+           width = 9, height = 8)
 
 # ---------------------------------------------------------------------------
 # Part 3. What compensation does to the marker correlations.
@@ -228,11 +227,9 @@ scatter_removed <- 100 * (Events("b_cells") - Events("b_lymphocytes")) /
 Say("\n  high scatter events inside the B cell gate: ",
     round(scatter_removed, 2), " percent")
 
-ggsave(
-  file.path(kOutputDir, "gate_tree.png"),
+SaveFigure(
   PlotGateTree(counts, title = "OMIP-051 gate hierarchy, one PBMC file"),
-  width = 11, height = 8, dpi = 150
-)
+  file.path(kOutputDir, "gate_tree.svg"), width = 11, height = 8)
 
 # The gating flow as Figure 1A draws it, one panel per boundary, with the
 # threshold that was applied.
@@ -273,9 +270,11 @@ panels <- list(
                x_threshold = Threshold("CD11c"),
                y_threshold = Threshold("CD123"), title = "Dendritic cells")
 )
-ggsave(file.path(kOutputDir, "gating_flow.png"),
-       patchwork::wrap_plots(panels, ncol = 2), width = 9, height = 16,
-       dpi = 150)
+gating_flow <- patchwork::wrap_plots(panels, ncol = 2) +
+  patchwork::plot_annotation(tag_levels = "A",
+                             theme = ThemePublication())
+SaveFigure(gating_flow, file.path(kOutputDir, "gating_flow.png"),
+           width = 9.5, height = 16)
 Say("  wrote gate_tree.png and gating_flow.png")
 
 # ---------------------------------------------------------------------------
@@ -287,7 +286,7 @@ Say("\nPart 5: clustering")
 # The gate reads one marker at a time and needs a threshold for each. Clustering
 # reads every marker at once and needs none, so it is a second route to the
 # subsets whose thresholds the unstained control had to supply.
-ClusterRoute <- function(mask, markers, definitions_path, label,
+ClusterRoute <- function(mask, markers, definitions_path, label, title,
                          n_metaclusters = 12, subsample = 50000) {
   detectors <- channels$channel[channels$name %in% markers]
   events <- transformed[mask, detectors, drop = FALSE]
@@ -308,13 +307,20 @@ ClusterRoute <- function(mask, markers, definitions_path, label,
   ]
 
   figure <- ggplot(embedding, aes(x = umap_1, y = umap_2, colour = cell_type)) +
-    geom_point(size = 0.2, alpha = 0.5) +
-    guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
-    labs(title = paste0(label, ", ", nrow(sampled), " events"),
-         x = "UMAP 1", y = "UMAP 2", colour = NULL) +
-    theme_minimal(base_size = 11)
-  ggsave(file.path(kOutputDir, paste0("umap_", label, ".png")), figure,
-         width = 9, height = 6.5, dpi = 150)
+    geom_point(size = 0.35, alpha = 0.6, shape = 16) +
+    ScaleColourPublication(name = NULL) +
+    LegendPoints() +
+    labs(
+      title = title,
+      subtitle = paste0(
+        CountLabels(nrow(sampled)), " events, ", n_metaclusters,
+        " FlowSOM metaclusters, each labelled by its median expression"
+      ),
+      x = "UMAP 1", y = "UMAP 2"
+    ) +
+    ThemeEmbedding(base_size = 11)
+  SaveFigure(figure, file.path(kOutputDir, paste0("umap_", label, ".png")),
+    width = 9, height = 6.5)
 
   list(medians = medians, annotation = annotation,
        summary = SummariseCellTypes(annotation))
@@ -324,7 +330,7 @@ b_markers <- c("CD10", "CD20", "CD27", "IgD", "IgM", "IgG", "IgA", "CD21",
                "CD85j")
 b_route <- ClusterRoute(gated$masks[["b_lymphocytes"]], b_markers,
                         file.path(kGatingDir, "omip51_bcell_definitions.csv"),
-                        "b_cells")
+                        "b_cells", "B cell subsets inside the CD19 CD20 gate")
 Write(cbind(cluster = rownames(b_route$medians),
             as.data.frame(b_route$medians)), "bcell_cluster_medians.csv")
 Write(b_route$annotation, "bcell_cluster_annotation.csv")
@@ -339,6 +345,7 @@ myeloid_markers <- c("CD19", "CD20", "HLADR", "CD123", "CD11c", "CD1c",
 myeloid_route <- ClusterRoute(
   gated$masks[["dendritic_parent"]], myeloid_markers,
   file.path(kGatingDir, "omip51_myeloid_definitions.csv"), "myeloid",
+  "Myeloid subsets inside the HLA-DR positive CD19 CD20 negative gate",
   n_metaclusters = 10
 )
 Write(cbind(cluster = rownames(myeloid_route$medians),

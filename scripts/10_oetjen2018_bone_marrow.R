@@ -18,6 +18,7 @@ suppressPackageStartupMessages({
   library(withr)
 })
 
+source(file.path("R", "figures.R"))
 source(file.path("R", "harmonisation.R"))
 source(file.path("R", "spectral.R"))
 source(file.path("R", "naive_memory.R"))
@@ -506,8 +507,7 @@ Say("\n  verdicts: ",
 Say("\nPart 7: figures")
 
 Save <- function(plot, name, width = 9, height = 6) {
-  ggplot2::ggsave(file.path(kOutputDir, name), plot, width = width,
-                  height = height, dpi = 150)
+  SaveFigure(plot, file.path(kOutputDir, name), width = width, height = height)
 }
 
 Save(
@@ -518,8 +518,8 @@ Save(
     facet_wrap(~panel, scales = "free_y") +
     coord_flip() +
     labs(x = NULL, y = "Percent positive of the parent gate") +
-    theme_bw(),
-  "marker_spread.png", width = 11, height = 8
+    ThemePublication(),
+  "marker_spread.svg", width = 11, height = 8
 )
 
 if (nrow(paired) > 0) {
@@ -537,8 +537,8 @@ if (nrow(paired) > 0) {
       geom_point(size = 2, colour = "#B2182B") +
       facet_wrap(~measure, scales = "free") +
       labs(x = "Flow cytometry, percent", y = "Mass cytometry, percent") +
-      theme_bw(),
-    "flow_against_mass.png", width = 10, height = 7
+      ThemePublication(),
+    "flow_against_mass.svg", width = 10, height = 7
   )
 }
 
@@ -557,8 +557,8 @@ if (nrow(flow_only) > 0) {
                   colour = "#762A83") +
       facet_wrap(~measure, scales = "free_y") +
       labs(x = "Donor age, years", y = "Percent of the T cell subset") +
-      theme_bw(),
-    "age_trend.png", width = 10, height = 6
+      ThemePublication(),
+    "age_trend.svg", width = 10, height = 6
   )
 }
 

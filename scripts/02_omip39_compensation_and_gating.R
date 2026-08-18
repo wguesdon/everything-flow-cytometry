@@ -126,8 +126,8 @@ heatmap_plot <- PlotSpilloverHeatmap(
   computed_spillover,
   title = "OMIP-39 spillover, computed from 12 single stained controls"
 )
-ggsave(file.path(kOutputDir, "spillover_heatmap.png"), heatmap_plot,
-       width = 10, height = 8, dpi = 150)
+SaveFigure(heatmap_plot, file.path(kOutputDir, "spillover_heatmap.svg"),
+  width = 10, height = 8)
 Log("Wrote spillover_heatmap.png")
 
 # ---------------------------------------------------------------------------
@@ -189,9 +189,10 @@ automated_stats <- CollectPopulationStats(automated_gs)
 write.csv(automated_stats, file.path(kOutputDir, "automated_stats.csv"),
           row.names = FALSE)
 
-png(file.path(kOutputDir, "automated_tree.png"), width = 900, height = 600)
+OpenFigureDevice(file.path(kOutputDir, "automated_tree.svg"),
+                 width = 8, height = 5.5)
 plot(automated_gs)
-dev.off()
+CloseFigureDevice()
 Log("Wrote automated_tree.png")
 
 # ---------------------------------------------------------------------------
@@ -208,9 +209,10 @@ manual_stats <- CollectPopulationStats(manual_gs)
 write.csv(manual_stats, file.path(kOutputDir, "manual_stats.csv"),
           row.names = FALSE)
 
-png(file.path(kOutputDir, "manual_tree.png"), width = 1400, height = 900)
+OpenFigureDevice(file.path(kOutputDir, "manual_tree.svg"),
+                 width = 12, height = 7.5)
 plot(manual_gs, boolean = FALSE)
-dev.off()
+CloseFigureDevice()
 Log("Wrote manual_tree.png")
 
 # ---------------------------------------------------------------------------
@@ -248,10 +250,10 @@ comparison_plot <- ggplot(
     y = "Automated, percent of parent",
     colour = "Verdict"
   ) +
-  theme_bw()
+  ThemePublication()
 
-ggsave(file.path(kOutputDir, "comparison_scatter.png"), comparison_plot,
-       width = 9, height = 7, dpi = 150)
+SaveFigure(comparison_plot, file.path(kOutputDir, "comparison_scatter.svg"),
+  width = 9, height = 7)
 Log("Wrote comparison_scatter.png")
 
 Log("Done. Output is in", kOutputDir)

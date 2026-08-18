@@ -299,10 +299,10 @@ claim_plot <- ggplot(
     y = "Difference, percentage points",
     fill = "Verdict"
   ) +
-  theme_bw()
+  ThemePublication()
 
-ggsave(file.path(kOutputDir, "claims_plot.png"), claim_plot,
-       width = 11, height = 5, dpi = 150)
+SaveFigure(claim_plot, file.path(kOutputDir, "claims_plot.svg"), width = 11,
+  height = 5)
 Log("Wrote claims_plot.png")
 
 Log("Done. Output is in", kOutputDir)

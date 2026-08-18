@@ -20,6 +20,7 @@ suppressPackageStartupMessages({
   library(withr)
 })
 
+source(file.path("R", "figures.R"))
 source(file.path("R", "harmonisation.R"))
 source(file.path("R", "spectral.R"))
 source(file.path("R", "naive_memory.R"))
@@ -949,8 +950,7 @@ kArmColours <- c(local = "#B2182B", central = "#2166AC",
 kArmOrder <- c("local", "central", "automated", "automated shared")
 
 Save <- function(plot, name, width = 9, height = 6) {
-  ggplot2::ggsave(file.path(kOutputDir, name), plot, width = width,
-                  height = height, dpi = 150)
+  SaveFigure(plot, file.path(kOutputDir, name), width = width, height = height)
 }
 
 interoperator$analysis <- factor(interoperator$analysis, levels = kArmOrder)
@@ -963,9 +963,9 @@ Save(
     facet_wrap(~material, ncol = 1) +
     scale_fill_manual(values = kArmColours) +
     labs(x = NULL, y = "Interoperator coefficient of variation", fill = NULL) +
-    theme_bw() +
+    ThemePublication() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)),
-  "interoperator_cv.png", height = 7
+  "interoperator_cv.svg", height = 7
 )
 
 Save(
@@ -975,9 +975,9 @@ Save(
     facet_wrap(~material, ncol = 1) +
     scale_fill_manual(values = kArmColours) +
     labs(x = NULL, y = "Intraclass correlation", fill = NULL) +
-    theme_bw() +
+    ThemePublication() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)),
-  "interoperator_icc.png", height = 7
+  "interoperator_icc.svg", height = 7
 )
 
 Save(
@@ -987,9 +987,9 @@ Save(
     facet_wrap(~material, ncol = 1) +
     scale_fill_manual(values = kArmColours) +
     labs(x = NULL, y = "Bias against the reference value", fill = NULL) +
-    theme_bw() +
+    ThemePublication() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)),
-  "interoperator_bias.png", height = 7
+  "interoperator_bias.svg", height = 7
 )
 
 z_scores$analysis <- factor(z_scores$analysis, levels = kArmOrder)
@@ -999,11 +999,12 @@ Save(
     geom_tile() +
     facet_grid(material ~ analysis) +
     scale_fill_gradient2(low = "#2166AC", mid = "white", high = "#B2182B",
-                         midpoint = 0, limits = c(-4, 4), oob = scales::squish) +
+                         midpoint = 0, limits = c(-4, 4), oob = scales::squish,
+                         guide = ColourbarGuide()) +
     labs(x = NULL, y = "Operator", fill = "Z") +
-    theme_bw() +
+    ThemePublication() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)),
-  "z_score_heatmap.png", width = 11, height = 7
+  "z_score_heatmap.svg", width = 11, height = 7
 )
 
 plot_frame <- donor_means
@@ -1015,9 +1016,9 @@ Save(
     facet_wrap(~material, ncol = 1, scales = "free_y") +
     scale_fill_manual(values = kArmColours) +
     labs(x = NULL, y = "Percent of parent", fill = NULL) +
-    theme_bw() +
+    ThemePublication() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)),
-  "distribution_by_arm.png", height = 8
+  "distribution_by_arm.svg", height = 8
 )
 
 intraoperator$analysis <- factor(intraoperator$analysis, levels = kArmOrder)
@@ -1029,8 +1030,8 @@ Save(
     scale_fill_manual(values = kArmColours) +
     labs(x = "Operator", y = "Intraoperator coefficient of variation",
          fill = NULL) +
-    theme_bw(),
-  "intraoperator_cv.png", height = 7
+    ThemePublication(),
+  "intraoperator_cv.svg", height = 7
 )
 
 Say("\nDone. Every table is in ", kOutputDir)

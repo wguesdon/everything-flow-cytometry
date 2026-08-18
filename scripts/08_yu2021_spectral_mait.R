@@ -338,13 +338,10 @@ SexBoxplot <- function(data, x, y, x_label, y_label, title, subtitle,
     ggplot2::labs(x = x_label, y = y_label, title = title,
                   subtitle = subtitle) +
     ggplot2::expand_limits(y = 0) +
-    ggpubr::theme_pubr(base_size = 12, legend = "top") +
+    ThemePublication(base_size = 12) +
+    ggplot2::theme(legend.position = "top") +
     ggplot2::theme(
-      plot.title = ggplot2::element_text(face = "bold", size = 13),
-      plot.subtitle = ggplot2::element_text(colour = "grey30", size = 10.5),
-      axis.title = ggplot2::element_text(size = 11.5),
-      panel.grid.major.y = ggplot2::element_line(colour = "grey92",
-                                                 linewidth = 0.3)
+      panel.grid.major.x = ggplot2::element_blank()
     )
 }
 
@@ -360,8 +357,8 @@ severity_plot <- SexBoxplot(
     "within each rank."
   )
 )
-ggsave(file.path(kOutputDir, "cd161hi_by_severity.png"), severity_plot,
-       width = 8.5, height = 6, dpi = 300, bg = "white")
+SaveFigure(severity_plot, file.path(kOutputDir, "cd161hi_by_severity.svg"),
+  width = 8.5, height = 6)
 
 timepoint_levels <- c("control", "early", "middle", "late")
 timepoint_data <- measures[measures$timepoint %in% timepoint_levels, ]
@@ -379,8 +376,8 @@ timepoint_plot <- SexBoxplot(
     "direction of the boxes."
   )
 )
-ggsave(file.path(kOutputDir, "cd161hi_by_timepoint.png"), timepoint_plot,
-       width = 8.5, height = 6, dpi = 300, bg = "white")
+SaveFigure(timepoint_plot, file.path(kOutputDir, "cd161hi_by_timepoint.svg"),
+  width = 8.5, height = 6)
 
 memory_plot <- SexBoxplot(
   timepoint_data, x = "timepoint", y = "memory_percent_of_cd8",
@@ -392,8 +389,8 @@ memory_plot <- SexBoxplot(
     "\nClaim 6 expects a significant difference in every window."
   )
 )
-ggsave(file.path(kOutputDir, "memory_by_timepoint.png"), memory_plot,
-       width = 8.5, height = 6, dpi = 300, bg = "white")
+SaveFigure(memory_plot, file.path(kOutputDir, "memory_by_timepoint.svg"),
+  width = 8.5, height = 6)
 
 slope_plot <- ggpubr::ggscatter(
   measures[!is.na(measures$cd161hi_percent_of_cd8), ],
@@ -425,15 +422,13 @@ slope_plot <- ggpubr::ggscatter(
       "and the band is the 95 percent interval."
     )
   ) +
-  ggpubr::theme_pubr(base_size = 12, legend = "top") +
+  ThemePublication(base_size = 12) +
+  ggplot2::theme(legend.position = "top") +
   ggplot2::theme(
-    plot.title = ggplot2::element_text(face = "bold", size = 13),
-    plot.subtitle = ggplot2::element_text(colour = "grey30", size = 10.5),
-    panel.grid.major.y = ggplot2::element_line(colour = "grey92",
-                                               linewidth = 0.3)
+    panel.grid.major.x = ggplot2::element_blank()
   )
-ggsave(file.path(kOutputDir, "cd161hi_slope_by_sex.png"), slope_plot,
-       width = 8.5, height = 6, dpi = 300, bg = "white")
+SaveFigure(slope_plot, file.path(kOutputDir, "cd161hi_slope_by_sex.svg"),
+  width = 8.5, height = 6)
 
 sweep_long <- do.call(rbind, lapply(c("claim_4", "claim_6", "claim_8"),
   function(column) {
@@ -458,15 +453,14 @@ sweep_plot <- ggplot2::ggplot(
       "this range."
     )
   ) +
-  ggpubr::theme_pubr(base_size = 12, legend = "top") +
+  ThemePublication(base_size = 12) +
+  ggplot2::theme(legend.position = "top") +
   ggplot2::theme(
-    plot.title = ggplot2::element_text(face = "bold", size = 13),
-    plot.subtitle = ggplot2::element_text(colour = "grey30", size = 10.5),
     axis.line.y = ggplot2::element_blank(),
     axis.ticks.y = ggplot2::element_blank()
   )
-ggsave(file.path(kOutputDir, "cd45ra_sweep.png"), sweep_plot,
-       width = 9, height = 4.2, dpi = 300, bg = "white")
+SaveFigure(sweep_plot, file.path(kOutputDir, "cd45ra_sweep.svg"), width = 9,
+  height = 4.2)
 
 
 # ---------------------------------------------------------------------------
@@ -622,44 +616,42 @@ if (length(all_events) < 2) {
       x = "CD161hi by gating, percent of CD8 T cells",
       y = "CD161hi by clustering, percent of CD8 T cells"
     ) +
-    ggpubr::theme_pubr(base_size = 12, legend = "top") +
-    theme(
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(colour = "grey30", size = 10.5),
-      panel.grid.major = element_line(colour = "grey92", linewidth = 0.3)
-    )
-  ggsave(file.path(kOutputDir, "route_comparison.png"), route_plot,
-         width = 7.5, height = 7, dpi = 300, bg = "white")
+    ThemePublication(base_size = 12) +
+    ggplot2::theme(legend.position = "top")
+  SaveFigure(route_plot, file.path(kOutputDir, "route_comparison.svg"),
+    width = 7.5, height = 7)
 
   umap_plot <- ggplot(embedding, aes(x = umap_1, y = umap_2,
                                      colour = metacluster)) +
-    geom_point(size = 0.15, alpha = 0.4) +
-    guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+    geom_point(size = 0.3, alpha = 0.6, shape = 16) +
+    ScaleColourPublication(name = "Metacluster") +
+    LegendPoints() +
     labs(
       title = paste(kMetaclusters, "FlowSOM metaclusters on the pooled draw"),
       subtitle = paste(
-        format(nrow(pooled), big.mark = ","),
+        CountLabels(nrow(pooled)),
         "live CD45+ events,", kEventsPerSample, "per sample, as in Figure 1B"
       ),
-      x = "UMAP 1", y = "UMAP 2", colour = "Metacluster"
+      x = "UMAP 1", y = "UMAP 2"
     ) +
-    theme_bw()
-  ggsave(file.path(kOutputDir, "umap_metaclusters.png"), umap_plot,
-         width = 9, height = 7, dpi = 150)
+    ThemeEmbedding()
+  SaveFigure(umap_plot, file.path(kOutputDir, "umap_metaclusters.png"),
+    width = 9, height = 7)
 
   umap_by_severity <- ggplot(
     embedding[!is.na(embedding$severity_rank), ], aes(x = umap_1, y = umap_2)
   ) +
-    geom_point(size = 0.1, alpha = 0.3, colour = "grey30") +
+    geom_point(size = 0.2, alpha = 0.4, colour = "#0072B2", shape = 16) +
     facet_grid(sex ~ severity_rank) +
     labs(
       title = "The same embedding, split by sex and severity rank",
       subtitle = "This is the layout of Figure 2A",
       x = "UMAP 1", y = "UMAP 2"
     ) +
-    theme_bw()
-  ggsave(file.path(kOutputDir, "umap_by_sex_and_severity.png"),
-         umap_by_severity, width = 11, height = 6, dpi = 150)
+    ThemeEmbedding()
+  SaveFigure(umap_by_severity,
+    file.path(kOutputDir, "umap_by_sex_and_severity.png"), width = 11,
+    height = 6)
 
   marker_long <- do.call(rbind, lapply(
     intersect(c("CD3", "CD8", "CD4", "CD56", "CD161", "CD19", "CD14", "CD45ra"),
@@ -673,17 +665,18 @@ if (length(all_events) < 2) {
   ))
   marker_plot <- ggplot(marker_long, aes(x = umap_1, y = umap_2,
                                          colour = value)) +
-    geom_point(size = 0.1, alpha = 0.4) +
+    geom_point(size = 0.22, alpha = 0.6, shape = 16) +
     facet_wrap(~ marker, ncol = 4) +
-    scale_colour_viridis_c() +
+    scale_colour_viridis_c(option = "viridis", name = "Logicle",
+                           guide = ColourbarGuide()) +
     labs(
       title = "Marker expression on the embedding",
       subtitle = "Read the metacluster labels against these panels",
-      x = "UMAP 1", y = "UMAP 2", colour = "Logicle"
+      x = "UMAP 1", y = "UMAP 2"
     ) +
-    theme_bw()
-  ggsave(file.path(kOutputDir, "umap_markers.png"), marker_plot,
-         width = 12, height = 7, dpi = 150)
+    ThemeEmbedding()
+  SaveFigure(marker_plot, file.path(kOutputDir, "umap_markers.png"), width = 12,
+    height = 7)
 }
 
 Log("Done. Output is in", kOutputDir)

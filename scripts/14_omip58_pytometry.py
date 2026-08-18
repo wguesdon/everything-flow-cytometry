@@ -39,6 +39,11 @@ from sklearn.mixture import GaussianMixture
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from figure_style import (
+    PUBLICATION_PALETTE,
+    apply_publication_style,
+    save_figure,
+)
 from omip58_analysis import (
     annotate,
     cluster,
@@ -57,6 +62,37 @@ EVENTS_PER_DONOR = 100_000
 COFACTOR = 150.0
 SEED = 42
 CLUSTERED_PATH = OUTPUT_DIR / "clustered.h5ad"
+
+
+def _palette(n_colours: int) -> list[str]:
+    """Return the discrete colours for a number of classes.
+
+    Args:
+        n_colours: How many colours the scale needs.
+
+    Returns:
+        A list of hex colours. Past the length of the named palette the colours
+        repeat, which is the point at which a discrete scale has stopped being
+        readable anyway.
+    """
+    repeats = -(-n_colours // len(PUBLICATION_PALETTE))
+    return (PUBLICATION_PALETTE * repeats)[:n_colours]
+
+
+def _strip_embedding_axes(axis: plt.Axes) -> None:
+    """Remove the tick marks and tick labels from a UMAP panel.
+
+    The two axes of an embedding carry no unit, so a tick invites a reader to
+    measure a distance that has no meaning.
+
+    Args:
+        axis: The axes to strip.
+    """
+    axis.set_xticks([])
+    axis.set_yticks([])
+    for spine in axis.spines.values():
+        spine.set_linewidth(0.8)
+        spine.set_color("#333333")
 
 
 def write(frame: pd.DataFrame, name: str) -> pd.DataFrame:
@@ -121,6 +157,7 @@ def main() -> int:
 
     warnings.filterwarnings("ignore", category=FutureWarning)
     sc.settings.verbosity = 1
+    apply_publication_style()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     print("Part 1: reading what the R half wrote")
@@ -202,31 +239,40 @@ def main() -> int:
     sampled.obs["cell_type"] = [mapping.get(str(value), "unlabelled")
                                 for value in sampled.obs["leiden"]]
 
-    with plt.rc_context({"figure.figsize": (9, 7)}):
-        sc.pl.umap(sampled, color="cell_type", show=False, legend_loc="right margin",
-                   title="OMIP-058 live lymphocytes, labelled by cluster")
-        plt.savefig(OUTPUT_DIR / "umap_cell_type.png", dpi=150, bbox_inches="tight")
-        plt.close("all")
+    # scanpy reads the palette off the AnnData object rather than from an
+    # argument, and it reads it only for a categorical column.
+    for column in ("cell_type", "donor"):
+        sampled.obs[column] = sampled.obs[column].astype("category")
+        sampled.uns[f"{column}_colors"] = _palette(
+            sampled.obs[column].cat.categories.size)
 
-    with plt.rc_context({"figure.figsize": (9, 7)}):
-        sc.pl.umap(sampled, color="donor", show=False,
-                   title="OMIP-058 live lymphocytes, by donor")
-        plt.savefig(OUTPUT_DIR / "umap_donor.png", dpi=150, bbox_inches="tight")
-        plt.close("all")
+    with plt.rc_context({"figure.figsize": (9, 6.5)}):
+        sc.pl.umap(sampled, color="cell_type", show=False,
+                   legend_loc="right margin", size=6, alpha=0.75, frameon=True,
+                   title="OMIP-058 live lymphocytes, labelled by cluster")
+        _strip_embedding_axes(plt.gca())
+        save_figure(plt.gcf(), OUTPUT_DIR / "umap_cell_type.png")
+
+    with plt.rc_context({"figure.figsize": (9, 6.5)}):
+        sc.pl.umap(sampled, color="donor", show=False, size=6, alpha=0.75,
+                   frameon=True, title="OMIP-058 live lymphocytes, by donor")
+        _strip_embedding_axes(plt.gca())
+        save_figure(plt.gcf(), OUTPUT_DIR / "umap_donor.png")
 
     ordered = medians.loc[labels.sort_values("cell_type")["cluster"]]
     ordered.index = labels.sort_values("cell_type")["cell_type"].to_numpy()
     figure, axis = plt.subplots(figsize=(11, 6))
     image = axis.imshow(ordered.to_numpy(), aspect="auto", cmap="viridis")
     axis.set_xticks(range(ordered.shape[1]))
-    axis.set_xticklabels(ordered.columns, rotation=90, fontsize=8)
+    axis.set_xticklabels(ordered.columns, rotation=90)
     axis.set_yticks(range(ordered.shape[0]))
-    axis.set_yticklabels(ordered.index, fontsize=8)
+    axis.set_yticklabels(ordered.index)
     axis.set_title("Median expression per cluster, arcsinh scale, cofactor 150")
-    figure.colorbar(image, ax=axis, shrink=0.8)
+    axis.tick_params(length=2)
+    bar = figure.colorbar(image, ax=axis, shrink=0.8)
+    bar.outline.set_linewidth(0.6)
     figure.tight_layout()
-    figure.savefig(OUTPUT_DIR / "cluster_heatmap.png", dpi=150)
-    plt.close("all")
+    save_figure(figure, OUTPUT_DIR / "cluster_heatmap.svg")
 
     print("\nPart 4: the claims")
     claims = pd.read_csv(GATING_DIR / "omip58_paper_claims.csv")

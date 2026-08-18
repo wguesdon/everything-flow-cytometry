@@ -331,35 +331,42 @@ for (tissue in kTissues) {
       manual_label = ifelse(truth, "ASC by the manual gate", "other"),
       cluster = factor(clustering$metacluster)
     )
-    write.csv(plot_data[sample.int(nrow(plot_data), min(20000, nrow(plot_data))), ],
-              file.path(kOutputDir, "umap_spleen.csv"), row.names = FALSE)
+    drawn <- withr::with_seed(
+      kSeed, sample.int(nrow(plot_data), min(20000, nrow(plot_data)))
+    )
+    write.csv(plot_data[drawn, ], file.path(kOutputDir, "umap_spleen.csv"),
+              row.names = FALSE)
 
     umap_manual <- ggplot(plot_data[order(plot_data$manual_label == "other",
                                           decreasing = TRUE), ],
                           aes(x = umap_1, y = umap_2, colour = manual_label)) +
-      geom_point(size = 0.3, alpha = 0.6) +
-      scale_colour_manual(values = c("ASC by the manual gate" = "#b2182b",
-                                     other = "grey75")) +
-      guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+      geom_point(size = 0.4, alpha = 0.7, shape = 16) +
+      scale_colour_manual(values = c("ASC by the manual gate" = "#D55E00",
+                                     other = "grey78"), name = NULL) +
+      LegendPoints() +
       labs(
         title = "Spleen, UMAP of the dumped population",
-        subtitle = "Red is the antibody secreting cell gate the authors drew. The embedding never saw that gate.",
-        x = "UMAP 1", y = "UMAP 2", colour = NULL
+        subtitle = paste(
+          "The coloured events are the antibody secreting cell gate the",
+          "authors drew.\nThe embedding never saw that gate."
+        ),
+        x = "UMAP 1", y = "UMAP 2"
       ) +
-      theme_bw()
-    ggsave(file.path(kOutputDir, "umap_spleen_manual.png"), umap_manual,
-           width = 9, height = 7, dpi = 150)
+      ThemeEmbedding()
+    SaveFigure(umap_manual, file.path(kOutputDir, "umap_spleen_manual.png"),
+      width = 9, height = 7)
 
     umap_cluster <- ggplot(plot_data, aes(x = umap_1, y = umap_2, colour = cluster)) +
-      geom_point(size = 0.3, alpha = 0.6) +
-      guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+      geom_point(size = 0.4, alpha = 0.7, shape = 16) +
+      ScaleColourPublication(name = "Metacluster") +
+      LegendPoints() +
       labs(
         title = "The same embedding, coloured by metacluster",
-        x = "UMAP 1", y = "UMAP 2", colour = "Metacluster"
+        x = "UMAP 1", y = "UMAP 2"
       ) +
-      theme_bw()
-    ggsave(file.path(kOutputDir, "umap_spleen_clusters.png"), umap_cluster,
-           width = 9, height = 7, dpi = 150)
+      ThemeEmbedding()
+    SaveFigure(umap_cluster, file.path(kOutputDir, "umap_spleen_clusters.png"),
+      width = 9, height = 7)
     umap_saved <- TRUE
     Log("  wrote the spleen UMAP figures")
   }
@@ -441,13 +448,16 @@ density_plot <- ggplot(data.frame(cd38 = spleen_events[, kChannels[["CD38"]]]),
            label = "mindensity cuts here  ", colour = "#2166ac",
            hjust = 1, vjust = 4, size = 3.6) +
   labs(
-    title = "Spleen: the CD38 distribution has no valley where the analyst cut",
-    subtitle = "mindensity finds the dip between negative and positive. The CD38 high population sits far above it, on a smooth shoulder.",
+    title = "Spleen, the CD38 distribution has no valley where the analyst cut",
+    subtitle = paste(
+      "mindensity finds the dip between negative and positive. The CD38 high",
+      "population\nsits far above it, on a smooth shoulder."
+    ),
     x = "CD38 intensity, on the workspace scale", y = "Density"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "cd38_density.png"), density_plot,
-       width = 10, height = 6, dpi = 150)
+  ThemePublication()
+SaveFigure(density_plot, file.path(kOutputDir, "cd38_density.svg"), width = 10,
+  height = 6)
 
 withr::with_seed(kSeed, {
   show <- sample.int(nrow(spleen_events), min(40000, nrow(spleen_events)))
@@ -461,25 +471,29 @@ biaxial_plot <- ggplot(
   ),
   aes(x = cd38, y = cd27)
 ) +
-  geom_point(aes(colour = asc), size = 0.25, alpha = 0.35) +
+  geom_point(aes(colour = asc), size = 0.35, alpha = 0.5, shape = 16) +
   annotate("rect",
            xmin = manual_gate@min[[kChannels[["CD38"]]]],
            xmax = manual_gate@max[[kChannels[["CD38"]]]],
            ymin = manual_gate@min[[kChannels[["CD27"]]]],
            ymax = manual_gate@max[[kChannels[["CD27"]]]],
-           fill = NA, colour = "#b2182b", linewidth = 0.8) +
+           fill = NA, colour = "#D55E00", linewidth = 0.8) +
   geom_vline(xintercept = spleen_row$mindensity_cd38_threshold,
              colour = "#2166ac", linewidth = 0.8, linetype = "dashed") +
-  scale_colour_manual(values = c(ASC = "#b2182b", other = "grey70")) +
-  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  scale_colour_manual(values = c(ASC = "#D55E00", other = "grey72"),
+                      name = NULL) +
+  LegendPoints() +
   labs(
-    title = "Spleen: CD38 against CD27, with both decisions drawn",
-    subtitle = "The red box is the rectangleGate the analyst placed. The dashed line is where mindensity cuts CD38.",
-    x = "CD38", y = "CD27", colour = NULL
+    title = "Spleen, CD38 against CD27, with both decisions drawn",
+    subtitle = paste(
+      "The box is the rectangleGate the analyst placed. The dashed line is",
+      "where\nmindensity cuts CD38."
+    ),
+    x = "CD38", y = "CD27"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "cd38_cd27_biaxial.png"), biaxial_plot,
-       width = 10, height = 7, dpi = 150)
+  ThemePublication()
+SaveFigure(biaxial_plot, file.path(kOutputDir, "cd38_cd27_biaxial.png"),
+  width = 10, height = 7)
 
 Log("Wrote cd38_density.png and cd38_cd27_biaxial.png")
 
@@ -560,17 +574,21 @@ expression_long$scaled <- stats::ave(
 
 heatmap_plot <- ggplot(expression_long,
                        aes(x = marker, y = cluster, fill = scaled)) +
-  geom_tile(colour = "white") +
-  scale_fill_viridis_c(option = "magma") +
+  geom_tile(colour = "white", linewidth = 0.3) +
+  scale_fill_viridis_c(option = "viridis", name = "Scaled\nmedian",
+                       guide = ColourbarGuide()) +
   labs(
-    title = "Spleen: median marker expression per metacluster",
-    subtitle = "Scaled within each marker. This table drives the labels in the annotation table.",
-    x = NULL, y = "Metacluster", fill = "Scaled\nmedian"
+    title = "Spleen, median marker expression per metacluster",
+    subtitle = paste(
+      "Scaled within each marker. This table drives the labels in the",
+      "annotation table."
+    ),
+    x = NULL, y = "Metacluster"
   ) +
-  theme_minimal() +
+  ThemePublication() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave(file.path(kOutputDir, "spleen_cluster_heatmap.png"), heatmap_plot,
-       width = 9, height = 6, dpi = 150)
+SaveFigure(heatmap_plot, file.path(kOutputDir, "spleen_cluster_heatmap.svg"),
+  width = 9, height = 6)
 
 spleen_embedding <- RunUmapEmbedding(spleen_sub, channels = kClusterChannels,
                                      seed = kSeed)
@@ -585,17 +603,21 @@ marker_long <- do.call(rbind, lapply(seq_along(kClusterChannels), function(i) {
 }))
 
 marker_plot <- ggplot(marker_long, aes(x = umap_1, y = umap_2, colour = value)) +
-  geom_point(size = 0.15, alpha = 0.5) +
+  geom_point(size = 0.25, alpha = 0.6, shape = 16) +
   facet_wrap(~marker, ncol = 4) +
-  scale_colour_viridis_c(option = "magma") +
+  scale_colour_viridis_c(option = "viridis", name = "Intensity",
+                         guide = ColourbarGuide()) +
   labs(
-    title = "Spleen: the same embedding, one panel per marker",
-    subtitle = "Read the annotation table against these panels. A label that does not match them is wrong.",
-    x = "UMAP 1", y = "UMAP 2", colour = "Intensity"
+    title = "Spleen, the same embedding, one panel per marker",
+    subtitle = paste(
+      "Read the annotation table against these panels. A label that does not",
+      "match them is wrong."
+    ),
+    x = "UMAP 1", y = "UMAP 2"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "spleen_umap_markers.png"), marker_plot,
-       width = 13, height = 7, dpi = 150)
+  ThemeEmbedding()
+SaveFigure(marker_plot, file.path(kOutputDir, "spleen_umap_markers.png"),
+  width = 13, height = 7)
 
 type_plot <- ggplot(
   cbind(spleen_embedding,
@@ -604,16 +626,20 @@ type_plot <- ggplot(
         ]),
   aes(x = umap_1, y = umap_2, colour = cell_type)
 ) +
-  geom_point(size = 0.3, alpha = 0.6) +
-  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  geom_point(size = 0.4, alpha = 0.7, shape = 16) +
+  ScaleColourPublication(name = "Cell type") +
+  LegendPoints() +
   labs(
-    title = "Spleen: metaclusters labelled from the definitions file",
-    subtitle = "No cluster was named by eye. Each was scored against gating/omip43_cell_type_definitions.csv.",
-    x = "UMAP 1", y = "UMAP 2", colour = "Cell type"
+    title = "Spleen, metaclusters labelled from the definitions file",
+    subtitle = paste(
+      "No cluster was named by eye. Each was scored against the cell type",
+      "definitions table."
+    ),
+    x = "UMAP 1", y = "UMAP 2"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "spleen_umap_cell_types.png"), type_plot,
-       width = 10, height = 7, dpi = 150)
+  ThemeEmbedding()
+SaveFigure(type_plot, file.path(kOutputDir, "spleen_umap_cell_types.png"),
+  width = 10, height = 7)
 
 Log("Wrote the annotation table and three more figures")
 
@@ -912,8 +938,8 @@ Log("Writing figures")
 count_plot <- ggplot(manual, aes(x = tissue, y = asc_events)) +
   annotate("rect", xmin = -Inf, xmax = Inf,
            ymin = kTargetEventsLow, ymax = kTargetEventsHigh,
-           alpha = 0.15, fill = "#2166ac") +
-  geom_point(size = 3, alpha = 0.8) +
+           alpha = 0.15, fill = "#0072B2") +
+  geom_point(size = 2.6, alpha = 0.85, shape = 16) +
   scale_y_log10() +
   labs(
     title = "Events collected in the ASC gate, by tissue",
@@ -923,9 +949,9 @@ count_plot <- ggplot(manual, aes(x = tissue, y = asc_events)) +
     ),
     x = NULL, y = "Events in the ASC gate, log scale"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "asc_event_counts.png"), count_plot,
-       width = 9, height = 6, dpi = 150)
+  ThemePublication()
+SaveFigure(count_plot, file.path(kOutputDir, "asc_event_counts.svg"), width = 9,
+  height = 6)
 
 cv_long <- rbind(
   data.frame(tissue = spread$tissue, source = "Poisson floor",
@@ -935,16 +961,20 @@ cv_long <- rbind(
 )
 cv_plot <- ggplot(cv_long, aes(x = tissue, y = cv, fill = source)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  ScaleFillPublication(name = NULL) +
   geom_hline(yintercept = kTargetCvPercent, linetype = "dashed") +
   annotate("text", x = 0.7, y = kTargetCvPercent + 0.4,
            label = "the paper's 5 percent target", hjust = 0, size = 3) +
   labs(
     title = "Counting noise against measured spread",
-    subtitle = "The Poisson floor is set by the event count alone. The measured CV is what seven replicates did.",
-    x = NULL, y = "Coefficient of variation, percent", fill = NULL
+    subtitle = paste(
+      "The Poisson floor is set by the event count alone. The measured CV is",
+      "what\nseven replicates did."
+    ),
+    x = NULL, y = "Coefficient of variation, percent"
   ) +
-  theme_bw()
-ggsave(file.path(kOutputDir, "cv_comparison.png"), cv_plot,
-       width = 9, height = 6, dpi = 150)
+  ThemePublication()
+SaveFigure(cv_plot, file.path(kOutputDir, "cv_comparison.svg"), width = 9,
+  height = 6)
 
 Log("Done. Output is in", kOutputDir)

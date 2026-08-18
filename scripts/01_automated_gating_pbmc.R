@@ -135,7 +135,14 @@ Log("Gated", length(population_paths), "populations:",
 
 writeLines(population_paths, file.path(kOutputDir, "population_paths.txt"))
 
-save_gs(gating_set, file.path(kOutputDir, "gating_set"))
+# save_gs refuses to write into a folder that already holds a GatingSet under a
+# different identifier, so a second run of this script fails unless the previous
+# archive is cleared first.
+gating_set_path <- file.path(kOutputDir, "gating_set")
+if (dir.exists(gating_set_path)) {
+  unlink(gating_set_path, recursive = TRUE)
+}
+save_gs(gating_set, gating_set_path)
 Log("Saved the GatingSet so the report can reload it without re-gating")
 
 # ---------------------------------------------------------------------------
@@ -170,16 +177,18 @@ print(spread_all)
 
 Log("Writing figures")
 
-SavePlot <- function(plot_object, name, width = 9, height = 6) {
-  path <- file.path(kOutputDir, paste0(name, ".png"))
-  ggsave(path, plot = plot_object, width = width, height = height, dpi = 150)
+SavePlot <- function(plot_object, name, width = 9, height = 6,
+                     extension = ".svg") {
+  path <- file.path(kOutputDir, paste0(name, extension))
+  SaveFigure(plot_object, path, width = width, height = height)
   Log("  wrote", basename(path))
 }
 
 # The gate hierarchy as a tree.
-png(file.path(kOutputDir, "gating_tree.png"), width = 900, height = 700)
+OpenFigureDevice(file.path(kOutputDir, "gating_tree.svg"),
+                 width = 8, height = 6)
 plot(gating_set)
-dev.off()
+CloseFigureDevice()
 Log("  wrote gating_tree.png")
 
 # Every gate of the hierarchy on the first sample.
@@ -193,9 +202,9 @@ for (population in setdiff(population_paths, "root")) {
       kOutputDir,
       paste0("gate_", gsub("[^A-Za-z0-9]+", "_", population), ".png")
     )
-    png(path, width = 700, height = 600)
+    OpenFigureDevice(path, width = 6, height = 5)
     print(gate_plot)
-    dev.off()
+    CloseFigureDevice()
     Log("  wrote", basename(path))
   }
 }
@@ -207,13 +216,13 @@ frequency_plot <- ggplot(
 ) +
   geom_point(size = 3, alpha = 0.8) +
   facet_wrap(~population, scales = "free_y") +
+  ScaleColourPublication(name = "Donor") +
   labs(
     title = "Population frequency, one automated template across eight samples",
     x = "Stimulation condition",
-    y = "Percent of parent population",
-    colour = "Donor"
+    y = "Percent of parent population"
   ) +
-  theme_bw() +
+  ThemePublication() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 SavePlot(frequency_plot, "population_frequencies", width = 10, height = 7)
 

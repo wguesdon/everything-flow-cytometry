@@ -17,6 +17,7 @@ suppressPackageStartupMessages({
   library(withr)
 })
 
+source(file.path("R", "figures.R"))
 source(file.path("R", "harmonisation.R"))
 source(file.path("R", "spectral.R"))
 source(file.path("R", "naive_memory.R"))
@@ -499,8 +500,7 @@ Say("\n  verdicts: ",
 Say("\nPart 6: figures")
 
 Save <- function(plot, name, width = 9, height = 6) {
-  ggplot2::ggsave(file.path(kOutputDir, name), plot, width = width,
-                  height = height, dpi = 150)
+  SaveFigure(plot, file.path(kOutputDir, name), width = width, height = height)
 }
 
 long_antigen <- do.call(rbind, lapply(feature_names, function(name) {
@@ -516,8 +516,8 @@ Save(
     scale_fill_manual(values = c(Env = "#B2182B", Gag = "#2166AC")) +
     labs(x = NULL, y = "Percent above the control threshold, background removed",
          fill = NULL) +
-    theme_bw(),
-  "env_against_gag.png", width = 10, height = 7
+    ThemePublication(),
+  "env_against_gag.svg", width = 10, height = 7
 )
 
 selected <- hvtn_result$selected
@@ -529,8 +529,8 @@ Save(
     scale_colour_manual(values = c(Env = "#B2182B", Gag = "#2166AC")) +
     labs(x = NULL, y = paste(selected, "percent"), colour = NULL,
          title = "The selected feature and the threshold fitted on the training half") +
-    theme_bw(),
-  "hvtn_selected_feature.png", width = 8, height = 5
+    ThemePublication(),
+  "hvtn_selected_feature.svg", width = 8, height = 5
 )
 
 score_long <- do.call(rbind, lapply(c("accuracy", "f_measure"),
@@ -547,8 +547,8 @@ Save(
     scale_fill_manual(values = c(HVTN = "#1B7837", HEUvsUE = "#762A83")) +
     ylim(0, 1) +
     labs(x = NULL, y = NULL, fill = NULL) +
-    theme_bw(),
-  "scores.png", width = 8, height = 5
+    ThemePublication(),
+  "scores.svg", width = 8, height = 5
 )
 
 Say("\nDone. Every table is in ", kOutputDir)

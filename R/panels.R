@@ -485,8 +485,18 @@ PlotGateTree <- function(counts, title = "Gate hierarchy") {
          paste(counts$population[is.na(depth)], collapse = ", "), ".")
   }
 
-  order_by_depth <- order(depth, seq_len(nrow(counts)))
-  position <- stats::setNames(seq_len(nrow(counts)), counts$population[order_by_depth])
+  # A row is placed by a depth first walk from the root rather than by depth,
+  # so that a child sits under its own parent. Ordering by depth alone
+  # interleaves the branches, and an edge then runs past an unrelated node that
+  # a reader takes for the parent.
+  VisitOrder. <- function(population) {
+    children <- counts$population[!is.na(counts$parent) &
+                                    counts$parent == population]
+    c(population, unlist(lapply(children, VisitOrder.), use.names = FALSE))
+  }
+  roots <- counts$population[is.na(counts$parent)]
+  walk <- unlist(lapply(roots, VisitOrder.), use.names = FALSE)
+  position <- stats::setNames(seq_along(walk), walk)
   nodes <- data.frame(
     population = counts$population,
     depth = depth,
@@ -513,12 +523,17 @@ PlotGateTree <- function(counts, title = "Gate hierarchy") {
     ggplot2::geom_label(
       data = nodes,
       ggplot2::aes(x = .data$depth, y = .data$y, label = .data$label),
-      hjust = 0, size = 2.6, label.size = 0.2, fill = "white"
+      hjust = 0, size = 2.9, linewidth = 0.25, fill = "white",
+      colour = "grey15", family = FigureFont(), lineheight = 1.05
     ) +
     ggplot2::scale_x_continuous(expand = ggplot2::expansion(c(0.02, 0.25))) +
     ggplot2::labs(title = title, x = NULL, y = NULL) +
-    ggplot2::theme_void(base_size = 11) +
-    ggplot2::theme(plot.title = ggplot2::element_text(size = 12))
+    ggplot2::theme_void(base_size = 11, base_family = FigureFont()) +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(size = 12, hjust = 0,
+                                         margin = ggplot2::margin(b = 8)),
+      plot.margin = ggplot2::margin(8, 8, 8, 8)
+    )
 }
 
 #' Draw one gate as a two dimensional plot with its thresholds
@@ -555,17 +570,21 @@ PlotGatePair <- function(values, parent, x, y, x_label = x, y_label = y,
   }
   frame <- data.frame(x = values[rows, x], y = values[rows, y])
 
-  plot <- ggplot2::ggplot(frame, ggplot2::aes(x = .data$x, y = .data$y)) +
-    ggplot2::geom_point(size = 0.1, alpha = 0.25, colour = "grey25") +
-    ggplot2::labs(title = title, x = x_label, y = y_label) +
-    ggplot2::theme_minimal(base_size = 10)
+  plot <- PlotDensityScatter(frame, "x", "y", x_label = x_label,
+                             y_label = y_label, title = title,
+                             point_size = 0.2) +
+    ggplot2::scale_x_continuous(labels = AxisLabels) +
+    ggplot2::scale_y_continuous(labels = AxisLabels)
+
+  # The line is drawn over the events so that a reader can see which side of it
+  # a dense population sits on.
   if (!is.na(x_threshold)) {
     plot <- plot + ggplot2::geom_vline(xintercept = x_threshold,
-                                       colour = "firebrick", linewidth = 0.4)
+                                       colour = "#D55E00", linewidth = 0.6)
   }
   if (!is.na(y_threshold)) {
     plot <- plot + ggplot2::geom_hline(yintercept = y_threshold,
-                                       colour = "firebrick", linewidth = 0.4)
+                                       colour = "#D55E00", linewidth = 0.6)
   }
   plot
 }
