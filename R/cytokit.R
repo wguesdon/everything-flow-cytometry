@@ -193,6 +193,10 @@ CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
 #' path in it cannot be run. The CLI records the host paths in the environment so
 #' that anything printed can be mapped back.
 #'
+#' Both variables carry the folder that the CLI mounted, and not the path the
+#' caller named, so that one substitution is correct whether `--data` named a
+#' folder or one file.
+#'
 #' @param path A path as the recipe sees it.
 #' @return The path as the caller typed it, when the mapping is known.
 #' @examples
@@ -204,14 +208,15 @@ DisplayPath <- function(path) {
   }
   data_host <- Sys.getenv("CYTOKIT_DATA_HOST", unset = "")
   out_host <- Sys.getenv("CYTOKIT_OUT_HOST", unset = "")
+  # A trailing slash on the host folder would double the separator, so it is
+  # dropped before the two are joined.
   if (nzchar(data_host)) {
-    path <- sub("^/indata/?", paste0(data_host, "/"), path)
-    path <- sub("/$", "", path)
+    path <- sub("^/indata/?", paste0(sub("/$", "", data_host), "/"), path)
   }
   if (nzchar(out_host)) {
-    path <- sub("^/outdata/?", paste0(dirname(out_host), "/"), path)
+    path <- sub("^/outdata/?", paste0(sub("/$", "", out_host), "/"), path)
   }
-  path
+  sub("(.)/$", "\\1", path)
 }
 
 #' List the FCS files at a path
@@ -228,7 +233,7 @@ DisplayPath <- function(path) {
 #' @export
 FcsFilesIn <- function(path, recursive = FALSE) {
   if (!file.exists(path)) {
-    stop("The path does not exist: ", path)
+    stop("The path does not exist: ", DisplayPath(path))
   }
   if (!dir.exists(path)) {
     return(path)
@@ -236,7 +241,7 @@ FcsFilesIn <- function(path, recursive = FALSE) {
   files <- list.files(path, pattern = "\\.fcs$", ignore.case = TRUE,
                       full.names = TRUE, recursive = recursive)
   if (length(files) == 0) {
-    stop("No FCS file was found in ", path,
+    stop("No FCS file was found in ", DisplayPath(path),
          if (recursive) "." else ". Add --recursive to look in sub folders.")
   }
   sort(files)
@@ -368,4 +373,99 @@ PanelNamingState <- function(panel) {
   }
   data.frame(named = named, unnamed = unnamed, state = state,
              stringsAsFactors = FALSE)
+}
+
+#' Decide whether a panel came from a mass cytometer or a fluorescence one
+#'
+#' The two need different work. A mass cytometry file carries no scatter and no
+#' spillover, so a scatter gate and a compensation step are both wrong on it.
+#' FR-FCM-Z244 in this archive is a CyTOF deposit with 66 detectors and no
+#' scatter channel, and a recipe that assumes FSC and SSC produces nothing on it.
+#'
+#' The check reads the instrument keyword and the channel names, because a
+#' deposit carries one, the other, or both.
+#'
+#' @param panel A panel table from `DescribeFcsPanel`.
+#' @param cytometer The `$CYT` keyword, or `NA` when the file carries none.
+#' @return A list with `kind`, either `"mass"` or `"fluorescence"`, `reason`,
+#'   and `has_scatter`.
+#' @examples
+#' panel <- data.frame(channel = c("Y89Di", "Pd102Di", "Event_length"),
+#'                     kind = c("stain", "stain", "unnamed"))
+#' AcquisitionKind(panel, "DVSSCIENCES-CYTOF-6.7.1014")$kind
+#' @export
+AcquisitionKind <- function(panel, cytometer = NA_character_) {
+  has_scatter <- any(panel$kind == "scatter")
+  instrument <- if (length(cytometer) == 0 || all(is.na(cytometer))) {
+    ""
+  } else {
+    paste(unique(stats::na.omit(cytometer)), collapse = " ")
+  }
+  # A mass cytometer names a detector after the isotope it counts, for example
+  # Y89Di or Pd102Di. Three of them is past coincidence.
+  mass_channels <- grep("^[A-Z][a-z]?[0-9]{2,3}Di$", panel$channel, value = TRUE)
+  by_instrument <- grepl("CYTOF|HELIOS|DVSSCIENCES", instrument, ignore.case = TRUE)
+  by_channels <- length(mass_channels) >= 3
+
+  if (by_instrument || by_channels) {
+    reason <- if (by_instrument) {
+      paste0("the instrument keyword reads ", instrument)
+    } else {
+      paste0(length(mass_channels), " detectors are named after an isotope")
+    }
+    return(list(kind = "mass", reason = reason, has_scatter = has_scatter))
+  }
+  list(kind = "fluorescence",
+       reason = if (nzchar(instrument)) {
+         paste0("the instrument keyword reads ", instrument)
+       } else {
+         "no instrument keyword, and no detector named after an isotope"
+       },
+       has_scatter = has_scatter)
+}
+
+#' Run an expression and collect what it reported instead of printing each line
+#'
+#' flowCore reports a malformed header once per read. On a deposit of 28 files
+#' that is 112 copies of one line, and the report scrolls out of view. The
+#' report still matters, so a recipe counts it and states it once. Hiding it
+#' would leave a scientist reading a panel from a file that did not parse
+#' cleanly.
+#'
+#' The reader writes some of these with `cat` rather than with `warning`, so
+#' printed output is captured as well as the conditions.
+#'
+#' @param expression The expression to run.
+#' @return A list with `value`, and `notes`, a table of the distinct lines with
+#'   the number of times each was reported.
+#' @examples
+#' CollectNotes({message("late"); 1})$notes
+#' @export
+CollectNotes <- function(expression) {
+  raised <- character(0)
+  value <- NULL
+  printed <- utils::capture.output(
+    value <- withCallingHandlers(
+      expression,
+      warning = function(condition) {
+        raised <<- c(raised, trimws(conditionMessage(condition)))
+        invokeRestart("muffleWarning")
+      },
+      message = function(condition) {
+        raised <<- c(raised, trimws(conditionMessage(condition)))
+        invokeRestart("muffleMessage")
+      }
+    )
+  )
+  raised <- c(raised, trimws(printed))
+  raised <- raised[nzchar(raised)]
+  notes <- if (length(raised) == 0) {
+    data.frame(note = character(0), times = integer(0),
+               stringsAsFactors = FALSE)
+  } else {
+    counted <- table(raised)
+    data.frame(note = names(counted), times = as.integer(counted),
+               stringsAsFactors = FALSE, row.names = NULL)
+  }
+  list(value = value, notes = notes[order(-notes$times), , drop = FALSE])
 }

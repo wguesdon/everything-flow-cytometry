@@ -24,7 +24,7 @@ arguments <- ParseCytokitArguments(
   commandArgs(trailingOnly = TRUE),
   allowed = c("data", "out"),
   required = c("data", "out"),
-  flags = "force"
+  flags = c("force", "recursive")
 )
 
 if (file.exists(arguments$out) && !isTRUE(arguments$force)) {
@@ -33,7 +33,8 @@ if (file.exists(arguments$out) && !isTRUE(arguments$force)) {
        "work, so it is not overwritten by default.")
 }
 
-files <- FcsFilesIn(arguments$data)
+files <- FcsFilesIn(arguments$data,
+                    recursive = isTRUE(arguments$recursive))
 panel <- DescribeFcsPanel(files[1])
 markers <- PanelMarkers(panel)
 scatter <- panel$channel[panel$kind == "scatter"]

@@ -25,7 +25,7 @@ arguments <- ParseCytokitArguments(
   commandArgs(trailingOnly = TRUE),
   allowed = c("data", "out", "markers", "populations"),
   required = c("data", "out"),
-  flags = "force"
+  flags = c("force", "recursive")
 )
 
 if (file.exists(arguments$out) && !isTRUE(arguments$force)) {
@@ -34,7 +34,8 @@ if (file.exists(arguments$out) && !isTRUE(arguments$force)) {
        "that took work, so it is not overwritten by default.")
 }
 
-files <- FcsFilesIn(arguments$data)
+files <- FcsFilesIn(arguments$data,
+                    recursive = isTRUE(arguments$recursive))
 panel <- DescribeFcsPanel(files[1])
 available <- PanelMarkers(panel)
 

@@ -173,16 +173,111 @@ test_that("PanelNamingState reports a file that names everything", {
 })
 
 test_that("DisplayPath maps the container path back to the one that was typed", {
+  # Both variables carry the folder that the CLI mounted, never the file that
+  # --data or --out named. One substitution then covers every case.
   withr::local_envvar(CYTOKIT_DATA_HOST = "/home/will/study",
-                      CYTOKIT_OUT_HOST = "/home/will/out/template.csv")
+                      CYTOKIT_OUT_HOST = "/home/will/out")
   expect_equal(DisplayPath("/indata"), "/home/will/study")
   expect_equal(DisplayPath("/indata/a.fcs"), "/home/will/study/a.fcs")
+  expect_equal(DisplayPath("/outdata"), "/home/will/out")
   expect_equal(DisplayPath("/outdata/template.csv"),
                "/home/will/out/template.csv")
+  expect_equal(DisplayPath("/outdata/inspect_study_2026_08_18_1200"),
+               "/home/will/out/inspect_study_2026_08_18_1200")
+})
+
+test_that("DisplayPath keeps a root path that is only a slash", {
+  withr::local_envvar(CYTOKIT_DATA_HOST = "/", CYTOKIT_OUT_HOST = "")
+  expect_equal(DisplayPath("/indata/a.fcs"), "/a.fcs")
 })
 
 test_that("DisplayPath leaves a path alone when the mapping is unknown", {
   withr::local_envvar(CYTOKIT_DATA_HOST = "", CYTOKIT_OUT_HOST = "")
   expect_equal(DisplayPath("/indata/a.fcs"), "/indata/a.fcs")
   expect_equal(DisplayPath("relative/path.csv"), "relative/path.csv")
+})
+
+test_that("AcquisitionKind reads a mass cytometer from the instrument keyword", {
+  panel <- data.frame(channel = c("FSC-A", "SSC-A", "APC-A"),
+                      kind = c("scatter", "scatter", "stain"),
+                      stringsAsFactors = FALSE)
+  result <- AcquisitionKind(panel, "DVSSCIENCES-CYTOF-6.7.1014")
+  expect_equal(result$kind, "mass")
+  expect_true(grepl("CYTOF", result$reason))
+})
+
+test_that("AcquisitionKind reads a mass cytometer from the detector names", {
+  # FR-FCM-Z244 names every detector after the isotope it counts.
+  panel <- data.frame(
+    channel = c("Y89Di", "Pd102Di", "Ir193Di", "Event_length"),
+    kind = c("stain", "stain", "stain", "unnamed"),
+    stringsAsFactors = FALSE)
+  result <- AcquisitionKind(panel, NA_character_)
+  expect_equal(result$kind, "mass")
+  expect_equal(result$reason, "3 detectors are named after an isotope")
+  expect_false(result$has_scatter)
+})
+
+test_that("AcquisitionKind calls a fluorescence panel fluorescence", {
+  panel <- data.frame(channel = c("FSC-A", "SSC-A", "B515-A"),
+                      kind = c("scatter", "scatter", "stain"),
+                      stringsAsFactors = FALSE)
+  result <- AcquisitionKind(panel, c("LSRFortessa", "LSRFortessa"))
+  expect_equal(result$kind, "fluorescence")
+  expect_true(result$has_scatter)
+})
+
+test_that("AcquisitionKind needs three isotope names, not one", {
+  # A single channel called Cd45Di in a fluorescence panel is a coincidence.
+  panel <- data.frame(channel = c("FSC-A", "SSC-A", "Cd45Di"),
+                      kind = c("scatter", "scatter", "stain"),
+                      stringsAsFactors = FALSE)
+  expect_equal(AcquisitionKind(panel, NA_character_)$kind, "fluorescence")
+})
+
+test_that("AcquisitionKind reports a fluorescence panel with no scatter", {
+  panel <- data.frame(channel = c("B515-A", "R780-A"),
+                      kind = c("stain", "stain"), stringsAsFactors = FALSE)
+  result <- AcquisitionKind(panel, "FACSAria")
+  expect_equal(result$kind, "fluorescence")
+  expect_false(result$has_scatter)
+})
+
+test_that("CollectNotes counts a repeated warning instead of repeating it", {
+  result <- CollectNotes({
+    for (index in 1:3) warning("uneven number of tokens: 695")
+    42
+  })
+  expect_equal(result$value, 42)
+  expect_equal(nrow(result$notes), 1)
+  expect_equal(result$notes$times, 3L)
+  expect_equal(result$notes$note, "uneven number of tokens: 695")
+})
+
+test_that("CollectNotes catches a line the reader printed rather than warned", {
+  # flowCore writes some of these with cat, so a condition handler alone misses
+  # them and the report fills with copies of one line.
+  result <- CollectNotes({
+    cat("The last keyword is dropped.\n")
+    cat("The last keyword is dropped.\n")
+    "panel"
+  })
+  expect_equal(result$value, "panel")
+  expect_equal(result$notes$times, 2L)
+})
+
+test_that("CollectNotes returns an empty table when nothing was reported", {
+  result <- CollectNotes(sum(1:4))
+  expect_equal(result$value, 10L)
+  expect_equal(nrow(result$notes), 0)
+})
+
+test_that("CollectNotes orders the notes by how often each was reported", {
+  result <- CollectNotes({
+    warning("once")
+    for (index in 1:2) warning("twice")
+    NULL
+  })
+  expect_equal(result$notes$note, c("twice", "once"))
+  expect_equal(result$notes$times, c(2L, 1L))
 })

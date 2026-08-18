@@ -27,6 +27,9 @@ cytokit list                                    # the recipes and their state
 cytokit inspect     --data PATH                 # panel, markers, compensation state
 cytokit template    --data PATH --out FILE      # an empty gating template for this panel
 cytokit definitions --data PATH --out FILE      # an empty cell type table for this panel
+
+# Add --recursive to any of the three when the FCS files sit below the folder
+# you name, which is how a deposit arrives when you unzip it.
 ```
 
 The data path is mounted read only. An FCS file is a measurement that cannot be
@@ -40,16 +43,19 @@ taken again.
    the tool then falls back to the detector name. A detector name is not an
    antibody, so ask the scientist for the mapping before any cell type label
    means anything.
-3. Read what it says about the compensation state. An identity matrix with
+3. Read the acquisition line. A mass cytometry file carries no scatter and no
+   spillover, so a scatter gate and a compensation step are both wrong on it.
+   Gate it on the DNA channel and on event length instead.
+4. Read what it says about the compensation state. An identity matrix with
    `APPLY COMPENSATION = TRUE` means no matrix was supplied. It does not mean
    the values are compensated. Three deposits in this repository carry that
    trap.
-4. A gating template and a cell type definitions table are per panel, and the
+5. A gating template and a cell type definitions table are per panel, and the
    scientist will not have one. Run `cytokit template` and `cytokit
    definitions` to get a valid empty file, then fill it in with them. Both
    recipes read the file back with the function that will consume it and report
    whether it parses.
-5. Confirm the design with the scientist before you draw a gate. How many
+6. Confirm the design with the scientist before you draw a gate. How many
    populations, which marker separates each one, and what the negative control
    is.
 
