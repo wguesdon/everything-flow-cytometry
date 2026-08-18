@@ -211,3 +211,71 @@ test_that("CompareSpilloverMatrices stops when the matrices share no detector", 
 
   expect_error(CompareSpilloverMatrices(computed, stored), "share no detector")
 })
+
+# GateableControls, added when a 28 colour matrix failed because one control of
+# the set gated to an empty population.
+
+BuildControl <- function(bright, events = 4000, seed = 1) {
+  withr::with_seed(seed, {
+    stained <- if (bright) {
+      c(rnorm(events / 2, 200, 40), rnorm(events / 2, 20000, 3000))
+    } else {
+      rnorm(events, 200, 40)
+    }
+    values <- cbind(
+      "FSC-A" = rnorm(events, 8e4, 1e4),
+      "SSC-A" = rnorm(events, 3e4, 5e3),
+      "V510-A" = stained,
+      "U785-A" = rnorm(events, 150, 30)
+    )
+  })
+  parameters <- Biobase::AnnotatedDataFrame(data.frame(
+    name = colnames(values),
+    desc = c(NA, NA, "CD3 BV510", "CD4 BUV805"),
+    range = 262144, minRange = 0, maxRange = 262144,
+    stringsAsFactors = FALSE, row.names = paste0("$P", seq_len(ncol(values)))
+  ))
+  flowCore::flowFrame(values, parameters)
+}
+
+test_that("GateableControls accepts a control with two separated modes", {
+  controls <- flowCore::flowSet(list(stained = BuildControl(TRUE)))
+  matches <- data.frame(
+    filename = "stained", stain = "CD3 BV510", channel = "V510-A",
+    marker = "CD3 BV510", matched_by = "exact", stringsAsFactors = FALSE
+  )
+  result <- GateableControls(controls, matches, min_events = 100)
+  expect_true(result$gateable)
+  expect_gt(result$gated_events, 100)
+})
+
+test_that("GateableControls rejects a control whose gate leaves too few events", {
+  controls <- flowCore::flowSet(list(stained = BuildControl(TRUE)))
+  matches <- data.frame(
+    filename = "stained", stain = "CD3 BV510", channel = "V510-A",
+    marker = "CD3 BV510", matched_by = "exact", stringsAsFactors = FALSE
+  )
+  result <- GateableControls(controls, matches, min_events = 1e6)
+  expect_false(result$gateable)
+})
+
+test_that("GateableControls returns zero events for an unresolvable control", {
+  controls <- flowCore::flowSet(list(flat = BuildControl(FALSE)))
+  matches <- data.frame(
+    filename = "flat", stain = "CD3 BV510", channel = "V510-A",
+    marker = "CD3 BV510", matched_by = "exact", stringsAsFactors = FALSE
+  )
+  result <- GateableControls(controls, matches, min_events = 100)
+  expect_equal(nrow(result), 1L)
+  expect_false(is.na(result$gated_events))
+})
+
+test_that("GateableControls stops when no control was matched to a channel", {
+  controls <- flowCore::flowSet(list(stained = BuildControl(TRUE)))
+  matches <- data.frame(
+    filename = "stained", stain = "unstained", channel = "unstained",
+    marker = NA_character_, matched_by = "unstained", stringsAsFactors = FALSE
+  )
+  expect_error(GateableControls(controls, matches),
+               "No stained control was matched to a channel")
+})

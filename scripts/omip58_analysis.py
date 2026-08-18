@@ -226,7 +226,9 @@ def cluster_medians(
     return values.groupby(key, observed=True).median()
 
 
-def marker_separation(medians: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
+def marker_separation(
+    medians: pd.DataFrame, seed: int = 42, min_range: float = 0.5
+) -> pd.DataFrame:
     """Measure how cleanly each marker splits the clusters into two levels.
 
     A marker that takes one level across every cluster carries no information
@@ -235,9 +237,17 @@ def marker_separation(medians: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
     brightest negative one, divided by the full range of the marker, so it does
     not depend on how bright the fluorochrome is.
 
+    The ratio alone is not enough. It has no scale, so a marker whose cluster
+    medians all sit within a hundredth of a unit still scores well if those
+    points happen to fall in two tight groups. `min_range` rejects that case,
+    because a marker that moves by less than half an arcsinh unit across every
+    cluster is measuring noise.
+
     Args:
         medians: The output of `cluster_medians`.
         seed: The seed for the two group fit.
+        min_range: The smallest spread across clusters, on the transformed
+            scale, that a marker must cover to score above zero.
 
     Returns:
         A table with `marker`, `positive_clusters`, `gap` and `separation`,
@@ -247,7 +257,7 @@ def marker_separation(medians: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
     for column in medians.columns:
         values = medians[column].to_numpy(dtype=float)
         spread = values.max() - values.min()
-        if np.unique(values).size < 2 or spread == 0:
+        if np.unique(values).size < 2 or spread < min_range:
             rows.append((column, 0, 0.0, 0.0))
             continue
         model = GaussianMixture(2, random_state=seed, n_init=5).fit(
