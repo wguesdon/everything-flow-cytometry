@@ -544,3 +544,30 @@ test_that("DescribeFcsIdentity treats an empty keyword as absent", {
   path <- WriteTestFcs(directory, keywords = list(`$SRC` = ""))
   expect_true(is.na(DescribeFcsIdentity(path)$specimen))
 })
+
+test_that("MarkerLabels keys the label on the channel, not on the position", {
+  # PanelMarkers returns the named detectors first and the unnamed ones after.
+  # Zipping that list against the panel order puts CD3 on the wrong detector
+  # whenever a panel interleaves the two.
+  panel <- data.frame(
+    channel = c("FSC-A", "APC-A", "B515-A", "PE-A"),
+    marker = c("", "", "CD3", ""),
+    kind = c("scatter", "unnamed", "stain", "unnamed"),
+    stringsAsFactors = FALSE)
+  labels <- MarkerLabels(panel)
+  expect_equal(unname(labels[["B515-A"]]), "CD3")
+  expect_equal(unname(labels[["APC-A"]]), "APC-A")
+  expect_equal(unname(labels[["PE-A"]]), "PE-A")
+})
+
+test_that("MarkerLabels leaves a detector with no marker under its own name", {
+  panel <- data.frame(channel = "APC-A", marker = "", kind = "unnamed",
+                      stringsAsFactors = FALSE)
+  expect_equal(unname(MarkerLabels(panel)), "APC-A")
+})
+
+test_that("MarkerLabels covers every channel of the panel", {
+  panel <- data.frame(channel = c("FSC-A", "APC-A"), marker = c("", "CD3"),
+                      kind = c("scatter", "stain"), stringsAsFactors = FALSE)
+  expect_equal(names(MarkerLabels(panel)), panel$channel)
+})

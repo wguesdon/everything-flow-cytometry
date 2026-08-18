@@ -799,3 +799,28 @@ ShortLabel <- function(name) {
   name <- sub("(^|_)[0-9]{4}_[0-9]{2}_[0-9]{2}_[0-9]{6}$", "", name)
   if (nzchar(name)) name else "study"
 }
+
+#' Map every detector of a panel to the name a reader should see
+#'
+#' A column is labelled by looking its channel up here, never by position.
+#' [PanelMarkers()] returns the named detectors first and the unnamed ones
+#' after, so a panel that interleaves the two would put an antibody name on the
+#' wrong detector if the two lists were zipped together.
+#'
+#' A detector the file names keeps its antibody. A detector the file leaves
+#' empty keeps its own name, which is honest and is not an antibody.
+#'
+#' @param panel The output of [DescribeFcsPanel()].
+#' @return A named character vector. The name is the channel and the value is
+#'   the label.
+#' @examples
+#' panel <- data.frame(channel = c("APC-A", "B515-A"), marker = c("", "CD3"),
+#'                     kind = c("unnamed", "stain"), stringsAsFactors = FALSE)
+#' MarkerLabels(panel)
+#' @export
+MarkerLabels <- function(panel) {
+  stats::setNames(
+    ifelse(panel$kind == "stain" & nzchar(panel$marker), panel$marker,
+           panel$channel),
+    panel$channel)
+}

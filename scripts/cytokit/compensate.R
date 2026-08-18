@@ -118,13 +118,12 @@ if (has_stored) {
 
 # The measurement. The same events are correlated twice, so the number to read
 # is the change and not the value on its own.
+marker_labels <- MarkerLabels(panel)
+
 Correlate. <- function(matrix_values) {
   events <- ArcsinhTransform(matrix_values, markers, cofactor = cofactor)
   events <- events[, markers, drop = FALSE]
-  named <- PanelMarkers(panel)
-  if (length(named) == length(markers)) {
-    colnames(events) <- named
-  }
+  colnames(events) <- unname(marker_labels[colnames(events)])
   MarkerCorrelation(events, seed = seed, threshold = 0.5)
 }
 

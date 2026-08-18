@@ -77,7 +77,14 @@ Say(wanted$what_it_shows[1], "\n")
 # Rscript, so that one container run does the work and the log lands here.
 log_path <- file.path(bundle, "run_log.txt")
 Say("Running the script. The log goes to run_log.txt.\n")
+# The sinks are unwound on the way out whatever happens, because a session left
+# with an open sink prints nothing and looks hung.
 connection <- file(log_path, open = "wt")
+on.exit({
+  while (sink.number(type = "message") > 2) sink(type = "message")
+  while (sink.number() > 0) sink()
+  close(connection)
+}, add = TRUE)
 sink(connection, split = TRUE)
 sink(connection, type = "message")
 status <- tryCatch({
@@ -86,7 +93,6 @@ status <- tryCatch({
 }, error = function(e) paste("failed:", conditionMessage(e)))
 sink(type = "message")
 sink()
-close(connection)
 
 Say("\nThe script ", status, ".")
 
