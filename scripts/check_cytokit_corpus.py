@@ -419,6 +419,86 @@ def check_marker_mapping(work: Path) -> list[Result]:
     return results
 
 
+def check_compensate(work: Path) -> list[Result]:
+    """Assert what compensate says about three deposits that differ.
+
+    The recipe reads the events of one file, so it is slower than the others.
+    It runs on three deposits rather than on all nine: one with a real stored
+    matrix, one with an identity matrix, and one mass cytometry run. The report
+    says so, because a check that covers three of nine and reads like nine is
+    worse than no check.
+
+    Args:
+        work: A scratch folder outside the repository.
+
+    Returns:
+        One result per rule checked.
+    """
+    results = []
+
+    # A deposit whose matrix is real. Applying it has to lower the correlation.
+    real = DEPOSIT_ROOT / "FlowRepository_FR-FCM-ZZLV_files"
+    out = work / "real"
+    out.mkdir(parents=True, exist_ok=True)
+    status, output, seconds = run_cli(["compensate", "--data", str(real), "--out", str(out)])
+    bundle = newest_bundle(out)
+    table = bundle / "marker_correlation.csv" if bundle else None
+    rows = len(table.read_text().splitlines()) - 1 if table and table.exists() else 0
+    lowered = "the matrix lowers the correlation" in output
+    results.append(
+        Result("compensate", "a deposit with a real matrix", status == 0 and rows == 2 and lowered,
+               f"{rows} row(s), and the verdict is earned" if lowered else first_error(output), seconds)
+    )
+    if bundle:
+        drawn = [name.name for name in bundle.iterdir() if name.suffix == ".svg"]
+        results.append(
+            Result("compensate", "the matrix is drawn", bool(drawn),
+                   ", ".join(drawn) if drawn else "no heat map was written", 0.0)
+        )
+
+    # A deposit with an identity matrix. There is nothing to apply, so the
+    # recipe has to say what to do next rather than print one row and stop.
+    identity = DEPOSIT_ROOT / "FR-FCM-ZZCA"
+    out = work / "identity"
+    out.mkdir(parents=True, exist_ok=True)
+    status, output, seconds = run_cli(
+        ["compensate", "--data", str(identity), "--recursive", "--out", str(out)])
+    guides = "--controls" in output and "no matrix was supplied" in output.lower()
+    results.append(
+        Result("compensate", "a deposit with an identity matrix", status == 0 and guides,
+               "says no matrix was supplied and what to do" if guides else first_error(output), seconds)
+    )
+
+    # A mass cytometry run. The refusal has to come before the bundle is made.
+    mass = DEPOSIT_ROOT / "FlowRepository_FR-FCM-Z244_files"
+    out = work / "mass"
+    out.mkdir(parents=True, exist_ok=True)
+    status, output, seconds = run_cli(["compensate", "--data", str(mass), "--out", str(out)])
+    left_behind = newest_bundle(out)
+    results.append(
+        Result("compensate", "a mass cytometry run", status != 0 and left_behind is None,
+               "refuses, and writes no bundle" if left_behind is None else
+               f"refused but left {left_behind.name}", seconds)
+    )
+
+    # Two runs of one recipe have to give one answer. flowStats draws a random
+    # subset while it gates, so an unseeded run moves between runs.
+    digests = []
+    for run in ("first", "second"):
+        out = work / f"seed_{run}"
+        out.mkdir(parents=True, exist_ok=True)
+        run_cli(["compensate", "--data", str(real), "--out", str(out)])
+        bundle = newest_bundle(out)
+        table = bundle / "marker_correlation.csv" if bundle else None
+        digests.append(table.read_text() if table and table.exists() else run)
+    results.append(
+        Result("compensate", "two runs give one answer", digests[0] == digests[1],
+               "the correlation table is the same" if digests[0] == digests[1] else
+               "the two runs disagree, so a seed is missing", 0.0)
+    )
+    return results
+
+
 def check_refusals(work: Path) -> list[Result]:
     """Assert that the CLI refuses what it has to refuse.
 
@@ -513,9 +593,13 @@ def report(results: list[Result]) -> int:
     if failed:
         print(f"{len(failed)} of {len(results)} checks failed.")
         return 1
-    deposits = {item.what for item in results} - {"refusals", "input shapes", "marker mapping"}
+    deposits = ({item.what for item in results}
+                - {"refusals", "input shapes", "marker mapping", "compensate"})
     noun = "deposit" if len(deposits) == 1 else "deposits"
     print(f"All {len(results)} checks passed over {len(deposits)} {noun}.")
+    if any(item.what == "compensate" for item in results):
+        print("compensate ran on 3 of those deposits, not on all of them, "
+              "because it reads every event of a file.")
     return 0
 
 
@@ -528,6 +612,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--deposit", action="append", help="check one deposit, repeatable")
     parser.add_argument("--skip-refusals", action="store_true", help="skip the refusal cases")
+    parser.add_argument("--skip-compensate", action="store_true",
+                        help="skip the compensate cases, which read whole files")
     options = parser.parse_args()
 
     corpus = CORPUS
@@ -553,6 +639,8 @@ def main() -> int:
             results += check_scaffold(deposit, data, work, "definitions")
         results += check_input_shapes(work_root / "shapes")
         results += check_marker_mapping(work_root / "mapping")
+        if not options.skip_compensate:
+            results += check_compensate(work_root / "compensate")
         if not options.skip_refusals:
             results += check_refusals(work_root / "refusals")
     finally:

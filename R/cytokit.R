@@ -148,6 +148,12 @@ CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
     list()
   }
 
+  # An argument that holds a container path says nothing about which study was
+  # run. Two studies would otherwise carry the same manifest.
+  arguments <- lapply(arguments, function(value) {
+    if (is.character(value) && length(value) == 1) DisplayPath(value) else value
+  })
+
   record <- list(
     recipe = recipe,
     written_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
@@ -208,6 +214,7 @@ DisplayPath <- function(path) {
   }
   data_host <- Sys.getenv("CYTOKIT_DATA_HOST", unset = "")
   out_host <- Sys.getenv("CYTOKIT_OUT_HOST", unset = "")
+  controls_host <- Sys.getenv("CYTOKIT_CONTROLS_HOST", unset = "")
   # A trailing slash on the host folder would double the separator, so it is
   # dropped before the two are joined.
   if (nzchar(data_host)) {
@@ -215,6 +222,10 @@ DisplayPath <- function(path) {
   }
   if (nzchar(out_host)) {
     path <- sub("^/outdata/?", paste0(sub("/$", "", out_host), "/"), path)
+  }
+  if (nzchar(controls_host)) {
+    path <- sub("^/incontrols/?",
+                paste0(sub("/$", "", controls_host), "/"), path)
   }
   sub("(.)/$", "\\1", path)
 }
@@ -672,4 +683,71 @@ ParseMarkerArgument <- function(argument, available, channels) {
                collapse = ", "))
   }
   result
+}
+
+#' Print what the reader reported, capped, and write the full list
+#'
+#' A 27 colour panel produces 27 distinct progress lines from the spillover
+#' matcher, and printing all of them hides the result they sit above. The count
+#' and the first few lines are what a reader needs, and the rest belong in a
+#' file.
+#'
+#' @param notes A table with `note` and `times`, from [CollectNotes()].
+#' @param bundle The bundle folder, or `NULL` to print without writing.
+#' @param limit How many distinct lines to print. Defaults to 5.
+#' @return The aggregated table, invisibly.
+#' @examples
+#' ReportNotes(data.frame(note = "uneven tokens", times = 3L), NULL)
+#' @export
+ReportNotes <- function(notes, bundle, limit = 5) {
+  if (is.null(notes) || nrow(notes) == 0) {
+    return(invisible(notes))
+  }
+  notes <- stats::aggregate(times ~ note, data = notes, FUN = sum)
+  notes <- notes[order(-notes$times, notes$note), , drop = FALSE]
+  cat("\nThe FCS reader raised ", sum(notes$times), " note(s) over ",
+      nrow(notes), " distinct line(s):\n", sep = "")
+  shown <- utils::head(notes, limit)
+  for (index in seq_len(nrow(shown))) {
+    cat("  ", shown$times[index], "x  ", shown$note[index], "\n", sep = "")
+  }
+  if (nrow(notes) > limit) {
+    cat("  and ", nrow(notes) - limit, " more, all in reader_notes.csv\n",
+        sep = "")
+  }
+  if (!is.null(bundle)) {
+    WriteBundleTable(bundle, notes, "reader_notes.csv")
+  }
+  invisible(notes)
+}
+
+# Every recipe that draws a random subset uses this seed unless the caller
+# names another. robustbase::covMcd draws one, and so does
+# flowStats::norm2Filter, which spillover_ng calls while it gates each control.
+kCytokitSeed <- 42
+
+#' Set the seed a recipe runs under, and report it
+#'
+#' Without a seed a spillover matrix moves between runs, the compensated values
+#' move with it, and a count in a report cannot be produced again. Two unseeded
+#' runs of the OMIP-58 analysis differed by six live lymphocytes of 598880 and
+#' swung a fitted cut from 60.97 to 79.76 percent of T cells.
+#'
+#' @param arguments The parsed arguments, which may carry `seed`.
+#' @return The seed that was set, invisibly.
+#' @examples
+#' SetCytokitSeed(list(seed = "7"))
+#' @export
+SetCytokitSeed <- function(arguments = list()) {
+  seed <- if (is.null(arguments$seed)) {
+    kCytokitSeed
+  } else {
+    value <- suppressWarnings(as.integer(arguments$seed))
+    if (is.na(value)) {
+      stop("--seed must be a whole number, not ", arguments$seed, ".")
+    }
+    value
+  }
+  set.seed(seed)
+  invisible(seed)
 }

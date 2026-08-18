@@ -152,14 +152,7 @@ notes <- unique(rbind(read_files$notes, read_identity$notes,
 if (exists("read_others")) {
   notes <- unique(rbind(notes, read_others$notes))
 }
-if (nrow(notes) > 0) {
-  notes <- stats::aggregate(times ~ note, data = notes, FUN = sum)
-  Say("\nThe FCS reader raised ", sum(notes$times), " note(s) while reading:")
-  for (index in seq_len(nrow(notes))) {
-    Say("  ", notes$times[index], "x  ", notes$note[index])
-  }
-  WriteBundleTable(bundle, notes, "reader_notes.csv")
-}
+ReportNotes(notes, bundle)
 
 CloseCytokitBundle(
   bundle, "inspect", arguments, inputs = files,

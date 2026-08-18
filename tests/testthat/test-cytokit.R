@@ -402,3 +402,49 @@ test_that("ParseMarkerArgument rejects an empty argument", {
   expect_error(ParseMarkerArgument(" ", c("CD3"), c("B515-A")),
                "--markers is empty")
 })
+
+test_that("SetCytokitSeed makes two runs draw the same subset", {
+  SetCytokitSeed()
+  first <- sample(100, 5)
+  SetCytokitSeed()
+  expect_equal(sample(100, 5), first)
+})
+
+test_that("SetCytokitSeed takes the seed the caller named", {
+  expect_equal(SetCytokitSeed(list(seed = "7")), 7L)
+  first <- sample(100, 5)
+  SetCytokitSeed(list(seed = "7"))
+  expect_equal(sample(100, 5), first)
+})
+
+test_that("SetCytokitSeed rejects a seed that is not a number", {
+  expect_error(SetCytokitSeed(list(seed = "later")),
+               "--seed must be a whole number")
+})
+
+test_that("ReportNotes adds up the times a line was reported", {
+  notes <- data.frame(note = c("uneven tokens", "uneven tokens", "dropped"),
+                      times = c(2L, 3L, 1L), stringsAsFactors = FALSE)
+  result <- ReportNotes(notes, NULL)
+  expect_equal(nrow(result), 2)
+  expect_equal(result$times[result$note == "uneven tokens"], 5L)
+})
+
+test_that("ReportNotes puts the most reported line first", {
+  notes <- data.frame(note = c("rare", "common"), times = c(1L, 9L),
+                      stringsAsFactors = FALSE)
+  expect_equal(ReportNotes(notes, NULL)$note, c("common", "rare"))
+})
+
+test_that("ReportNotes says how many lines it did not print", {
+  notes <- data.frame(note = paste("line", 1:8), times = rep(1L, 8),
+                      stringsAsFactors = FALSE)
+  printed <- capture.output(ReportNotes(notes, NULL, limit = 3))
+  expect_true(any(grepl("and 5 more", printed)))
+  expect_true(any(grepl("8 note\\(s\\) over 8 distinct", printed)))
+})
+
+test_that("ReportNotes prints nothing when nothing was reported", {
+  empty <- data.frame(note = character(0), times = integer(0))
+  expect_equal(length(capture.output(ReportNotes(empty, NULL))), 0)
+})

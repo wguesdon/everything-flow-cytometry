@@ -279,3 +279,85 @@ test_that("GateableControls stops when no control was matched to a channel", {
   expect_error(GateableControls(controls, matches),
                "No stained control was matched to a channel")
 })
+
+test_that("MarkerCorrelation finds the pair that spills", {
+  # CD4 is built from CD3, so the two correlate and nothing else does.
+  events <- withr::with_seed(1, {
+    cd3 <- rnorm(4000)
+    cbind(CD3 = cd3, CD4 = 0.8 * cd3 + rnorm(4000), CD8 = rnorm(4000))
+  })
+  result <- MarkerCorrelation(events)
+  expect_equal(result$summary$markers, 3L)
+  expect_equal(result$summary$pairs, 3L)
+  expect_equal(result$summary$most_correlated, "CD3 against CD4")
+  expect_gt(result$matrix["CD3", "CD4"], 0.5)
+  expect_lt(abs(result$matrix["CD3", "CD8"]), 0.1)
+})
+
+test_that("MarkerCorrelation counts a negative pair as high", {
+  # Over-compensation drives a correlation negative, which is also a fault.
+  events <- withr::with_seed(2, {
+    cd3 <- rnorm(3000)
+    cbind(CD3 = cd3, CD4 = -0.9 * cd3 + rnorm(3000, sd = 0.2))
+  })
+  result <- MarkerCorrelation(events, threshold = 0.5)
+  expect_lt(result$matrix["CD3", "CD4"], -0.5)
+  expect_equal(result$summary$pairs_above_threshold, 1L)
+  expect_equal(result$summary$positive_pairs_above_threshold, 0L)
+})
+
+test_that("MarkerCorrelation gives the same answer twice with one seed", {
+  events <- withr::with_seed(3, matrix(rnorm(6000), ncol = 3,
+                                       dimnames = list(NULL, c("a", "b", "c"))))
+  first <- MarkerCorrelation(events, max_events = 500, seed = 7)
+  second <- MarkerCorrelation(events, max_events = 500, seed = 7)
+  expect_equal(first$summary$median_absolute_r,
+               second$summary$median_absolute_r)
+})
+
+test_that("MarkerCorrelation subsamples down to max_events", {
+  events <- withr::with_seed(4, matrix(rnorm(4000), ncol = 2,
+                                       dimnames = list(NULL, c("a", "b"))))
+  expect_equal(MarkerCorrelation(events, max_events = 300)$summary$events_used,
+               300L)
+  expect_equal(MarkerCorrelation(events)$summary$events_used, 2000L)
+})
+
+test_that("MarkerCorrelation lists each unordered pair once", {
+  events <- withr::with_seed(5, matrix(rnorm(400), ncol = 4,
+                                       dimnames = list(NULL, letters[1:4])))
+  result <- MarkerCorrelation(events)
+  expect_equal(nrow(result$pairs), 6L)
+  expect_true(all(result$pairs$a < result$pairs$b))
+})
+
+test_that("MarkerCorrelation sorts the pairs by the size of the correlation", {
+  events <- withr::with_seed(6, {
+    a <- rnorm(2000)
+    cbind(a = a, b = 0.9 * a + rnorm(2000, sd = 0.3), c = rnorm(2000))
+  })
+  result <- MarkerCorrelation(events)
+  expect_equal(result$pairs$a[1], "a")
+  expect_equal(result$pairs$b[1], "b")
+  expect_true(all(diff(abs(result$pairs$r)) <= 0))
+})
+
+test_that("MarkerCorrelation rejects a matrix with one marker", {
+  events <- matrix(rnorm(100), ncol = 1, dimnames = list(NULL, "a"))
+  expect_error(MarkerCorrelation(events), "A correlation needs two markers")
+})
+
+test_that("MarkerCorrelation rejects a matrix with no column names", {
+  expect_error(MarkerCorrelation(matrix(rnorm(100), ncol = 2)),
+               "must carry a column name")
+})
+
+test_that("MarkerCorrelation rejects something that is not a numeric matrix", {
+  expect_error(MarkerCorrelation(data.frame(a = 1:5, b = 6:10)),
+               "must be a numeric matrix")
+})
+
+test_that("MarkerCorrelation rejects a matrix with two events", {
+  events <- matrix(rnorm(4), ncol = 2, dimnames = list(NULL, c("a", "b")))
+  expect_error(MarkerCorrelation(events), "needs three events")
+})

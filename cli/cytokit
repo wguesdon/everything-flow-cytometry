@@ -24,6 +24,8 @@ cytokit — flow cytometry analysis you can drive from a conversation
 Usage:
   cytokit inspect     --data PATH [--recursive] [--out DIR] [--label NAME]
   cytokit template    --data PATH --out FILE [--recursive] [--force]
+  cytokit compensate  --data PATH [--controls DIR] [--recursive] [--out DIR]
+                                  [--cofactor 150] [--unstained PATTERN]
   cytokit definitions --data PATH --out FILE [--recursive] [--force]
                                              [--markers "CD3,CD4"]
                                              [--markers "APC-A=CD3,PE-A=CD4"]
@@ -40,6 +42,10 @@ state, and every later recipe reads what it prints.
 A gating template and a cell type definitions table are per panel, so nobody
 arrives with one. template and definitions write a valid empty file with the
 panel's markers in it, for you to fill in with the scientist.
+
+compensate answers "is my data compensated". It correlates every pair of
+markers before and after the stored matrix, because the keyword does not answer
+it. Give it --controls to compute a matrix from the single stains as well.
 
 When a file leaves $PnS empty, the panel reads as detector names and a cell
 type built on one means nothing. Give definitions the mapping instead, in the
@@ -97,7 +103,7 @@ run_recipe() {
     local recipe="$1"; shift
     require_image
 
-    local data_host="" out_host="" args=() index=1
+    local data_host="" out_host="" controls_host="" args=() index=1
     local -a passthrough=()
 
     # --data is mounted read only. --out is mounted read and write when it points
@@ -115,6 +121,17 @@ run_recipe() {
                     fi
                     shift 2 ;;
             --out)  out_host="${2:?--out needs a path}"; shift 2 ;;
+            # The controls are a second folder of FCS files, and they are as
+            # irreplaceable as the samples, so they mount read only too.
+            --controls)
+                    controls_host="$(absolute "${2:?--controls needs a path}")"
+                    if [[ -d "$controls_host" ]]; then
+                        passthrough+=(--controls "/incontrols")
+                    else
+                        passthrough+=(--controls \
+                            "/incontrols/$(basename "$controls_host")")
+                    fi
+                    shift 2 ;;
             *)      passthrough+=("$1"); shift ;;
         esac
     done
@@ -123,7 +140,7 @@ run_recipe() {
     # prints back to the host with it, so it has to be the folder and not the
     # file, even when --data named one file.
     # out_mount is the folder that lands on /outdata, for the same reason.
-    local data_mount="" out_mount=""
+    local data_mount="" out_mount="" controls_mount=""
     local mounts=(--volume "$REPO_ROOT:/work:z")
     if [[ -n "$data_host" ]]; then
         if [[ -d "$data_host" ]]; then
@@ -132,6 +149,14 @@ run_recipe() {
             data_mount="$(dirname "$data_host")"
         fi
         mounts+=(--volume "$data_mount:/indata:ro,z")
+    fi
+    if [[ -n "$controls_host" ]]; then
+        if [[ -d "$controls_host" ]]; then
+            controls_mount="$controls_host"
+        else
+            controls_mount="$(dirname "$controls_host")"
+        fi
+        mounts+=(--volume "$controls_mount:/incontrols:ro,z")
     fi
 
     # An --out inside the repository already has a mount. One outside needs its
@@ -179,6 +204,7 @@ run_recipe() {
         --userns keep-id \
         --env "CYTOKIT_IMAGE=$IMAGE" \
         --env "CYTOKIT_DATA_HOST=${data_mount:-}" \
+        --env "CYTOKIT_CONTROLS_HOST=${controls_mount:-}" \
         --env "CYTOKIT_OUT_HOST=${out_mount:-}" \
         --env "CYTOKIT_IMAGE_DIGEST=$(podman image inspect --format '{{.Digest}}' "$IMAGE" 2>/dev/null || echo unknown)" \
         "${mounts[@]}" \
@@ -187,7 +213,7 @@ run_recipe() {
 }
 
 case "${1:-help}" in
-    inspect|template|definitions)
+    inspect|template|definitions|compensate)
         recipe="$1"; shift
         run_recipe "$recipe" "$@"
         ;;
@@ -197,7 +223,7 @@ Recipe        State    What it does
 inspect       ready    Panel, markers, event counts, compensation state
 template      ready    An empty openCyto gating template for this panel
 definitions   ready    An empty cell type definitions table for this panel
-compensate    planned  Spillover from single stains, and the correlation check
+compensate    ready    The stored matrix, and whether it lowers the correlation
 gate          planned  Run a template, write counts, a gate tree and the flow
 cluster       planned  FlowSOM and UMAP, inside a gate when asked
 annotate      planned  Label each cluster from a definitions table

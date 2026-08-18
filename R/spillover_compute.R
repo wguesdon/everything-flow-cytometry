@@ -622,3 +622,78 @@ GateableControls <- function(flow_set, match_table, scale_factor = 2,
     stringsAsFactors = FALSE
   )
 }
+
+#' Correlate every pair of markers in a set of events
+#'
+#' Spillover shows up as a correlation between two detectors that measure two
+#' different antibodies. A panel that is compensated correctly still correlates
+#' where the biology correlates, for example CD3 with CD4, so the number to read
+#' is the change between the uncompensated and the compensated events and not
+#' the value on its own.
+#'
+#' The events are subsampled because a correlation over ten million rows costs
+#' time and answers the same question. The seed is fixed so that the number in a
+#' report can be produced again.
+#'
+#' @param events A numeric matrix of events, one column per marker, with the
+#'   marker names as the column names.
+#' @param max_events The largest number of events to correlate. Defaults to
+#'   100000.
+#' @param seed The seed for the subsample. Defaults to 42.
+#' @param threshold The correlation that counts as high. Defaults to 0.5.
+#' @return A list with `matrix`, the correlation matrix, `pairs`, one row per
+#'   unordered pair sorted by the size of the correlation, and `summary`, a one
+#'   row `data.frame` that counts the pairs above `threshold` both by the
+#'   absolute value and by the signed value.
+#' @examples
+#' events <- cbind(CD3 = rnorm(500), CD4 = rnorm(500))
+#' MarkerCorrelation(events)$summary$pairs
+#' @export
+MarkerCorrelation <- function(events, max_events = 1e5, seed = 42,
+                              threshold = 0.5) {
+  if (!is.matrix(events) || !is.numeric(events)) {
+    stop("events must be a numeric matrix, not a ", class(events)[1], ".")
+  }
+  if (is.null(colnames(events))) {
+    stop("events must carry a column name for every marker.")
+  }
+  if (ncol(events) < 2) {
+    stop("A correlation needs two markers. This matrix has ", ncol(events), ".")
+  }
+  if (nrow(events) < 3) {
+    stop("A correlation needs three events. This matrix has ", nrow(events), ".")
+  }
+
+  rows <- withr::with_seed(seed, {
+    sample(nrow(events), min(max_events, nrow(events)))
+  })
+  correlation <- stats::cor(events[rows, , drop = FALSE])
+
+  pairs <- data.frame(
+    a = rep(rownames(correlation), times = ncol(correlation)),
+    b = rep(colnames(correlation), each = nrow(correlation)),
+    r = as.vector(correlation),
+    stringsAsFactors = FALSE
+  )
+  pairs <- pairs[pairs$a < pairs$b, , drop = FALSE]
+  pairs <- pairs[order(-abs(pairs$r)), , drop = FALSE]
+  rownames(pairs) <- NULL
+
+  summary <- data.frame(
+    markers = ncol(events),
+    events_used = length(rows),
+    pairs = nrow(pairs),
+    median_absolute_r = stats::median(abs(pairs$r)),
+    # Over-compensation drives a correlation negative, which is also a fault, so
+    # the measure counts the absolute value. The signed count is reported beside
+    # it because two analyses in this repository published that column.
+    pairs_above_threshold = sum(abs(pairs$r) > threshold),
+    positive_pairs_above_threshold = sum(pairs$r > threshold),
+    threshold = threshold,
+    max_absolute_r = max(abs(pairs$r)),
+    most_correlated = paste(pairs$a[1], "against", pairs$b[1]),
+    stringsAsFactors = FALSE
+  )
+
+  list(matrix = correlation, pairs = pairs, summary = summary)
+}

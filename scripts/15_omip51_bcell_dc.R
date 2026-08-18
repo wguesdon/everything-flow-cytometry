@@ -160,19 +160,13 @@ CorrelationSummary <- function(frame, matrix_used, label) {
                                          scatter)
   events <- values[singlets, panel$channel, drop = FALSE]
   colnames(events) <- panel$name
-  rows <- withr::with_seed(kSeed, sample(nrow(events),
-                                         min(100000, nrow(events))))
-  correlation <- stats::cor(events[rows, ])
-  pairs <- data.frame(
-    a = rep(rownames(correlation), times = ncol(correlation)),
-    b = rep(colnames(correlation), each = nrow(correlation)),
-    r = as.vector(correlation), stringsAsFactors = FALSE
-  )
-  pairs <- pairs[pairs$a < pairs$b, ]
+  result <- MarkerCorrelation(events, seed = kSeed, threshold = 0.5)
+  correlation <- result$matrix
   data.frame(
     compensation = label,
-    median_absolute_r = stats::median(abs(pairs$r)),
-    pairs_above_half = sum(pairs$r > 0.5), pairs = nrow(pairs),
+    median_absolute_r = result$summary$median_absolute_r,
+    pairs_above_half = result$summary$positive_pairs_above_threshold,
+    pairs = result$summary$pairs,
     cd19_against_cd14 = correlation["CD19", "CD14"],
     cd20_against_cd19 = correlation["CD20", "CD19"],
     igd_against_cd27 = correlation["IgD", "CD27"],

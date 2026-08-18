@@ -152,20 +152,13 @@ CorrelationSummary <- function(frame, spillover_matrix, label, donor) {
                                           scatter)
   events <- values[lymphocytes, channels$channel, drop = FALSE]
   colnames(events) <- channels$name
-  withr::with_seed(42, {
-    rows <- sample(nrow(events), min(100000, nrow(events)))
-  })
-  correlation <- stats::cor(events[rows, ])
-  pairs <- data.frame(
-    a = rep(rownames(correlation), times = ncol(correlation)),
-    b = rep(colnames(correlation), each = nrow(correlation)),
-    r = as.vector(correlation), stringsAsFactors = FALSE
-  )
-  pairs <- pairs[pairs$a < pairs$b, ]
+  result <- MarkerCorrelation(events, seed = 42, threshold = 0.5)
+  correlation <- result$matrix
   data.frame(
     donor = donor, compensation = label,
-    median_absolute_r = stats::median(abs(pairs$r)),
-    pairs_above_half = sum(pairs$r > 0.5), pairs = nrow(pairs),
+    median_absolute_r = result$summary$median_absolute_r,
+    pairs_above_half = result$summary$positive_pairs_above_threshold,
+    pairs = result$summary$pairs,
     cd4_against_cd8 = correlation["CD4", "CD8"],
     cd3_against_cd8 = correlation["CD3", "CD8"],
     cd16_against_viability = correlation["CD16", "viability"],

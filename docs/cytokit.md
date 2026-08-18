@@ -16,10 +16,12 @@ read only, because an FCS file is a measurement that cannot be taken again.
 ./cli/cytokit inspect     --data PATH              # panel, markers, compensation state
 ./cli/cytokit template    --data PATH --out FILE   # an empty gating template
 ./cli/cytokit definitions --data PATH --out FILE   # an empty cell type table
+./cli/cytokit compensate  --data PATH [--controls DIR] [--out DIR]
+                                      [--cofactor 150] [--seed INTEGER]
 ```
 
-Add `--recursive` when the FCS files sit below the folder you name. That is how
-a deposit arrives when you unzip it.
+Add `--recursive` when the FCS files sit below the data folder you name. That
+is how a deposit arrives when you unzip it.
 
 Start with `inspect`. Every later recipe reads what it prints.
 
@@ -30,7 +32,7 @@ Start with `inspect`. Every later recipe reads what it prints.
 | `inspect` | ready | Panel, markers, event counts, acquisition kind, compensation state |
 | `template` | ready | An empty openCyto gating template for this panel |
 | `definitions` | ready | An empty cell type definitions table for this panel |
-| `compensate` | planned | Spillover from single stains, and the correlation check |
+| `compensate` | ready | The stored matrix, and whether it lowers the correlation |
 | `gate` | planned | Run a template, write counts, a gate tree and the flow |
 | `cluster` | planned | FlowSOM and UMAP, inside a gate when asked |
 | `annotate` | planned | Label each cluster from a definitions table |
@@ -43,18 +45,47 @@ A recipe that `cytokit list` calls planned does not exist. It is not a command
 you can run, and an agent that invents one sends you to a failure that reads
 like your own fault.
 
+## Compensate
+
+`compensate` answers whether the data is compensated. The `APPLY COMPENSATION`
+keyword does not answer that question. The recipe correlates every marker pair
+before and after it applies the stored matrix, on arcsinh transformed values.
+Read the change between the rows and not the value on its own, because the
+recipe gates no events. A matrix that works lowers the median absolute
+correlation. A pair driven far negative is over compensated, so the count uses
+the absolute correlation.
+
+The recipe reads every event of one file and it names that file. Measure a
+second file when the run spans more than one day or one instrument.
+
+Use `--controls DIR` to compute a matrix from the single stain controls. The
+recipe compares that matrix with the stored one and draws both. The bundle
+checksums the control files as well as the samples, because the matrix depends
+on both.
+
+The recipe refuses a mass cytometry run. A mass cytometer counts an isotope, so
+there is no spillover to compensate.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--controls DIR` | The folder of single stain controls | None |
+| `--cofactor N` | The arcsinh cofactor | 150 |
+| `--unstained PATTERN` | The name pattern of the unstained control | `unstain` |
+| `--seed N` | The seed for every random draw | 42 |
+
+Set the seed once and the answer repeats. `flowStats::norm2Filter` draws a
+random subset while it gates each control, so an unseeded run moves the matrix
+between runs. The seed is recorded in `manifest.json`.
+
 ## The build order
 
-Each step depends on the one before it.
+`inspect`, `template`, `definitions` and `compensate` are ready. Build the
+remaining recipes in this order.
 
-1. `inspect`, and the shared parts of a recipe.
-2. `template` and `definitions`, because a panel the tool has not seen needs
-   both and nobody arrives with them.
-3. `compensate`.
-4. `gate`.
-5. `cluster` and `annotate`.
-6. `proportions` and `compare`.
-7. `claims` and `reproduce`.
+1. `gate`.
+2. `cluster` and `annotate`.
+3. `proportions` and `compare`.
+4. `claims` and `reproduce`.
 
 ## What a recipe writes
 
@@ -67,6 +98,11 @@ the tables and the figures, and four files that let the result be rebuilt.
 | `session_info.txt` | Every package version |
 | `REPRODUCE.md` | The command to run again |
 | `reader_notes.csv` | What the FCS reader reported, when it reported anything |
+
+`compensate` adds `marker_correlation.csv`, which holds one row per state, and
+`stored_matrix.csv` and `stored_matrix.svg` when the file carries a matrix.
+With `--controls` it also writes `computed_matrix.csv`, `computed_matrix.svg`,
+`control_match.csv` and `matrix_comparison.csv`.
 
 `template` and `definitions` write one file that you name, plus a `_notes.md`
 beside it. The notes are a separate file because openCyto reads the template
