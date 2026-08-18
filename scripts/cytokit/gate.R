@@ -46,7 +46,10 @@ Say <- function(...) cat(..., "\n", sep = "")
 # does not parse is the most common way for this recipe to fail.
 # openCyto prints one line per row while it parses, so the lines are collected
 # and reported with the rest.
-template_rows <- nrow(utils::read.csv(arguments$template, check.names = FALSE))
+template_rows_table <- utils::read.csv(arguments$template,
+                                      check.names = FALSE,
+                                      stringsAsFactors = FALSE)
+template_rows <- nrow(template_rows_table)
 read_template <- CollectNotes(tryCatch(ReadGatingTemplate(arguments$template),
                                        error = function(e) e))
 template <- read_template$value
@@ -155,6 +158,22 @@ if (!is.null(warnings_table) && nrow(warnings_table) > 0) {
   print(warnings_table, row.names = FALSE, digits = 4)
   Say("  A gate that keeps every event did not cut. A gate that keeps almost")
   Say("  none cut in the wrong place. Both look like a result in a table.")
+  Say("")
+  Say("  The gating_method of that row is the thing to change. On a marker")
+  Say("  with two clear modes, mindensity finds the valley between them. On a")
+  Say("  marker whose negative mode is the only clear one, tailgate cuts a")
+  Say("  fixed distance above it, and quantileGate cuts at a share of the")
+  Say("  negative control. flowClust with K=2 fits two populations and suits")
+  Say("  a scatter gate. Read the rows the template used:")
+  for (index in seq_len(nrow(warnings_table))) {
+    row <- template_rows_table[
+      template_rows_table$alias == warnings_table$population[index], ,
+      drop = FALSE]
+    if (nrow(row) == 1) {
+      Say("    ", row$alias, " uses ", row$gating_method, " on ", row$dims,
+          if (nzchar(row$gating_args)) paste0(" with ", row$gating_args) else "")
+    }
+  }
 } else {
   Say("\nEvery gate kept between 1 and 99.5 percent of its parent.")
 }

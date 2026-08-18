@@ -706,6 +706,31 @@ def check_gate(work: Path) -> list[Result]:
             )
         )
 
+    # A gate that cut in the wrong place has to name the remedy and not only
+    # the fault, or the caller tries one method at a time.
+    bad = work / "bad_template.csv"
+    bad.write_text(
+        "alias,pop,parent,dims,gating_method,gating_args,collapseDataForGating,"
+        "groupBy,preprocessing_method,preprocessing_args\n"
+        'nonDebris,+,root,"FSC-A,SSC-A",flowClust,K=2,,,,\n'
+        "live,-,nonDebris,VIVID / CD14,mindensity,,,,,\n"
+    )
+    status, output, seconds = run_cli(
+        ["gate", "--data", str(data), "--template", str(bad), "--out", str(work / "bad_out")]
+    )
+    names_method = "mindensity" in output and "tailgate" in output
+    results.append(
+        Result(
+            "gate",
+            "a gate that keeps almost none",
+            status == 0 and names_method,
+            "names the method it used and the ones to try"
+            if names_method
+            else first_error(output),
+            seconds,
+        )
+    )
+
     # A template that does not parse has to be refused with the command that
     # writes a valid one.
     broken = work / "broken.csv"
