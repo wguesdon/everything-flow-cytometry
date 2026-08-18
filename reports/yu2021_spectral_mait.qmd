@@ -54,9 +54,9 @@ verdicts <- ReadOutput("claim_verdicts.csv")
 ## Introduction
 
 A conventional analyser assigns one detector to one fluorochrome. A spectral
-analyser records the emission of every fluorochrome across 64 detectors and then
-solves for the contribution of each one, which is why a spectral panel carries
-35 markers where a conventional panel carries 20.
+analyser records the emission of every fluorochrome across many detectors and
+then solves for the contribution of each one. The panel in this deposit carries
+35 markers.
 
 This report uses FlowRepository FR-FCM-Z3WR, the flow cytometry deposit of Yu
 and colleagues [1]. The paper reports that circulating mucosal-associated

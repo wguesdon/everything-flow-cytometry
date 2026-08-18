@@ -172,8 +172,8 @@ the point of the paper. The two controls are still poor compensation controls.
 
 ### The finding: mode against median
 
-A spillover value of 164 percent appeared for one pair, which is not physical,
-so the cause was investigated.
+Two spillover values above 100 percent appeared under one configuration, which
+is not physical, so the cause was investigated.
 
 ```{r}
 #| label: method-sweep
