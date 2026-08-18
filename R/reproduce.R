@@ -121,7 +121,9 @@ MarkerFrequencyFromBooleans <- function(stats, markers) {
       marker = marker,
       positive_events = positive_events,
       total_events = total,
-      percent_positive = if (total == 0) NA_real_ else 100 * positive_events / total,
+      percent_positive = if (total == 0) NA_real_ else {
+        100 * positive_events / total
+      },
       stringsAsFactors = FALSE
     )
   })
@@ -219,7 +221,9 @@ FindPhenotype <- function(stats, phenotype) {
     population = basename(as.character(stats$population[hit])),
     count = stats$count[hit],
     total_events = total,
-    percent_of_parent = if (total == 0) NA_real_ else 100 * stats$count[hit] / total,
+    percent_of_parent = if (total == 0) NA_real_ else {
+      100 * stats$count[hit] / total
+    },
     stringsAsFactors = FALSE
   )
 }

@@ -85,7 +85,8 @@ ScoreAgainstStored <- function(computed, reference) {
   data.frame(
     channels = length(shared),
     max_difference_points = 100 * max(abs(a[off_diagonal] - b[off_diagonal])),
-    median_difference_points = 100 * stats::median(abs(a[off_diagonal] - b[off_diagonal])),
+    median_difference_points = 100 *
+      stats::median(abs(a[off_diagonal] - b[off_diagonal])),
     values_above_100_percent = sum(a[off_diagonal] > 1),
     correlation = stats::cor(a[off_diagonal], b[off_diagonal]),
     stringsAsFactors = FALSE

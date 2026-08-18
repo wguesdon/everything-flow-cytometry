@@ -231,7 +231,8 @@ GateSpectralFile <- function(path,
     if (marker %in% panel$channel) {
       return(marker)
     }
-    hit <- panel$channel[tolower(trimws(panel$marker)) == tolower(trimws(marker))]
+    wanted <- tolower(trimws(marker))
+    hit <- panel$channel[tolower(trimws(panel$marker)) == wanted]
     if (length(hit) == 0) {
       stop("No channel carries the marker '", marker, "'.")
     }

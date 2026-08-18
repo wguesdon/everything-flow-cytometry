@@ -67,7 +67,8 @@ ApplyLogicleTransform <- function(x, channels = NULL, reference = 1) {
     channels <- FluorescenceChannels(reference_frame)
   }
   if (length(channels) == 0) {
-    stop("No fluorescence channel was selected, so there is nothing to transform.")
+    stop("No fluorescence channel was selected, ",
+         "so there is nothing to transform.")
   }
 
   unknown <- setdiff(channels, flowCore::colnames(reference_frame))

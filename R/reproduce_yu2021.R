@@ -84,7 +84,8 @@ CompareBySex <- function(values, sex) {
     n_female = length(female), n_male = length(male),
     female_median = female_median, male_median = male_median,
     difference = female_median - male_median,
-    observed = if (female_median >= male_median) "female higher" else "male higher",
+    observed = if (female_median >= male_median) "female higher" else
+      "male higher",
     p_value = p_value,
     stringsAsFactors = FALSE
   )
@@ -117,7 +118,8 @@ CorrelateWithSeverity <- function(values, severity_index) {
     n = length(values),
     rho = unname(test$estimate),
     p_value = test$p.value,
-    observed = if (test$estimate < 0) "falls with severity" else "rises with severity",
+    observed = if (test$estimate < 0) "falls with severity" else
+      "rises with severity",
     stringsAsFactors = FALSE
   )
 }
@@ -336,7 +338,8 @@ TestYuClaims <- function(claims, measures, alpha = 0.05) {
       }
       return(Row(
         claim,
-        sprintf("IgG %s, female median %.2f against male median %.2f, n = %d and %d",
+        sprintf(paste("IgG %s, female median %.2f against male median",
+                      "%.2f, n = %d and %d"),
                 tolower(wanted_result), result$female_median,
                 result$male_median,
                 result$n_female, result$n_male),

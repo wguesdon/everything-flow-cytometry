@@ -183,10 +183,12 @@ MatchControlsToChannels <- function(flow_set,
   # two markers cannot resolve a channel.
   panel_token <- AntibodyToken(panel$marker)
   unique_token <- panel_token[!duplicated(panel_token) &
-                                !(panel_token %in% panel_token[duplicated(panel_token)])]
+                                !(panel_token %in%
+                                    panel_token[duplicated(panel_token)])]
   token_hit <- match(AntibodyToken(stains), panel_token)
   token_is_unique <- AntibodyToken(stains) %in% unique_token
-  use_token <- is.na(channel) & !is_unstained & !is.na(token_hit) & token_is_unique
+  use_token <- is.na(channel) & !is_unstained & !is.na(token_hit) &
+    token_is_unique
   channel[use_token] <- panel$channel[token_hit[use_token]]
   marker[use_token] <- panel$marker[token_hit[use_token]]
   matched_by[use_token] <- "antibody"
@@ -236,7 +238,8 @@ WriteMatchFile <- function(match_table, path, keep_unstained = NULL) {
   unstained_rows <- which(usable$channel == "unstained")
   if (length(unstained_rows) == 0) {
     stop(
-      "No unstained control was found. flowStats::spillover_ng() needs one row ",
+      "No unstained control was found. flowStats::spillover_ng() needs ",
+      "one row ",
       "whose channel is 'unstained'."
     )
   }
@@ -522,7 +525,8 @@ CheckControlQuality <- function(flow_set,
   unstained_files <- match_table$filename[match_table$channel == "unstained" &
                                             !is.na(match_table$channel)]
   if (length(unstained_files) == 0) {
-    stop("The match table names no unstained control, so no threshold can be set.")
+    stop("The match table names no unstained control, ",
+         "so no threshold can be set.")
   }
 
   unstained <- flowCore::exprs(flow_set[[unstained_files[1]]])

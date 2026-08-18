@@ -390,7 +390,8 @@ SelectAndScore <- function(features, labels, training) {
 
   candidates <- sort(unique(oriented[training & is.finite(oriented)]))
   if (length(candidates) < 2) {
-    stop("The selected feature takes fewer than two values on the training half")
+    stop("The selected feature takes fewer than two values on the ",
+         "training half")
   }
   midpoints <- (candidates[-1] + candidates[-length(candidates)]) / 2
   accuracy <- vapply(midpoints, function(threshold) {

@@ -727,7 +727,8 @@ verdicts <- rbind(verdicts, data.frame(
 # Claim 12. Where the reference operator ranks.
 rop_rank <- do.call(rbind, lapply(
   split(operator_performance[operator_performance$analysis == "local", ],
-        operator_performance$material[operator_performance$analysis == "local"]),
+        operator_performance$material[
+          operator_performance$analysis == "local"]),
   function(piece) {
     piece <- piece[order(piece$median_absolute_z), ]
     data.frame(
@@ -821,7 +822,8 @@ verdicts <- rbind(verdicts, data.frame(
     stats::median(size_check$parent_median_cv),
     stats::median(size_check$subset_median_cv)
   ),
-  verdict = if (all(size_check$parent_median_cv < size_check$subset_median_cv)) {
+  verdict = if (all(size_check$parent_median_cv <
+                    size_check$subset_median_cv)) {
     "reproduced"
   } else {
     "partly reproduced"

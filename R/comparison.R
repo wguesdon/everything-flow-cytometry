@@ -133,7 +133,8 @@ CompareGatingResults <- function(manual_stats, automated_stats,
 #' @export
 JudgeAgreement <- function(comparison, tolerance_points = 5) {
   if (!"difference" %in% colnames(comparison)) {
-    stop("comparison has no 'difference' column. Run CompareGatingResults first.")
+    stop("comparison has no 'difference' column. ",
+         "Run CompareGatingResults first.")
   }
   if (tolerance_points <= 0) {
     stop("tolerance_points must be above zero, not ", tolerance_points, ".")

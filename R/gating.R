@@ -144,7 +144,9 @@ SummarisePopulationSpread <- function(stats, group_by = NULL) {
     out$n <- length(values)
     out$mean_percent <- mean_value
     out$sd_percent <- sd_value
-    out$cv_percent <- if (mean_value == 0) NA_real_ else 100 * sd_value / mean_value
+    out$cv_percent <- if (mean_value == 0) NA_real_ else {
+      100 * sd_value / mean_value
+    }
     out
   })
 

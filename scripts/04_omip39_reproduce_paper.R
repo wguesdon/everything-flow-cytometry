@@ -176,7 +176,8 @@ combination_table <- rbind(
   cbind(branch = "NKG2C-", manual_neg[, c("population", "count",
                                           "percent_of_parent")])
 )
-combination_table$population <- basename(as.character(combination_table$population))
+combination_table$population <- basename(
+  as.character(combination_table$population))
 write.csv(combination_table,
           file.path(kOutputDir, "boolean_combinations_manual.csv"),
           row.names = FALSE)

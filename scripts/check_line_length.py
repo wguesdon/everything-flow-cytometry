@@ -3,9 +3,13 @@
 The rule is 80 characters for R and 100 for Python. A rule nobody measures is a
 rule nobody keeps, and a sweep in August 2026 found 225 R lines over the limit.
 
-A line that cannot be broken without hurting it is exempt: a URL, a file path
-and a roxygen `@examples` line that has to stay runnable. Those are recognised
-rather than listed, so the exemption cannot rot.
+A line that cannot be broken without hurting it is exempt. That covers a URL, a
+single token longer than the limit, a roxygen `@examples` line that has to stay
+runnable, and a line that is one long string on a short piece of code. The last
+one is the widest, so it is bounded: the code around the string has to be 20
+characters or less, which leaves a call with several arguments and a long
+message still reported. Every exemption is recognised from the line rather than listed
+by name, so none of them can rot.
 
 Run it from the repository root:
 
@@ -16,6 +20,7 @@ Run it from the repository root:
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 from typing import NamedTuple
 
@@ -48,11 +53,12 @@ SKIPPED_PARTS = frozenset({".venv", "venv", "__pycache__", "site-packages",
                            "node_modules", ".git"})
 
 
-def is_exempt(line: str) -> bool:
+def is_exempt(line: str, in_examples: bool = False) -> bool:
     """Say whether a long line is one that cannot be broken.
 
     Args:
         line: The line, without its newline.
+        in_examples: Whether the line sits in a roxygen `@examples` block.
 
     Returns:
         True when the line holds something that a break would damage.
@@ -60,11 +66,21 @@ def is_exempt(line: str) -> bool:
     stripped = line.strip()
     if "http://" in stripped or "https://" in stripped:
         return True
-    # A roxygen example has to stay runnable as one expression.
-    if stripped.startswith("#' ") and ("::" in stripped and "(" in stripped):
-        return False
+    # A roxygen example has to stay runnable as one expression, and the reader
+    # copies it whole.
+    if in_examples:
+        return True
     # A long single token, such as a path or a checksum, has no break point.
-    return max((len(word) for word in stripped.split()), default=0) > 60
+    if max((len(word) for word in stripped.split()), default=0) > 60:
+        return True
+    # One long string on a short line of code. The code is a wrapper and the
+    # string is the content, which covers a test description, a figure title, a
+    # sprintf format and a file name from a deposit. Breaking one of those turns
+    # a sentence into a concatenation, which reads worse and cannot be grepped.
+    # The line still has to be almost all string: 20 characters of code is the
+    # ceiling, so a call with several arguments and a long message is reported.
+    without_strings = re.sub(r'"[^"]*"|\'[^\']*\'', '""', stripped)
+    return len(without_strings) <= 20 and stripped.count('"') >= 2
 
 
 def main() -> int:
@@ -89,8 +105,14 @@ def main() -> int:
                 # A script may hold a byte that is not UTF-8, and a length check
                 # is not the place to stop for it.
                 text = path.read_text(encoding="utf-8", errors="replace")
+                in_examples = False
                 for number, line in enumerate(text.splitlines(), start=1):
-                    if len(line) > rule.limit and not is_exempt(line):
+                    stripped = line.lstrip()
+                    if stripped.startswith("#'") and "@" in stripped:
+                        in_examples = "@examples" in stripped
+                    elif not stripped.startswith("#'"):
+                        in_examples = False
+                    if len(line) > rule.limit and not is_exempt(line, in_examples):
                         offenders.append((path.relative_to(REPO_ROOT), number, len(line)))
 
         print(f"{rule.name}: {files} file(s), limit {rule.limit}, "

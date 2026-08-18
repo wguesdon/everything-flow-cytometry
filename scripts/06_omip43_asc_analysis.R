@@ -756,7 +756,8 @@ verdict_rows <- list(
     3,
     paste0(sum(counting_claims$meets_cv_target), " of ",
            nrow(counting_claims), " tissues at or below 5 percent"),
-    if (all(counting_claims$meets_cv_target)) "reproduced" else "partly reproduced",
+    if (all(counting_claims$meets_cv_target)) "reproduced" else
+      "partly reproduced",
     "Met in spleen and tonsil, missed in blood and bone marrow."
   ),
   Verdict(
@@ -778,7 +779,8 @@ verdict_rows <- list(
     sprintf("CD19 median %.0f to %.0f across tissues, CV %.1f%%",
             min(phenotype$cd19_asc), max(phenotype$cd19_asc),
             MeasuredCv(phenotype$cd19_asc)),
-    if (MeasuredCv(phenotype$cd19_asc) > 5) "reproduced" else "too small to call",
+    if (MeasuredCv(phenotype$cd19_asc) > 5) "reproduced" else
+      "too small to call",
     "Lowest in bone marrow and highest in tonsil."
   ),
   Verdict(
@@ -786,7 +788,8 @@ verdict_rows <- list(
     sprintf("HLA-DR median %.0f to %.0f across tissues, CV %.1f%%",
             min(phenotype$hladr_asc), max(phenotype$hladr_asc),
             MeasuredCv(phenotype$hladr_asc)),
-    if (MeasuredCv(phenotype$hladr_asc) > 5) "reproduced" else "too small to call",
+    if (MeasuredCv(phenotype$hladr_asc) > 5) "reproduced" else
+      "too small to call",
     "The paper also names Ki67 here. The PE channel in these files carries HLA-DR, so Ki67 is not measurable."
   )
 )
@@ -890,7 +893,8 @@ for (tissue in kTissues) {
 }
 
 cluster_phenotype <- do.call(rbind, cluster_phenotype_rows)
-cluster_phenotype$ssc_ratio <- cluster_phenotype$ssc_asc / cluster_phenotype$ssc_other
+cluster_phenotype$ssc_ratio <- cluster_phenotype$ssc_asc /
+  cluster_phenotype$ssc_other
 cluster_phenotype$cd20_difference <- cluster_phenotype$cd20_asc -
   cluster_phenotype$cd20_other
 write.csv(cluster_phenotype, file.path(kOutputDir,
@@ -904,20 +908,23 @@ print(cluster_phenotype[, c("tissue", "asc_percent", "manual_percent",
       digits = 3, row.names = FALSE)
 
 # The same claims, scored against this population.
-cluster_pbmc <- cluster_phenotype$asc_percent[cluster_phenotype$tissue == "PBMC"]
-cluster_others <- cluster_phenotype$asc_percent[cluster_phenotype$tissue != "PBMC"]
+is_pbmc <- cluster_phenotype$tissue == "PBMC"
+cluster_pbmc <- cluster_phenotype$asc_percent[is_pbmc]
+cluster_others <- cluster_phenotype$asc_percent[!is_pbmc]
 
 route_rows <- list(
   Verdict(1,
           sprintf("PBMC %.2f%%, others %.2f to %.2f%%", cluster_pbmc,
                   min(cluster_others), max(cluster_others)),
-          if (all(cluster_pbmc < cluster_others)) "reproduced" else "not reproduced",
+          if (all(cluster_pbmc < cluster_others)) "reproduced" else
+            "not reproduced",
           "Tested on clusters, not on the manual gate."),
   Verdict(4,
           sprintf("side scatter ratio %.2f to %.2f",
                   min(cluster_phenotype$ssc_ratio),
                   max(cluster_phenotype$ssc_ratio)),
-          if (all(cluster_phenotype$ssc_ratio > 1)) "reproduced" else "not reproduced",
+          if (all(cluster_phenotype$ssc_ratio > 1)) "reproduced" else
+            "not reproduced",
           "Tested on clusters, not on the manual gate."),
   Verdict(5,
           sprintf("CD20 difference %.1f to %.1f",

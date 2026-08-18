@@ -90,7 +90,9 @@ if (!dir.exists(kDataDir)) {
 #'   one at the cost of the other.
 ScoreSelection <- function(selected, truth) {
   true_positive <- sum(selected & truth)
-  precision <- if (sum(selected) == 0) 0 else 100 * true_positive / sum(selected)
+  precision <- if (sum(selected) == 0) 0 else {
+    100 * true_positive / sum(selected)
+  }
   recall <- if (sum(truth) == 0) NA_real_ else 100 * true_positive / sum(truth)
   f1 <- if (is.na(recall) || precision + recall == 0) {
     0

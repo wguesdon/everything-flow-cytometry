@@ -40,7 +40,8 @@ ExtractSpillover <- function(frame) {
   if (length(filled) == 0) {
     stop(
       "This flowFrame carries no spillover matrix. ",
-      "Compute one from single stained controls with ComputeSpilloverFromControls() ",
+      "Compute one from single stained controls with ",
+      "ComputeSpilloverFromControls() ",
       "or with flowStats::spillover_ng()."
     )
   }

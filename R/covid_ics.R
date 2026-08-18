@@ -164,7 +164,11 @@ GateCovidFile <- function(path, minimum_events = 100) {
   }
 
   Percent <- function(mask, parent_size) {
-    if (parent_size < minimum_events) NA_real_ else 100 * sum(mask) / parent_size
+    if (parent_size < minimum_events) {
+      NA_real_
+    } else {
+      100 * sum(mask) / parent_size
+    }
   }
 
   cd3_cut <- Cut("CD3", events[, channels[["CD3"]]], "root")

@@ -262,8 +262,9 @@ GateOmip51File <- function(path, spillover, thresholds = NULL,
   Cut <- function(parent, name, keep, label) {
     empty <- rep(FALSE, total)
     column <- values[parent, Channel(name)]
-    density_cut <- if (sum(parent) < min_events) NA_real_ else DensityCut(column)
-    mixture_cut <- if (sum(parent) < min_events) NA_real_ else MixtureCut(column)
+    too_few <- sum(parent) < min_events
+    density_cut <- if (too_few) NA_real_ else DensityCut(column)
+    mixture_cut <- if (too_few) NA_real_ else MixtureCut(column)
     threshold <- if (is.null(thresholds)) density_cut else
       unname(thresholds[[name]])
     # The fraction each candidate cut would keep is recorded next to the cut

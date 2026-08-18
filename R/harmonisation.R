@@ -292,7 +292,8 @@ StableTimeWindow <- function(frame, time_channel, bins = 100,
   }
 
   reference <- stats::median(counts[counts > 0])
-  passes <- counts >= reference * tolerance[1] & counts <= reference * tolerance[2]
+  passes <- counts >= reference * tolerance[1] &
+    counts <= reference * tolerance[2]
 
   runs <- rle(passes)
   if (!any(runs$values)) {
