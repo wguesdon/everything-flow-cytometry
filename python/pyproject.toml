@@ -12,9 +12,14 @@ dependencies = [
     # Read and prepare FCS files
     "flowkit>=1.2",
     "readfcs>=2.0",
+    # Cytometry on an AnnData object: compensation, transforms, plots
+    "pytometry>=0.1.6",
     # Downstream analysis on an AnnData object
     "anndata>=0.11",
     "scanpy>=1.11",
+    # The graph and the community detection that scanpy leiden calls
+    "igraph>=1.0",
+    "leidenalg>=0.12",
     # Arrays, tables and figures
     "numpy>=2.1",
     "pandas>=2.2",
