@@ -1,8 +1,8 @@
 # Gate the OMIP-058 deposit and hand the result to Python.
 #
 # FR-FCM-ZYRN holds two PBMC files acquired on a 28 colour panel, together with
-# 57 single stained compensation controls. The panel is described in Liechti and
-# Roederer, Cytometry A 2019;95(9):946-951.
+# 59 compensation controls, 55 of them single stains. The panel is described in
+# Liechti and Roederer, Cytometry A 2019;95(9):946-951.
 #
 # Every file of the deposit stores a spillover matrix that is exactly the
 # identity, alongside the keyword `APPLY COMPENSATION` set to TRUE. The keyword
@@ -15,7 +15,7 @@
 # no matrix was supplied rather than that none is needed.
 #
 # The matrix is therefore computed from the deposited single stains, which is
-# why the deposit ships 57 of them.
+# why the deposit ships 55 of them.
 #
 # The gate hierarchy follows Figure 1A to 1D of the paper. It stops at the CD3
 # split, because the populations below that split are what the Python side is
@@ -512,16 +512,20 @@ AssessOneDimensionalCuts <- function(values, channels, parent, markers) {
 GateOmip58File <- function(path, spillover, cofactor = 150,
                            min_events = 200) {
   frame <- flowCore::read.FCS(path, truncate_max_range = FALSE)
-  state <- ReadCompensationState(frame)
-  channels <- ResolveOmip58Channels(frame)
-  scatter <- Omip58ScatterChannels(frame)
 
+  # The argument is checked before any work is done on the file, so a matrix
+  # that does not belong to this panel is reported as such rather than as a
+  # missing marker.
   absent <- setdiff(rownames(spillover), flowCore::colnames(frame))
   if (length(absent) > 0) {
     stop("The spillover matrix names ", length(absent),
          " detector(s) that the file does not carry: ",
          paste(absent, collapse = ", "), ".")
   }
+
+  state <- ReadCompensationState(frame)
+  channels <- ResolveOmip58Channels(frame)
+  scatter <- Omip58ScatterChannels(frame)
   frame <- flowCore::compensate(frame, spillover)
 
   values <- TransformOmip58(flowCore::exprs(frame), channels$channel, cofactor)

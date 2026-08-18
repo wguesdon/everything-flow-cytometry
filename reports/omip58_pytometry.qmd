@@ -1,0 +1,571 @@
+---
+title: "Compensation, gating and clustering of a 28 colour T cell panel in R and Python"
+subtitle: "The OMIP-058 deposit, FR-FCM-ZYRN, two PBMC donors on a 30 parameter panel"
+author: "William Guesdon"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: show
+    code-tools: true
+    embed-resources: true
+    theme: cosmo
+    fig-width: 9
+    fig-height: 6
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(knitr)
+})
+
+kOutputDir <- file.path("..", "output", "omip58")
+
+ReadOutput <- function(name) {
+  path <- file.path(kOutputDir, name)
+  if (!file.exists(path)) {
+    stop(
+      "The analysis output is missing: ", path, "\n",
+      "Run scripts/13_omip58_prepare.R and then ",
+      "scripts/14_omip58_pytometry.py. ",
+      "See the section 'Reproducing this'."
+    )
+  }
+  read.csv(path, check.names = FALSE)
+}
+
+OutputImage <- function(name) {
+  file.path(kOutputDir, name)
+}
+
+verdicts <- ReadOutput("claim_verdicts.csv")
+correlations <- ReadOutput("marker_correlation.csv")
+counts <- ReadOutput("gate_counts.csv")
+```
+
+## Introduction
+
+Liechti and Roederer published OMIP-058, a 30 parameter panel that resolves
+invariant natural killer T cells, natural killer cells, and unconventional and
+conventional T cells from peripheral blood mononuclear cells [1]. The panel
+carries 28 fluorescence markers, among them CD1d:PBS57 tetramer for invariant
+natural killer T cells, T cell receptor Vδ1, Vδ2 and Vγ9 for γδ subsets, Vα7.2
+with CD161 for mucosal associated invariant T cells, and CD3, CD4, CD8, CCR7 and
+CD45RA for conventional subsets.
+
+The deposit FR-FCM-ZYRN holds two PBMC files, one per donor, and 59 compensation
+controls, 29 on beads and 30 on cells. Four of the 59 are unstained, so 55 are
+single stains. It carries no analysis workspace and no fluorescence minus one
+control.
+
+This report divides the analysis between two languages. R reads the deposit,
+computes the spillover matrix from the single stains, applies it, removes the
+out of range events, the doublets, the debris and the dead cells, separates the
+T cells from the rest, and writes each population to disk as FCS. Python reads
+those files with pytometry, embeds them, and assigns each cluster to a
+population of the panel. The report measures what each half resolves and what it
+does not.
+
+## Methods
+
+### The dataset
+
+FR-FCM-ZYRN holds two PBMC files acquired on a BD LSRFortessa, of 874,203 and
+1,078,749 events, each with 32 parameters. The compensation controls are 29 bead
+files of 20,000 events each and 30 cell files, 27 of which hold 300,000 events.
+Every marker of the gate hierarchy is resolved to its detector by matching one
+token of the antibody name, because `cd16` is a substring of `cd161` and a
+substring rule resolves CD16 to the CD161 detector.
+
+### Preprocessing
+
+Every file of the deposit stores a spillover matrix that is exactly the identity
+and the keyword `APPLY COMPENSATION` set to TRUE. The matrix used here is
+computed from the deposited single stains with `flowStats::spillover_ng`,
+summarising each stained population by its median rather than its mode, because
+a cell control for a marker that a minority of cells carry puts the mode on the
+negative population. Each control is gated on its own detector before the matrix
+is computed, and a control whose gate leaves fewer than 500 events is left out
+and named.
+
+Fluorescence is transformed with an inverse hyperbolic sine at a cofactor of
+150. One cofactor is used for every channel, every file and both languages, so a
+threshold means the same thing on either side of the handoff.
+
+### Gating
+
+The hierarchy follows Figure 1A of the paper. Events outside the digitiser range
+are removed first, because forward scatter runs to 115,422,144 against a stated
+range of 262,144. Doublets are removed on the ratio of forward scatter height to
+area, with the cut placed three median absolute deviations below the median of
+that ratio. Lymphocytes are gated by cutting side scatter at the density minimum
+above the lowest mode and then fitting a robust bivariate centre inside that
+population. Dead cells are removed on the viability channel and T cells are
+separated on CD3, each at a fitted density minimum.
+
+The hierarchy stops at CD3. Every cut below it is reported rather than applied,
+in the table of one dimensional cuts.
+
+### The handoff
+
+R writes each population as an FCS file carrying the compensated and
+untransformed values, alongside a manifest naming the donor, the population, the
+event count and the source file. No transform is applied before writing, so the
+Python side chooses its own and the file stays readable by any cytometry tool.
+
+### Clustering
+
+Python reads the files with `pytometry.io.read_fcs`, drops the scatter and time
+parameters, and applies the same arcsinh transform. Events are sampled to
+100,000 per donor, which keeps the two donors equally represented whatever their
+event counts. The values are scaled, reduced to 20 principal components, and
+embedded in a neighbour graph of 30 neighbours. Communities are found with the
+Leiden algorithm at resolution 1.0 and the embedding is drawn with UMAP. Every
+step takes a fixed seed.
+
+Each cluster is labelled against a table of population definitions. Every marker
+is first called positive or negative across the clusters, and a definition
+scores the fraction of the markers it names that a cluster matches. A marker
+whose cluster medians do not split into two levels does not vote, and a
+definition that loses more than half of its markers that way is not scored at
+all.
+
+### Statistics
+
+Spillover is measured by the correlation between marker pairs inside the
+lymphocyte gate, on 100,000 sampled events. Two detectors that carry spillover
+move together whatever the biology says, so the median absolute correlation over
+every pair measures how much spillover remains without needing a gate or a
+threshold. Whether a distribution carries one level or two is judged by the
+Bayesian information criterion of a one component against a two component
+Gaussian mixture.
+
+### Software
+
+The R half uses flowCore, flowStats, robustbase and ggplot2. The Python half
+uses pytometry, scanpy, anndata, readfcs, igraph, leidenalg, scikit-learn, numpy
+and pandas. Every version is pinned in the container and in `uv.lock`.
+
+## Part 1: what the deposit says about its compensation, and what the data says
+
+```{r}
+#| label: compensation-state
+
+kable(
+  ReadOutput("compensation_state.csv"),
+  digits = 4,
+  caption = "The compensation keywords of the two PBMC files.",
+  col.names = c("Donor", "APPLY COMPENSATION", "Matrix size",
+                "Largest off diagonal", "State")
+)
+```
+
+Both files carry `APPLY COMPENSATION` set to TRUE and a 28 by 28 matrix whose
+largest off diagonal value is zero. Read on its own, that pair says the values
+were compensated at export and nothing remains to apply.
+
+The events say otherwise.
+
+```{r}
+#| label: correlations
+
+kable(
+  correlations,
+  digits = 3,
+  caption = "Correlation between markers inside the lymphocyte gate, on 100,000 sampled events per donor.",
+  col.names = c("Donor", "Compensation", "Median absolute r",
+                "Pairs above 0.5", "Pairs", "CD4 with CD8", "CD3 with CD8",
+                "CD16 with viability")
+)
+```
+
+```{r}
+#| label: correlation-figure
+#| fig-cap: "The median absolute correlation over all 153 marker pairs, for each donor and each matrix. A compensated 28 colour file has no reason for two markers to move together."
+
+ggplot(correlations,
+       aes(x = compensation, y = median_absolute_r, fill = donor)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  labs(x = NULL, y = "Median absolute correlation over 153 marker pairs",
+       fill = "Donor") +
+  theme_minimal(base_size = 12)
+```
+
+As deposited, the median absolute correlation over the 153 marker pairs is 0.585
+in the first donor and 0.516 in the second. CD4 and CD8 correlate at 0.710 and
+0.700, where a T cell carries one or the other. CD3 and CD8, whose fluorochromes
+sit on adjacent violet detectors, correlate at 0.938 and 0.921. CD16 and the
+viability dye, on adjacent ultraviolet detectors and joined by no biology,
+correlate at 0.866 and 0.894.
+
+The identity matrix therefore records that no matrix was supplied, not that none
+is needed.
+
+## Part 2: the matrix computed from the single stains
+
+```{r}
+#| label: gateability
+
+gateable <- ReadOutput("control_gateability.csv")
+summary_table <- aggregate(
+  gateable ~ control_set, data = gateable,
+  FUN = function(x) c(usable = sum(x), total = length(x))
+)
+kable(
+  data.frame(
+    control_set = summary_table$control_set,
+    usable = summary_table$gateable[, "usable"],
+    total = summary_table$gateable[, "total"]
+  ),
+  caption = "How many controls of each set could be gated on their own detector.",
+  col.names = c("Control set", "Usable", "Total")
+)
+```
+
+```{r}
+#| label: dropped
+
+dropped <- gateable[!gateable$gateable,
+                    c("control_set", "stain", "channel", "gated_events")]
+kable(
+  dropped,
+  caption = "Every control that could not be gated, with the events its gate returned.",
+  col.names = c("Control set", "Stain", "Detector", "Events after the gate")
+)
+```
+
+The cell controls yield 27 usable stains of 28. The one that fails is CD244
+BB660, whose gate returns no events. No gate in the hierarchy reads that
+detector.
+
+The bead controls yield 24 of 27. The CD4 control gates to 11 events and the CD3
+control to 22, so the bead matrix carries no row for either marker.
+
+```{r}
+#| label: spillover-heatmap
+#| fig-cap: "The spillover matrix computed from the cell single stains. The diagonal is dropped, because it is 1 everywhere and would set the colour scale."
+
+knitr::include_graphics(OutputImage("spillover_heatmap.png"))
+```
+
+```{r}
+#| label: agreement
+
+kable(
+  ReadOutput("spillover_agreement.csv"),
+  digits = 3,
+  caption = "The two matrices compared on the detectors they share.",
+  col.names = c("Shared detectors", "Correlation", "Cells only", "Beads only")
+)
+```
+
+The two matrices agree at a correlation of 0.687 on the 23 detectors they share.
+The cell matrix is the one applied here. It covers the viability detector, which
+no bead can stain, and a matrix that leaves that detector out cannot correct the
+spillover between it and CD16.
+
+The difference shows in the result. The bead matrix takes the median absolute
+correlation from 0.585 to 0.211 in the first donor and leaves CD4 with CD8 at
+0.687, because it has no row for either marker. The cell matrix takes the same
+donor to 0.168 and CD4 with CD8 to -0.311, which is the sign a mutually
+exclusive pair should carry.
+
+## Part 3: the gate and the handoff
+
+```{r}
+#| label: gate-counts
+
+kable(
+  counts[, c("donor", "population", "events", "percent_of_parent")],
+  digits = 2,
+  caption = "The gate hierarchy, for each donor.",
+  col.names = c("Donor", "Population", "Events", "Percent of parent")
+)
+```
+
+```{r}
+#| label: gate-cuts
+
+kable(
+  ReadOutput("gate_cuts.csv"),
+  digits = 3,
+  caption = "The two fitted cuts of the hierarchy, on the arcsinh scale.",
+  col.names = c("Donor", "Gate", "Marker", "Detector", "Cut", "Rule",
+                "Parent events")
+)
+```
+
+Between 92.6 and 93.8 percent of lymphocytes are viable, and between 61.9 and
+65.8 percent of live lymphocytes are CD3 positive. Both cuts are placed at a
+density minimum between two separated modes.
+
+```{r}
+#| label: manifest
+
+kable(
+  read.csv(file.path(kOutputDir, "handoff", "manifest.csv"),
+           check.names = FALSE)[, c("file", "donor", "population", "events")],
+  caption = "What R wrote to disk for the Python side to read.",
+  col.names = c("File", "Donor", "Population", "Events")
+)
+```
+
+## Part 4: what a one dimensional cut does below CD3
+
+```{r}
+#| label: one-dimensional
+
+kable(
+  ReadOutput("one_dimensional_cuts.csv"),
+  digits = 3,
+  caption = "A density or mixture cut fitted on each rare marker, and the share of the parent it selects.",
+  col.names = c("Donor", "Marker", "Detector", "Cut", "Rule",
+                "Percent selected", "Parent")
+)
+```
+
+The tetramer cut selects 48.7 percent of CD3 positive cells in the first donor
+and 53.2 percent in the second, for a population the paper places below 1
+percent of lymphocytes. The Vδ1 cut selects 62.7 and 54.0 percent, and the Vγ9
+cut 80.1 and 42.1 percent, for subsets that make up a few percent of blood T
+cells. The Vα7.2 cut returns nothing at all in the first donor and 2.0 percent
+in the second.
+
+These markers are unimodal inside CD3 positive cells. A rule that looks for a
+second mode either finds nothing, which is visible, or places the cut inside the
+negative population and returns a number, which is not. The deposit carries no
+fluorescence minus one control against which either failure could be corrected.
+
+## Part 5: the clustering
+
+```{r}
+#| label: umap
+#| fig-cap: "The 200,000 sampled live lymphocytes, embedded with UMAP and coloured by the label each cluster received."
+
+knitr::include_graphics(OutputImage("umap_cell_type.png"))
+```
+
+```{r}
+#| label: umap-donor
+#| fig-cap: "The same embedding coloured by donor. The two donors occupy the same regions, so the clusters are not an artefact of one file."
+
+knitr::include_graphics(OutputImage("umap_donor.png"))
+```
+
+```{r}
+#| label: separation
+
+kable(
+  ReadOutput("marker_separation.csv"),
+  digits = 3,
+  caption = "How cleanly each marker splits the clusters into two levels. Separation is the gap between the dimmest positive cluster and the brightest negative one, divided by the full range of the marker.",
+  col.names = c("Marker", "Positive clusters", "Gap", "Separation",
+                "Informative")
+)
+```
+
+The Leiden algorithm returns 24 clusters. Eight markers split those clusters
+into two levels: HLA-DR at a separation of 0.456, CD4 at 0.428, CD56 at 0.278,
+CD8 at 0.236, CD45RA at 0.216, CD3 at 0.177, Vα7.2 at 0.165, Vγ9 at 0.161 and
+CD16 at 0.122. Four do not: Vδ1 at 0.058, the tetramer at 0.058, CD161 at 0.057
+and Vδ2 at 0.057.
+
+Those four are the same markers that defeat a one dimensional cut in Part 4. The
+failure follows the marker and not the method.
+
+```{r}
+#| label: coverage
+
+kable(
+  ReadOutput("definition_coverage.csv"),
+  caption = "How many of the markers each population definition names still separate the clusters.",
+  col.names = c("Population", "Markers named", "Markers informative",
+                "Lost", "Scorable")
+)
+```
+
+```{r}
+#| label: cluster-heatmap
+#| fig-cap: "Median expression of every marker in every cluster, on the arcsinh scale, with the clusters grouped by the label they received."
+
+knitr::include_graphics(OutputImage("cluster_heatmap.png"))
+```
+
+```{r}
+#| label: labels
+
+kable(
+  ReadOutput("cluster_labels.csv"),
+  digits = 3,
+  caption = "Every cluster, the definition it best matched, and the margin over the runner up.",
+  col.names = c("Cluster", "Population", "Score", "Runner up", "Margin",
+                "Markers scored", "Events", "Percent of sample")
+)
+```
+
+```{r}
+#| label: frequencies
+
+kable(
+  ReadOutput("cluster_frequencies.csv"),
+  digits = 3,
+  caption = "The frequency of each labelled population, per donor, as a percentage of the sampled live lymphocytes.",
+  col.names = c("Donor", "Population", "Events", "Parent events",
+                "Percent of parent")
+)
+```
+
+CD4 T cells account for 43.8 and 51.6 percent of the sampled live lymphocytes,
+CD8 T cells for 20.8 and 10.3 percent, and HLA-DR positive non T cells for 7.0
+and 13.6 percent. MAIT cells account for 0.83 and 0.75 percent.
+
+Four populations keep too few informative markers to be scored: invariant
+natural killer T cells, both γδ subsets, and, through them, the comparison the
+paper draws between the two γδ subsets.
+
+## Part 6: every claim, with a verdict
+
+```{r}
+#| label: verdicts
+
+kable(
+  verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+  caption = "Every claim the paper makes that these two files could be asked to test.",
+  col.names = c("Claim", "What the paper says", "Expected", "Measured",
+                "Verdict")
+)
+```
+
+```{r}
+#| label: verdict-counts
+
+kable(
+  ReadOutput("verdict_counts.csv"),
+  caption = "How the ten claims came out.",
+  col.names = c("Verdict", "Claims")
+)
+```
+
+## Discussion
+
+### What this shows
+
+A deposit can carry a compensation keyword that is wrong, and the data will say
+so. `APPLY COMPENSATION` is TRUE on every file of FR-FCM-ZYRN and the stored
+matrix is the identity, yet CD4 and CD8 correlate at 0.710 inside the lymphocyte
+gate. The correlation between marker pairs is enough to settle it, and it needs
+neither a gate nor a threshold.
+
+Which single stains are used changes the answer. The cell controls and the bead
+controls agree at a correlation of 0.687 where they overlap, but the bead CD3
+and CD4 controls gate to 22 and 11 events, so the bead matrix has no row for
+either and leaves CD4 with CD8 at 0.687. The cell matrix takes that pair to
+-0.311.
+
+The two halves of the workflow fail on the same markers. Vδ1, Vδ2, the tetramer
+and CD161 defeat a fitted cut inside CD3 positive cells, and they also fail to
+split the 24 clusters into two levels. Compensation does not repair this, and it
+was measured after compensation.
+
+CCR7 and CD45RA behave differently. Both are bimodal inside the conventional T
+cell clusters and all four quadrants are occupied, which is the split the paper
+describes for naive, central memory, effector memory and terminally
+differentiated cells.
+
+### Where the workflow falls short
+
+Four of the ten claims concern populations the analysis could not measure, and
+they are recorded as unresolved rather than as a frequency of zero. An absent
+label is not a count.
+
+Two NK subsets of the three carry a cluster. CD56 is called positive in 22 of
+the 24 clusters, so the split between a CD56 bright and a CD56 positive cluster
+is not the split the paper draws, and the terminal subset takes no cluster of
+its own. The claim that mature NK cells are the largest of the three cannot be
+judged on two.
+
+The labelling is one automated procedure and not a curated analysis. The margins
+in the label table say which assignments are close, and several are close.
+
+### What this does not show
+
+The deposit holds two donors. Nothing here separates a difference between donors
+from a difference between experiments, and the paper itself draws every panel of
+its Figure 1 from one donor except the second plot of Figure 1B.
+
+The clustering reads 100,000 events per donor of the 599,922 and 633,490 that
+were gated. A population below a tenth of a percent of lymphocytes is
+represented by fewer than 100 events at that depth, which is a count that no
+clustering recovers reliably.
+
+A fluorescence minus one control would place a threshold on the four markers
+that defeat both halves of this workflow. The deposit carries none, and no
+method applied to these files alone supplies one.
+
+## Reproducing this
+
+```bash
+# Pull the accession, about 1.4 GB of the 103 GB archive
+./sync.sh pull datasets/flowrepository/FR-FCM-ZYRN
+
+# Build the container. Every package version is pinned and asserted at build time.
+./containers/build.sh
+
+# The R half: compensation, gating and the handoff
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  Rscript scripts/13_omip58_prepare.R
+
+# The Python half: clustering and the claim verdicts
+uv run --project python python scripts/14_omip58_pytometry.py
+
+# This report
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  quarto render reports/omip58_pytometry.qmd
+```
+
+The R half writes `output/omip58/handoff`, holding one FCS file per donor per
+population and a manifest. The Python half reads that folder and nothing else,
+so the two halves can run on different machines. Passing `--reuse-clustering`
+reads the saved embedding instead of building the neighbour graph again.
+
+The claims live in `gating/omip58_paper_claims.csv`, each with the sentence it
+came from, and the population definitions in
+`gating/omip58_cell_type_definitions.csv`.
+
+```{r}
+#| label: session-info
+
+sessionInfo()
+```
+
+## References
+
+[1] Liechti T, Roederer M. OMIP-058: 30-Parameter Flow Cytometry Panel to
+Characterize iNKT, NK, Unconventional and Conventional T Cells. Cytometry A
+2019;95(9):946-951. PMID 31334918. doi:10.1002/cyto.a.23850.
+
+[2] Hahne F, LeMeur N, Brinkman RR, Ellis B, Haaland P, Sarkar D, Spidlen J,
+Strain E, Gentleman R. flowCore: a Bioconductor package for high throughput flow
+cytometry. BMC Bioinformatics 2009;10:106. PMID 19358741.
+doi:10.1186/1471-2105-10-106.
+
+[3] Büttner M, Hempel F, Ryborz T, Theis FJ, Schultze JL. Pytometry: Flow and
+mass cytometry analytics in Python. bioRxiv 2022. doi:10.1101/2022.10.10.511546.
+
+[4] Wolf FA, Angerer P, Theis FJ. SCANPY: large-scale single-cell gene expression
+data analysis. Genome Biol 2018;19(1):15. PMID 29409532. PMC5802054.
+doi:10.1186/s13059-017-1382-0.
+
+[5] Traag VA, Waltman L, van Eck NJ. From Louvain to Leiden: guaranteeing
+well-connected communities. Sci Rep 2019;9(1):5233. PMID 30914743. PMC6435756.
+doi:10.1038/s41598-019-41695-z.

@@ -1,7 +1,7 @@
 # The R half of the OMIP-058 workflow.
 #
-# FR-FCM-ZYRN holds two PBMC files on a 28 colour panel and 57 single stained
-# compensation controls. This script computes the spillover matrix from those
+# FR-FCM-ZYRN holds two PBMC files on a 28 colour panel and 59 compensation
+# controls, 55 of them single stains. This script computes the spillover matrix from those
 # controls, applies it, removes the out of range events, the doublets, the
 # debris and the dead cells, splits the T cells from the rest, and writes the
 # result to disk as FCS.
