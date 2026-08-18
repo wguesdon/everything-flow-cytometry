@@ -83,10 +83,12 @@ if (!dir.exists(kDataDir)) {
 
 Log("Computing compensation from the single stained controls")
 control_set <- read.flowSet(
-  list.files(kDataDir, pattern = "^Single stainings.*\\.fcs$", full.names = TRUE),
+  list.files(kDataDir, pattern = "^Single stainings.*\\.fcs$",
+             full.names = TRUE),
   truncate_max_range = FALSE
 )
-match_table <- MatchControlsToChannels(control_set, unstained_pattern = "unstained")
+match_table <- MatchControlsToChannels(control_set,
+                                       unstained_pattern = "unstained")
 match_file <- file.path(kOutputDir, "spillover_match.csv")
 WriteMatchFile(match_table, match_file)
 computed_spillover <- ComputeSpilloverFromControls(
@@ -129,7 +131,8 @@ clustering <- RunFlowSomClustering(
 )
 
 Log("Running UMAP")
-embedding <- RunUmapEmbedding(subsample, channels = kLineageChannels, seed = kSeed)
+embedding <- RunUmapEmbedding(subsample, channels = kLineageChannels,
+                              seed = kSeed)
 
 Log("Summarising median expression per cluster")
 median_expression <- ClusterMedianExpression(
@@ -194,7 +197,8 @@ write.csv(
 
 Log("Writing figures")
 
-umap_by_type <- ggplot(plot_data, aes(x = umap_1, y = umap_2, colour = cell_type)) +
+umap_by_type <- ggplot(plot_data, aes(x = umap_1, y = umap_2,
+                       colour = cell_type)) +
   geom_point(size = 0.35, alpha = 0.6, shape = 16) +
   ScaleColourPublication(name = "Cell type") +
   LegendPoints() +
@@ -210,7 +214,8 @@ umap_by_type <- ggplot(plot_data, aes(x = umap_1, y = umap_2, colour = cell_type
 SaveFigure(umap_by_type, file.path(kOutputDir, "umap_cell_types.png"),
   width = 10, height = 7)
 
-umap_by_cluster <- ggplot(plot_data, aes(x = umap_1, y = umap_2, colour = cluster)) +
+umap_by_cluster <- ggplot(plot_data, aes(x = umap_1, y = umap_2,
+                          colour = cluster)) +
   geom_point(size = 0.35, alpha = 0.6, shape = 16) +
   ScaleColourPublication(name = "Metacluster") +
   LegendPoints() +
@@ -235,7 +240,8 @@ marker_long <- do.call(rbind, lapply(kLineageChannels, function(channel) {
   )
 }))
 
-umap_by_marker <- ggplot(marker_long, aes(x = umap_1, y = umap_2, colour = value)) +
+umap_by_marker <- ggplot(marker_long, aes(x = umap_1, y = umap_2,
+                         colour = value)) +
   geom_point(size = 0.25, alpha = 0.6, shape = 16) +
   facet_wrap(~marker, ncol = 4) +
   scale_colour_viridis_c(option = "viridis", name = "Intensity",
@@ -268,7 +274,8 @@ expression_long$scaled <- stats::ave(
   }
 )
 
-heatmap_plot <- ggplot(expression_long, aes(x = marker, y = cluster, fill = scaled)) +
+heatmap_plot <- ggplot(expression_long, aes(x = marker, y = cluster,
+                       fill = scaled)) +
   geom_tile(colour = "white", linewidth = 0.3) +
   scale_fill_viridis_c(option = "viridis", name = "Scaled\nmedian",
                        guide = ColourbarGuide()) +

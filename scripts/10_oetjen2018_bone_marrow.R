@@ -160,7 +160,8 @@ event_summary <- data.frame(
 Write(event_summary, "event_summary.csv")
 print(event_summary)
 
-hierarchy <- do.call(rbind, lapply(split(counts, counts$panel), function(piece) {
+hierarchy <- do.call(rbind, lapply(split(counts, counts$panel),
+                     function(piece) {
   data.frame(
     panel = piece$panel[1],
     files = nrow(piece),
@@ -442,7 +443,8 @@ if (!is.null(technology_agreement) && nrow(technology_agreement) > 0) {
   verdicts <- rbind(verdicts, Verdict(
     6,
     sprintf("%d of %d subset measures correlate above rho 0.5 across %d donors",
-            strong, nrow(technology_agreement), max(technology_agreement$donors)),
+            strong, nrow(technology_agreement),
+            max(technology_agreement$donors)),
     if (strong >= nrow(technology_agreement) / 2) {
       "reproduced"
     } else {

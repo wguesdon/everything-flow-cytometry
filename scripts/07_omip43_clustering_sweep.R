@@ -109,7 +109,8 @@ definitions <- ReadCellTypeDefinitions(kDefinitionsPath)
 # Read every tissue once, so the sweep does not repeat the slow part.
 tissue_data <- list()
 for (tissue in kTissues) {
-  gating_set <- CytoML::flowjo_to_gatingset(workspace, name = tissue, path = kDataDir)
+  gating_set <- CytoML::flowjo_to_gatingset(workspace, name = tissue,
+                                            path = kDataDir)
   gating_hierarchy <- gating_set[[1]]
 
   events_all <- flowCore::exprs(
@@ -149,7 +150,8 @@ settings <- expand.grid(
   stringsAsFactors = FALSE
 )
 
-Log("Running", nrow(settings), "configurations across", length(kTissues), "tissues")
+Log("Running", nrow(settings), "configurations across", length(kTissues),
+    "tissues")
 
 sweep_rows <- list()
 for (i in seq_len(nrow(settings))) {
@@ -207,7 +209,8 @@ for (i in seq_len(nrow(settings))) {
 }
 
 sweep <- do.call(rbind, sweep_rows)
-write.csv(sweep, file.path(kOutputDir, "clustering_sweep.csv"), row.names = FALSE)
+write.csv(sweep, file.path(kOutputDir, "clustering_sweep.csv"),
+          row.names = FALSE)
 
 # A configuration is only useful if it works on every tissue, so rank on the
 # worst tissue rather than the average. An average hides a total failure.

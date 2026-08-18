@@ -251,7 +251,8 @@ group_medians <- do.call(rbind, lapply(
       severity_rank = as.character(piece$severity_rank[1]),
       sex = piece$sex[1],
       samples = nrow(piece),
-      median_cd161hi = stats::median(piece$cd161hi_percent_of_cd8, na.rm = TRUE),
+      median_cd161hi = stats::median(piece$cd161hi_percent_of_cd8,
+                                     na.rm = TRUE),
       median_memory = stats::median(piece$memory_percent_of_cd8, na.rm = TRUE),
       median_naive = stats::median(piece$naive_percent_of_cd8, na.rm = TRUE),
       stringsAsFactors = FALSE

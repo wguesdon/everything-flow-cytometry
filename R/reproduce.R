@@ -171,7 +171,8 @@ TestPaperClaims <- function(claims,
   result$verdict <- ifelse(
     is.na(result$difference_points), "not measured",
     ifelse(
-      abs(result$difference_points) < min_difference_points, "too small to call",
+      abs(result$difference_points) < min_difference_points,
+      "too small to call",
       ifelse(observed == result$direction, "reproduced", "opposite")
     )
   )

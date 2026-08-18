@@ -253,7 +253,8 @@ WriteMatchFile <- function(match_table, path, keep_unstained = NULL) {
     }
     dropped <- setdiff(unstained_rows, chosen)
     warning(
-      "The set holds ", length(unstained_rows), " unstained controls. Keeping '",
+      "The set holds ", length(unstained_rows),
+      " unstained controls. Keeping '",
       usable$filename[chosen], "' and dropping: ",
       paste(usable$filename[dropped], collapse = ", "), "."
     )
@@ -696,7 +697,8 @@ MarkerCorrelation <- function(events, max_events = 1e5, seed = 42,
     stop("A correlation needs two markers. This matrix has ", ncol(events), ".")
   }
   if (nrow(events) < 3) {
-    stop("A correlation needs three events. This matrix has ", nrow(events), ".")
+    stop("A correlation needs three events. This matrix has ", nrow(events),
+         ".")
   }
 
   rows <- withr::with_seed(seed, {

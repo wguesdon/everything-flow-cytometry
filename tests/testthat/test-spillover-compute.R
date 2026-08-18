@@ -125,7 +125,8 @@ test_that("WriteMatchFile stops when there is no unstained control", {
   expect_error(WriteMatchFile(match_table, path), "No unstained control")
 })
 
-test_that("WriteMatchFile keeps one unstained control and warns about the rest", {
+test_that("WriteMatchFile keeps one unstained control and warns about the rest",
+          {
   path <- withr::local_tempfile(fileext = ".csv")
   match_table <- data.frame(
     filename = c("a.fcs", "u_mouse.fcs", "u_rat.fcs"),
@@ -160,11 +161,13 @@ test_that("ComputeSpilloverFromControls rejects a missing match file", {
   )
 })
 
-test_that("ComputeSpilloverFromControls names a scatter channel it cannot find", {
+test_that("ComputeSpilloverFromControls names a scatter channel it cannot find",
+          {
   flow_set <- MakeTestControlSet()
   path <- withr::local_tempfile(fileext = ".csv")
   utils::write.csv(
-    data.frame(filename = "a.fcs", channel = "unstained"), path, row.names = FALSE
+    data.frame(filename = "a.fcs",
+               channel = "unstained"), path, row.names = FALSE
   )
 
   expect_error(
@@ -205,7 +208,8 @@ test_that("CompareSpilloverMatrices reports the difference in percentage points"
   expect_equal(top$difference, 5)
 })
 
-test_that("CompareSpilloverMatrices stops when the matrices share no detector", {
+test_that("CompareSpilloverMatrices stops when the matrices share no detector",
+          {
   computed <- MakeTestSpillover(channels = c("A", "B"))
   stored <- MakeTestSpillover(channels = c("X", "Y"))
 
@@ -249,7 +253,8 @@ test_that("GateableControls accepts a control with two separated modes", {
   expect_gt(result$gated_events, 100)
 })
 
-test_that("GateableControls rejects a control whose gate leaves too few events", {
+test_that("GateableControls rejects a control whose gate leaves too few events",
+          {
   controls <- flowCore::flowSet(list(stained = BuildControl(TRUE)))
   matches <- data.frame(
     filename = "stained", stain = "CD3 BV510", channel = "V510-A",
@@ -372,7 +377,8 @@ test_that("CheckControlQuality reports one row per stained control", {
   expect_true("filename" %in% colnames(quality))
 })
 
-test_that("CheckControlQuality rejects a match table with no unstained control", {
+test_that("CheckControlQuality rejects a match table with no unstained control",
+          {
   # Without an unstained tube there is no threshold, so a positive fraction
   # cannot be computed at all.
   controls <- MakeTestControlSet()

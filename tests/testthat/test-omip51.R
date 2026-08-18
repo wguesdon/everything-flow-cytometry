@@ -88,7 +88,8 @@ test_that("MatchOmip51Controls gives the two controls different channels", {
 
 test_that("ComputeOmip51Spillover stops when no file matches the pattern", {
   expect_error(
-    ComputeOmip51Spillover(tempdir(), "^NoSuchPrefix", tempfile(fileext = ".csv")),
+    ComputeOmip51Spillover(tempdir(), "^NoSuchPrefix",
+                           tempfile(fileext = ".csv")),
     "No control file in"
   )
 })

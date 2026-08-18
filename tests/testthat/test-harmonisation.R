@@ -1,8 +1,10 @@
 # Tests for R/harmonisation.R
 
-test_that("CoefficientOfVariation returns the standard deviation over the mean", {
+test_that("CoefficientOfVariation returns the standard deviation over the mean",
+          {
   expect_equal(CoefficientOfVariation(c(10, 10, 10)), 0)
-  expect_equal(CoefficientOfVariation(c(8, 10, 12)), stats::sd(c(8, 10, 12)) / 10)
+  expect_equal(CoefficientOfVariation(c(8, 10, 12)), stats::sd(c(8, 10,
+               12)) / 10)
 })
 
 test_that("CoefficientOfVariation refuses a case it cannot answer", {
@@ -11,7 +13,8 @@ test_that("CoefficientOfVariation refuses a case it cannot answer", {
   expect_true(is.na(CoefficientOfVariation(c(NA, NA))))
 })
 
-test_that("RelativeBias is the absolute relative difference from the reference", {
+test_that("RelativeBias is the absolute relative difference from the reference",
+          {
   expect_equal(RelativeBias(c(9, 11), reference = 10), 0)
   expect_equal(RelativeBias(c(12, 12), reference = 10), 0.2)
   expect_equal(RelativeBias(c(8, 8), reference = 10), 0.2)
@@ -102,7 +105,8 @@ test_that("ResolveMarkerChannels rejects a material it does not know", {
                "must be PBMC or WB")
 })
 
-test_that("ResolveMarkerChannels rejects a panel with nothing for the material", {
+test_that("ResolveMarkerChannels rejects a panel with nothing for the material",
+          {
   frame <- MakeTestFlowFrame()
   panel <- data.frame(marker = "CD3", material = "WB",
                       stringsAsFactors = FALSE)

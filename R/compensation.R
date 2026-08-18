@@ -47,7 +47,8 @@ ExtractSpillover <- function(frame) {
 
   matrix_out <- filled[[1]]
   if (!is.matrix(matrix_out)) {
-    stop("The spillover keyword holds a ", class(matrix_out)[1], ", not a matrix.")
+    stop("The spillover keyword holds a ", class(matrix_out)[1],
+         ", not a matrix.")
   }
   if (nrow(matrix_out) != ncol(matrix_out)) {
     stop(

@@ -53,7 +53,8 @@ if (!dir.exists(kDataDir)) {
 
 Log("Reading the controls and the sample")
 control_set <- read.flowSet(
-  list.files(kDataDir, pattern = "^Single stainings.*\\.fcs$", full.names = TRUE),
+  list.files(kDataDir, pattern = "^Single stainings.*\\.fcs$",
+             full.names = TRUE),
   truncate_max_range = FALSE
 )
 sample_set <- read.flowSet(
@@ -61,7 +62,8 @@ sample_set <- read.flowSet(
   truncate_max_range = FALSE
 )
 
-match_table <- MatchControlsToChannels(control_set, unstained_pattern = "unstained")
+match_table <- MatchControlsToChannels(control_set,
+                                       unstained_pattern = "unstained")
 match_file <- file.path(kOutputDir, "spillover_match.csv")
 WriteMatchFile(match_table, match_file)
 

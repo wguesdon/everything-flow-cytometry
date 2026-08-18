@@ -90,7 +90,8 @@ print(state, row.names = FALSE)
 Say("\nPart 2: the spillover matrix from the single stains")
 
 cell_result <- ComputeOmip51Spillover(
-  kDepositDir, "^Comp_Cells|^Comp_Live", file.path(kOutputDir, "match_cells.csv"),
+  kDepositDir, "^Comp_Cells|^Comp_Live", file.path(kOutputDir,
+                                                   "match_cells.csv"),
   keep_unstained = kUnstainedCells
 )
 bead_result <- ComputeOmip51Spillover(
@@ -344,7 +345,8 @@ myeloid_route <- ClusterRoute(
   n_metaclusters = 10
 )
 Write(cbind(cluster = rownames(myeloid_route$medians),
-            as.data.frame(myeloid_route$medians)), "myeloid_cluster_medians.csv")
+            as.data.frame(myeloid_route$medians)),
+            "myeloid_cluster_medians.csv")
 Write(myeloid_route$annotation, "myeloid_cluster_annotation.csv")
 Write(myeloid_route$summary, "myeloid_cluster_summary.csv")
 Say("\n  myeloid clusters:")
@@ -470,7 +472,8 @@ Add(10, paste0("a fitted cut selects ",
                " percent on CD141, and the clustering labels ", subsets_found,
                " of the three subsets"), subsets_found == 3)
 
-Add(11, paste0(nrow(channels), " of the 28 markers were resolved to a detector"),
+Add(11, paste0(nrow(channels),
+    " of the 28 markers were resolved to a detector"),
     NA)
 
 verdicts <- merge(claims, do.call(rbind, rows), by = "claim_id")

@@ -44,7 +44,8 @@ ReadBoneMarrowPanels <- function(path) {
   required <- c("panel", "detector", "fluorochrome", "marker")
   missing <- setdiff(required, names(panels))
   if (length(missing) > 0) {
-    stop("The panel table lacks these columns: ", paste(missing, collapse = ", "))
+    stop("The panel table lacks these columns: ", paste(missing,
+         collapse = ", "))
   }
   panels
 }
@@ -70,7 +71,8 @@ ReadBoneMarrowDonors <- function(path) {
   required <- c("sample", "donor", "sex", "age")
   missing <- setdiff(required, names(donors))
   if (length(missing) > 0) {
-    stop("The donor table lacks these columns: ", paste(missing, collapse = ", "))
+    stop("The donor table lacks these columns: ", paste(missing,
+         collapse = ", "))
   }
   donors$age <- as.numeric(donors$age)
   donors
@@ -99,7 +101,8 @@ ReadBoneMarrowGates <- function(path) {
   required <- c("gate", "x_channel", "y_channel", "vertex", "x", "y")
   missing <- setdiff(required, names(gates))
   if (length(missing) > 0) {
-    stop("The gate table lacks these columns: ", paste(missing, collapse = ", "))
+    stop("The gate table lacks these columns: ", paste(missing,
+         collapse = ", "))
   }
   gates
 }
@@ -287,7 +290,8 @@ GateBoneMarrowFile <- function(path, panels, panel, gates) {
     return(Fail(trimws(as.character(frame))))
   }
 
-  channels <- try(ResolveBoneMarrowChannels(frame, panels, panel), silent = TRUE)
+  channels <- try(ResolveBoneMarrowChannels(frame, panels, panel),
+                  silent = TRUE)
   if (methods::is(channels, "try-error")) {
     return(Fail(trimws(as.character(channels))))
   }
@@ -455,7 +459,8 @@ GateTcellSubsets <- function(path, panels, gates) {
   scatter_gate <- scatter_gate[order(scatter_gate$vertex), ]
   keep <- SingletMask(raw, area = scatter[["forward_area"]],
                       height = scatter[["forward_height"]]) &
-    InPolygon(raw[, scatter_gate$x_channel[1]], raw[, scatter_gate$y_channel[1]],
+    InPolygon(raw[, scatter_gate$x_channel[1]],
+              raw[, scatter_gate$y_channel[1]],
               scatter_gate$x, scatter_gate$y) &
     LiveMask(raw[, Channel("LIVE/DEAD")], gates)
   entry <- events[keep, , drop = FALSE]

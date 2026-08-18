@@ -36,7 +36,9 @@ Three layers test different things, and only the third one tests the skill.
 |---|---|---|
 | The functions | `podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest Rscript tests/testthat.R` | Each function returns the value it has to return, on a `flowFrame` built in the test |
 | The surface | `uv run python scripts/check_cytokit_corpus.py` | Every ready recipe runs on nine deposits that no analysis here reads, and the CLI refuses what it has to refuse |
-| The adapters | `python3 scripts/check_skill_adapters.py` | The three adapters name the same commands the CLI dispatches |
+| The adapters | `python3 scripts/check_skill_adapters.py` | The CLI, the three adapters, `docs/cytokit.md` and `README.md` all agree |
+| The coverage | `uv run python scripts/check_function_tests.py` | Every function in `R/` has a test or a written reason for none |
+| The style | `uv run python scripts/check_line_length.py` | Each language stays inside the limit CLAUDE.md sets |
 
 The corpus check is the one that finds the faults a unit test cannot. Its nine
 deposits carry different instruments, different naming conventions and different

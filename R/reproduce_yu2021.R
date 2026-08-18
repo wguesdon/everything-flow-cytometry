@@ -243,7 +243,8 @@ TestYuClaims <- function(claims, measures, alpha = 0.05) {
     }
 
     if (claim$test == "regression_slope_by_sex") {
-      result <- CompareSlopesBySex(values, measures$severity_index, measures$sex)
+      result <- CompareSlopesBySex(values, measures$severity_index,
+                                   measures$sex)
       verdict <- if (is.na(result$observed)) {
         "not measured"
       } else if (result$observed == "females fall faster") {
@@ -316,7 +317,8 @@ TestYuClaims <- function(claims, measures, alpha = 0.05) {
 
     if (claim$test %in% c("sex_difference_before_seroconversion",
                           "sex_difference_after_seroconversion")) {
-      wanted_result <- if (grepl("before", claim$test)) "NEGATIVE" else "POSITIVE"
+      wanted_result <- if (grepl("before",
+                           claim$test)) "NEGATIVE" else "POSITIVE"
       keep <- !is.na(infected$igg_result) & infected$igg_result == wanted_result
       subset_values <- infected[[claim$measure]][keep]
       result <- CompareBySex(subset_values, infected$sex[keep])
@@ -335,7 +337,8 @@ TestYuClaims <- function(claims, measures, alpha = 0.05) {
       return(Row(
         claim,
         sprintf("IgG %s, female median %.2f against male median %.2f, n = %d and %d",
-                tolower(wanted_result), result$female_median, result$male_median,
+                tolower(wanted_result), result$female_median,
+                result$male_median,
                 result$n_female, result$n_male),
         result$observed, result$difference, result$p_value, verdict
       ))
@@ -350,7 +353,8 @@ TestYuClaims <- function(claims, measures, alpha = 0.05) {
       } else {
         "opposite"
       }
-      return(Row(claim, sprintf("Spearman against severity rank, n = %d", result$n),
+      return(Row(claim, sprintf("Spearman against severity rank, n = %d",
+             result$n),
                  sprintf("rho = %.3f", result$rho), result$rho, result$p_value,
                  verdict))
     }
@@ -362,12 +366,14 @@ TestYuClaims <- function(claims, measures, alpha = 0.05) {
         return(Row(claim, "no CD56 median was collected", NA_character_,
                    NA_real_, NA_real_, "not measured"))
       }
-      difference <- stats::median(nk, na.rm = TRUE) - stats::median(cd8, na.rm = TRUE)
+      difference <- stats::median(nk, na.rm = TRUE) - stats::median(cd8,
+                                  na.rm = TRUE)
       observed <- if (difference > 0) "NK higher" else "CD8 T higher"
       return(Row(
         claim,
         sprintf("NK median %.3f against CD8 T median %.3f",
-                stats::median(nk, na.rm = TRUE), stats::median(cd8, na.rm = TRUE)),
+                stats::median(nk, na.rm = TRUE), stats::median(cd8,
+                              na.rm = TRUE)),
         observed, difference, NA_real_,
         if (difference > 0) "reproduced" else "opposite"
       ))

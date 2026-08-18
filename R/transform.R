@@ -73,11 +73,13 @@ ApplyLogicleTransform <- function(x, channels = NULL, reference = 1) {
   unknown <- setdiff(channels, flowCore::colnames(reference_frame))
   if (length(unknown) > 0) {
     stop(
-      "These channels are not in the data: ", paste(unknown, collapse = ", "), "."
+      "These channels are not in the data: ", paste(unknown,
+                                                    collapse = ", "), "."
     )
   }
 
-  transform_list <- flowCore::estimateLogicle(reference_frame, channels = channels)
+  transform_list <- flowCore::estimateLogicle(reference_frame,
+                                              channels = channels)
 
   list(
     data = flowCore::transform(x, transform_list),

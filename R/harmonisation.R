@@ -50,7 +50,8 @@ ReadZ282Panel <- function(path) {
   required <- c("marker", "fluorochrome", "material", "detector_aliases")
   missing <- setdiff(required, names(panel))
   if (length(missing) > 0) {
-    stop("The panel table lacks these columns: ", paste(missing, collapse = ", "))
+    stop("The panel table lacks these columns: ", paste(missing,
+         collapse = ", "))
   }
   panel
 }
@@ -84,7 +85,8 @@ MarkerFromLabel. <- function(label, order = kMarkerOrder) {
 # Strip the `-A`, `-H` or `-W` suffix and every separator, so `PerCP-Cy5-5-A`
 # and `PerCP-Cy5.5-A` compare equal.
 NormaliseDetector. <- function(detector) {
-  tolower(gsub("[^A-Za-z0-9]", "", sub("-[AHW]$", "", detector, ignore.case = TRUE)))
+  tolower(gsub("[^A-Za-z0-9]", "", sub("-[AHW]$", "", detector,
+          ignore.case = TRUE)))
 }
 
 #' Match every marker of the panel to a channel of one file
@@ -213,7 +215,8 @@ SettleCompensation <- function(frame) {
   applied <- keywords[["APPLY COMPENSATION"]]
   already <- !is.null(applied) && toupper(trimws(applied)) == "TRUE"
 
-  matrix_keyword <- intersect(c("$SPILLOVER", "SPILL", "$SPILL"), names(keywords))
+  matrix_keyword <- intersect(c("$SPILLOVER", "SPILL", "$SPILL"),
+                              names(keywords))
   if (length(matrix_keyword) == 0) {
     return(list(frame = frame, state = "no matrix"))
   }
@@ -279,7 +282,8 @@ StableTimeWindow <- function(frame, time_channel, bins = 100,
 
   repeat {
     breaks <- seq(min(values), max(values), length.out = bins + 1)
-    bin_of <- cut(values, breaks = breaks, include.lowest = TRUE, labels = FALSE)
+    bin_of <- cut(values, breaks = breaks, include.lowest = TRUE,
+                  labels = FALSE)
     counts <- tabulate(bin_of, nbins = bins)
     if (sum(counts == 0) <= 0.1 * bins || bins <= 20) {
       break

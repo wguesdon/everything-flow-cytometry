@@ -150,8 +150,10 @@ MixtureCut <- function(values, max_events = 20000, seed = 42,
   }
 
   grid <- seq(fit$means[1], fit$means[2], length.out = 1024)
-  low <- fit$weights[1] * stats::dnorm(grid, fit$means[1], sqrt(fit$variances[1]))
-  high <- fit$weights[2] * stats::dnorm(grid, fit$means[2], sqrt(fit$variances[2]))
+  low <- fit$weights[1] * stats::dnorm(grid, fit$means[1],
+                     sqrt(fit$variances[1]))
+  high <- fit$weights[2] * stats::dnorm(grid, fit$means[2],
+                      sqrt(fit$variances[2]))
   crossing <- which(diff(sign(low - high)) != 0)
   if (length(crossing) == 0) {
     return(NA_real_)
@@ -385,7 +387,8 @@ GateNaiveMemoryFile <- function(path, panel, material, time_bins = 100,
   if (cd3$rule == "none") {
     return(Fail("No cut could be fitted on CD3"))
   }
-  cd3_events <- lymphocytes[lymphocytes[, Channel("CD3")] > cd3$cut, , drop = FALSE]
+  cd3_events <- lymphocytes[lymphocytes[, Channel("CD3")] > cd3$cut, ,
+                            drop = FALSE]
 
   cd4 <- Cut("CD4", cd3_events[, Channel("CD4")])
   cd8 <- Cut("CD8", cd3_events[, Channel("CD8")])
@@ -496,7 +499,11 @@ LymphocyteGate. <- function(events, scatter, quantile_limit = 0.95) {
   }
   side <- events[, scatter[["side_area"]]]
   side_cut <- DensityCut(side)
-  low_side <- if (is.na(side_cut)) events else events[side < side_cut, , drop = FALSE]
+  low_side <- if (is.na(side_cut)) {
+    events
+  } else {
+    events[side < side_cut, , drop = FALSE]
+  }
   if (nrow(low_side) < 100) {
     return(NULL)
   }

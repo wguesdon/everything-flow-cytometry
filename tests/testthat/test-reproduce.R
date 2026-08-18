@@ -183,7 +183,8 @@ MakeDirectionalClaims. <- function() {
              quote = "a sentence", stringsAsFactors = FALSE)
 }
 
-test_that("TestPaperClaims calls a claim reproduced when the direction matches", {
+test_that("TestPaperClaims calls a claim reproduced when the direction matches",
+          {
   test <- data.frame(marker = c("CD57", "NKG2A"),
                      percent_positive = c(80, 10), stringsAsFactors = FALSE)
   reference <- data.frame(marker = c("CD57", "NKG2A"),

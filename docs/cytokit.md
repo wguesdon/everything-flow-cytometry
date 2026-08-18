@@ -426,12 +426,25 @@ label.
 | Layer | Command | What it proves |
 |---|---|---|
 | The functions | `Rscript tests/testthat.R` in the container | Each function returns the right value |
-| The surface | `uv run python scripts/check_cytokit_corpus.py` | Every ready recipe runs on nine deposits no analysis reads |
-| The adapters | `python3 scripts/check_skill_adapters.py` | The adapters name the commands the CLI dispatches |
+| The surface | `uv run python scripts/check_cytokit_corpus.py` | Every recipe runs on nine deposits no analysis reads, and the chain runs end to end |
+| The adapters | `python3 scripts/check_skill_adapters.py` | The CLI, the three adapters, this document and `README.md` all agree |
+| The coverage | `uv run python scripts/check_function_tests.py` | Every function in `R/` has a test or a written reason for none |
+| The style | `uv run python scripts/check_line_length.py` | Each language stays inside the limit CLAUDE.md sets |
 
-The agent is the fourth layer and no script runs it.
+The corpus check is the one that finds the faults a unit test cannot. Its nine
+deposits carry different instruments, different naming conventions and
+different acquisition kinds. It also runs the whole chain, which is `gate`,
+then `cluster`, then `annotate`, then `proportions`, then `compare`, each one
+reading the bundle the last one wrote. That handoff is where a column name goes
+missing, and running each recipe alone would not catch it.
+
+The agent is the last layer and no script runs it.
 `scripts/make_test_study.py` copies a deposit to a folder outside this
 repository, for a session that starts with nothing but the skill and the data.
+Three sessions run that way in August 2026 found three faults that no check
+had: `inspect` said nothing about the identity keywords, `definitions` wrote
+detector names as if they were antibodies, and every adapter pointed at a
+document that is not in the repository.
 
 ## The agent adapters
 

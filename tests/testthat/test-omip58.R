@@ -24,7 +24,8 @@ BuildFrame <- function(events = 500, seed = 1) {
   flowCore::flowFrame(values, parameters)
 }
 
-test_that("ResolveOmip58Channels names the detector of every marker asked for", {
+test_that("ResolveOmip58Channels names the detector of every marker asked for",
+          {
   frame <- BuildFrame()
   resolved <- ResolveOmip58Channels(
     frame, c(CD3 = "cd3", CD4 = "cd4", viability = "live")
@@ -60,7 +61,8 @@ test_that("GateOmip58File stops when the matrix names a missing detector", {
   flowCore::write.FCS(BuildFrame(), path)
   wrong <- diag(2)
   dimnames(wrong) <- list(c("V510-A", "B999-A"), c("V510-A", "B999-A"))
-  expect_error(GateOmip58File(path, wrong), "detector\\(s\\) that the file does not carry")
+  expect_error(GateOmip58File(path, wrong),
+               "detector\\(s\\) that the file does not carry")
 })
 
 test_that("MatchOmip58Controls rejects a panel with no viability marker", {

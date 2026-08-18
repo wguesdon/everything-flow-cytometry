@@ -52,7 +52,8 @@ RunAutomatedGating <- function(flow_set, template, n_cores = 1) {
   }
 
   gating_set <- flowWorkspace::GatingSet(flow_set)
-  openCyto::gt_gating(template, gating_set, mc.cores = n_cores, parallel_type = "none")
+  openCyto::gt_gating(template, gating_set, mc.cores = n_cores,
+                      parallel_type = "none")
   flowWorkspace::recompute(gating_set)
 
   gating_set
@@ -121,7 +122,8 @@ SummarisePopulationSpread <- function(stats, group_by = NULL) {
   required <- c("population", "percent_of_parent")
   missing <- setdiff(required, colnames(stats))
   if (length(missing) > 0) {
-    stop("stats is missing the column(s): ", paste(missing, collapse = ", "), ".")
+    stop("stats is missing the column(s): ", paste(missing, collapse = ", "),
+         ".")
   }
 
   keys <- c("population", group_by)

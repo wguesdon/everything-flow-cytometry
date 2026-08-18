@@ -88,7 +88,8 @@ ReadPopulationMap <- function(path) {
 #' side
 #'   did not produce keeps `NA` on that side, so a gap is visible.
 #' @export
-CompareGatingResults <- function(manual_stats, automated_stats, population_map) {
+CompareGatingResults <- function(manual_stats, automated_stats,
+                                 population_map) {
   LeafName <- function(paths) {
     basename(as.character(paths))
   }

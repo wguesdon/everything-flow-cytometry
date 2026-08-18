@@ -128,7 +128,8 @@ RunFlowSomClustering <- function(events,
   withr::with_seed(seed, {
     fsom <- FlowSOM::ReadInput(frame, transform = FALSE, scale = scale_channels)
     fsom <- FlowSOM::BuildSOM(
-      fsom, colsToUse = channels, xdim = grid_size, ydim = grid_size, silent = TRUE
+      fsom, colsToUse = channels, xdim = grid_size, ydim = grid_size,
+      silent = TRUE
     )
     fsom <- FlowSOM::BuildMST(fsom, silent = TRUE)
     consensus <- MetaclusterCodes.(fsom$map$codes, n_metaclusters, seed)
@@ -285,8 +286,8 @@ AnnotateClusters <- function(median_expression, definitions) {
     span <- max(x) - min(x)
     if (span == 0) rep(0.5, length(x)) else (x - min(x)) / span
   }
-  scaled <- as.data.frame(lapply(median_expression[, marker_columns, drop = FALSE],
-                                 ScaleColumn))
+  wanted <- median_expression[, marker_columns, drop = FALSE]
+  scaled <- as.data.frame(lapply(wanted, ScaleColumn))
   colnames(scaled) <- marker_columns
 
   # The score is a weighted mean over the markers a definition specifies, not a

@@ -23,7 +23,8 @@ test_that("ClassificationScore reports the four benchmark measures", {
   expect_equal(perfect$samples, 4L)
 })
 
-test_that("ClassificationScore handles a prediction that misses every positive", {
+test_that("ClassificationScore handles a prediction that misses every positive",
+          {
   result <- ClassificationScore(c(FALSE, FALSE), c(TRUE, TRUE))
   expect_equal(result$recall, 0)
   expect_equal(result$precision, 0)
@@ -61,7 +62,8 @@ test_that("SelectAndScore picks the feature that separates the classes", {
   labels <- rep(c(TRUE, FALSE), each = 10)
   features <- data.frame(
     noise = withr::with_seed(5, stats::rnorm(20)),
-    signal = rep(c(10, 0), each = 10) + withr::with_seed(6, stats::rnorm(20, 0, 0.1))
+    signal = rep(c(10, 0), each = 10) + withr::with_seed(6, stats::rnorm(20, 0,
+                 0.1))
   )
   training <- rep(c(TRUE, FALSE), 10)
   result <- SelectAndScore(features, labels, training)

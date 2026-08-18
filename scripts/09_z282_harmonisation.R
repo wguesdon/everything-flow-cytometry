@@ -160,7 +160,8 @@ Write(automated, "automated_measures.csv")
 cuts <- do.call(rbind, lapply(gate_results[!failed], function(x) x$cuts))
 Write(cuts, "automated_cuts.csv")
 
-resolution <- do.call(rbind, lapply(gate_results[!failed], function(x) x$channels))
+resolution <- do.call(rbind, lapply(gate_results[!failed],
+                      function(x) x$channels))
 Write(resolution, "channel_resolution.csv")
 
 resolution_summary <- as.data.frame(
@@ -218,7 +219,8 @@ repeats <- automated[
 repeats <- repeats[order(repeats$operator, repeats$material, repeats$vial,
                          repeats$round), ]
 Write(repeats, "repeated_acquisitions.csv")
-Say("  files that share an acquisition stamp with another file: ", nrow(repeats))
+Say("  files that share an acquisition stamp with another file: ",
+    nrow(repeats))
 
 # ---------------------------------------------------------------------------
 # Part 2b. The same rule, with one cut per operator instead of one per file.
@@ -287,7 +289,8 @@ Write(shared, "shared_cut_measures.csv")
 Say("\nPart 3: the three arms in one table")
 
 published <- results[, c("operator", "centre", "instrument", "material", "vial",
-                         "round", "excluded", "parameter", "percent", "analysis",
+                         "round", "excluded", "parameter", "percent",
+                         "analysis",
                          "key")]
 published$analysis <- ifelse(published$analysis == "centr", "central", "local")
 published$percent <- suppressWarnings(as.numeric(published$percent))
@@ -371,7 +374,8 @@ Write(reference, "reference_values.csv")
 
 # Interoperator CV. For each donor, the spread across operators. The reported
 # value is the median of the three donor specific values.
-interoperator <- do.call(rbind, lapply(seq_len(nrow(combinations)), function(i) {
+interoperator <- do.call(rbind, lapply(seq_len(nrow(combinations)),
+                         function(i) {
   row <- combinations[i, ]
   piece <- donor_means[
     donor_means$analysis == row$analysis &
@@ -579,7 +583,8 @@ PcaVariance <- function(parameters) {
                                  drop = FALSE]
   fit <- stats::prcomp(matrix_values, center = TRUE, scale. = TRUE)
   variance <- fit$sdev^2 / sum(fit$sdev^2)
-  list(fit = fit, first_two = 100 * sum(variance[1:2]), rows = nrow(matrix_values))
+  list(fit = fit, first_two = 100 * sum(variance[1:2]),
+       rows = nrow(matrix_values))
 }
 
 parent_pca <- PcaVariance(c("CD3", "CD4", "CD8"))
@@ -664,7 +669,8 @@ verdicts <- rbind(verdicts, data.frame(
 # Claims 8 and 9. How many of the 195 intraoperator CVs sit above 0.20.
 for (item in list(list(id = 8, material = "PBMC", local = 52, central = 56),
                   list(id = 9, material = "WB", local = 5, central = 2))) {
-  piece <- intraoperator_counts[intraoperator_counts$material == item$material, ]
+  piece <- intraoperator_counts[intraoperator_counts$material == item$material,
+                                ]
   observed_local <- Count(piece, "local", item$material, "above_threshold")
   observed_central <- Count(piece, "central", item$material, "above_threshold")
   verdicts <- rbind(verdicts, data.frame(

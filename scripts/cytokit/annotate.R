@@ -50,6 +50,23 @@ if (inherits(definitions, "error")) {
        "--out <file>")
 }
 
+# A definition that names a marker the clustering never saw cannot score. When
+# none of them overlaps, nothing can be scored at all, and the recipe stops
+# before it opens a bundle. A folder that holds no result looks like one.
+definition_markers <- setdiff(colnames(definitions), c("cell_type", "note"))
+shared <- intersect(definition_markers, colnames(medians))
+unmatched <- setdiff(definition_markers, colnames(medians))
+if (length(shared) == 0) {
+  stop("The definitions and the clustering share no marker.\n",
+       "The definitions name: ", paste(definition_markers, collapse = ", "),
+       "\nThe clustering carries: ",
+       paste(setdiff(colnames(medians),
+                     c("cluster", "events", "percent_of_total")),
+             collapse = ", "),
+       "\nWrite the definitions against the markers the clustering carries, ",
+       "or cluster again with --markers.")
+}
+
 label <- if (is.null(arguments$label)) ShortLabel(arguments$clusters) else
   arguments$label
 out_root <- if (is.null(arguments$out)) kCytokitOutputRoot else arguments$out
@@ -60,11 +77,6 @@ Say("  clusters    ", nrow(medians))
 Say("  definitions ", nrow(definitions), " cell type(s)")
 Say("  bundle      ", DisplayPath(bundle), "\n")
 
-# A definition that names a marker the clustering never saw cannot score, so the
-# overlap is reported before the scores are read.
-definition_markers <- setdiff(colnames(definitions), c("cell_type", "note"))
-shared <- intersect(definition_markers, colnames(medians))
-unmatched <- setdiff(definition_markers, colnames(medians))
 Say("Markers in common: ", length(shared), " of ",
     length(definition_markers), " named by the definitions")
 if (length(unmatched) > 0) {

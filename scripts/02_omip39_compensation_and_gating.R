@@ -70,14 +70,17 @@ if (!dir.exists(kDataDir)) {
 # ---------------------------------------------------------------------------
 
 Log("Reading the single stained controls")
-control_files <- list.files(kDataDir, pattern = kControlPattern, full.names = TRUE)
+control_files <- list.files(kDataDir, pattern = kControlPattern,
+                            full.names = TRUE)
 Log("Found", length(control_files), "control files")
 
 control_set <- read.flowSet(control_files, truncate_max_range = FALSE)
 
 Log("Matching every control to the channel it stains")
-match_table <- MatchControlsToChannels(control_set, unstained_pattern = "unstained")
-print(match_table[, c("stain", "channel", "marker", "matched_by")], right = FALSE)
+match_table <- MatchControlsToChannels(control_set,
+                                       unstained_pattern = "unstained")
+print(match_table[, c("stain", "channel", "marker", "matched_by")],
+      right = FALSE)
 
 write.csv(match_table, file.path(kOutputDir, "control_match_table.csv"),
           row.names = FALSE)
@@ -138,7 +141,8 @@ Log("Wrote spillover_heatmap.png")
 # ---------------------------------------------------------------------------
 
 Log("Reading the sample file")
-sample_files <- list.files(kDataDir, pattern = kSamplePattern, full.names = TRUE)
+sample_files <- list.files(kDataDir, pattern = kSamplePattern,
+                           full.names = TRUE)
 sample_set <- read.flowSet(sample_files, truncate_max_range = FALSE)
 Log("Read", length(sample_set), "sample(s):", sampleNames(sample_set))
 
@@ -159,7 +163,8 @@ if (!is.null(stored_spillover)) {
             file.path(kOutputDir, "spillover_computed_vs_stored.csv"),
             row.names = FALSE)
   Log("Largest disagreement between the computed and the stored matrix:",
-      sprintf("%.2f percentage points", max(abs(comparison_matrices$difference))))
+      sprintf("%.2f percentage points",
+              max(abs(comparison_matrices$difference))))
 } else {
   Log("Skipping the matrix comparison, because the sample stores no matrix.")
 }
@@ -224,10 +229,12 @@ Log("Wrote manual_tree.png")
 
 Log("Comparing the two results")
 population_map <- ReadPopulationMap(kPopulationMap)
-comparison <- CompareGatingResults(manual_stats, automated_stats, population_map)
+comparison <- CompareGatingResults(manual_stats, automated_stats,
+                                   population_map)
 comparison <- JudgeAgreement(comparison, tolerance_points = kTolerancePoints)
 
-write.csv(comparison, file.path(kOutputDir, "comparison.csv"), row.names = FALSE)
+write.csv(comparison, file.path(kOutputDir, "comparison.csv"),
+          row.names = FALSE)
 
 print(comparison[, c("manual", "automated", "manual_percent",
                      "automated_percent", "difference", "verdict")])
@@ -239,9 +246,11 @@ comparison_plot <- ggplot(
   comparison[!is.na(comparison$difference), ],
   aes(x = manual_percent, y = automated_percent, colour = verdict)
 ) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed", colour = "grey50") +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed",
+              colour = "grey50") +
   geom_point(size = 4, alpha = 0.85) +
-  geom_text(aes(label = automated), vjust = -1.1, size = 3, show.legend = FALSE) +
+  geom_text(aes(label = automated), vjust = -1.1, size = 3,
+            show.legend = FALSE) +
   scale_colour_manual(values = c(agree = "#2166ac", differ = "#b2182b")) +
   labs(
     title = "Automated template against published manual gates, OMIP-39",

@@ -404,7 +404,8 @@ SelectAndScore <- function(features, labels, training) {
     direction = if (high_is_positive) "high" else "low",
     threshold = if (high_is_positive) threshold else -threshold,
     training_score = ClassificationScore(predicted[training], labels[training]),
-    testing_score = ClassificationScore(predicted[!training], labels[!training]),
+    testing_score = ClassificationScore(predicted[!training],
+                                        labels[!training]),
     ranking = ranking
   )
 }

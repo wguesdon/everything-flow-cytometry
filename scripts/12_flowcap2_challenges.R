@@ -321,7 +321,8 @@ for (index in seq_along(individuals)) {
         reference[[subset]], gated[[position]]$cytokines[[subset]]
       )
       for (cytokine in kCytokinesInnate) {
-        row[[paste0(subset, "_", cytokine)]] <- if (cytokine %in% names(values)) {
+        row[[paste0(subset, "_",
+            cytokine)]] <- if (cytokine %in% names(values)) {
           values[[cytokine]]
         } else {
           NA_real_
@@ -518,7 +519,8 @@ Save(
     geom_boxplot(outlier.size = 0.6) +
     facet_wrap(~feature, scales = "free_y") +
     scale_fill_manual(values = c(Env = "#B2182B", Gag = "#2166AC")) +
-    labs(x = NULL, y = "Percent above the control threshold, background removed",
+    labs(x = NULL,
+         y = "Percent above the control threshold, background removed",
          fill = NULL) +
     ThemePublication(),
   "env_against_gag.svg", width = 10, height = 7

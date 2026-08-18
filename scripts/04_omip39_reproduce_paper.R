@@ -97,13 +97,16 @@ IsBooleanLeaf <- function(population, parent) {
   in_branch <- grepl(parent, as.character(population), fixed = TRUE)
   # A combination names every one of the six markers; a single gate names one.
   names_all_markers <- vapply(leaf, function(x) {
-    all(vapply(kBooleanMarkers, function(m) grepl(m, x, fixed = TRUE), logical(1)))
+    all(vapply(kBooleanMarkers, function(m) grepl(m, x, fixed = TRUE),
+        logical(1)))
   }, logical(1))
   in_branch & names_all_markers
 }
 
-manual_pos <- manual_stats[IsBooleanLeaf(manual_stats$population, kManualNKG2Cpos), ]
-manual_neg <- manual_stats[IsBooleanLeaf(manual_stats$population, kManualNKG2Cneg), ]
+manual_pos <- manual_stats[IsBooleanLeaf(manual_stats$population,
+                           kManualNKG2Cpos), ]
+manual_neg <- manual_stats[IsBooleanLeaf(manual_stats$population,
+                           kManualNKG2Cneg), ]
 
 Log("Boolean populations found:", nrow(manual_pos), "under", kManualNKG2Cpos,
     "and", nrow(manual_neg), "under", kManualNKG2Cneg)
@@ -140,7 +143,8 @@ manual_phenotype_neg <- FindPhenotype(manual_neg, kAdaptivePhenotype)
 
 phenotype_table <- data.frame(
   branch = c(kManualNKG2Cpos, kManualNKG2Cneg),
-  population = c(manual_phenotype_pos$population, manual_phenotype_neg$population),
+  population = c(manual_phenotype_pos$population,
+                 manual_phenotype_neg$population),
   count = c(manual_phenotype_pos$count, manual_phenotype_neg$count),
   parent_events = c(manual_phenotype_pos$total_events,
                     manual_phenotype_neg$total_events),
@@ -148,7 +152,8 @@ phenotype_table <- data.frame(
                         manual_phenotype_neg$percent_of_parent),
   stringsAsFactors = FALSE
 )
-write.csv(phenotype_table, file.path(kOutputDir, "adaptive_phenotype_manual.csv"),
+write.csv(phenotype_table, file.path(kOutputDir,
+          "adaptive_phenotype_manual.csv"),
           row.names = FALSE)
 
 cat("\n=== Figure 1C: the prototypic adaptive phenotype ===\n")
@@ -183,10 +188,12 @@ Log("Wrote all", nrow(combination_table), "boolean combinations")
 
 Log("Reading the controls and computing compensation")
 control_set <- read.flowSet(
-  list.files(kDataDir, pattern = "^Single stainings.*\\.fcs$", full.names = TRUE),
+  list.files(kDataDir, pattern = "^Single stainings.*\\.fcs$",
+             full.names = TRUE),
   truncate_max_range = FALSE
 )
-match_table <- MatchControlsToChannels(control_set, unstained_pattern = "unstained")
+match_table <- MatchControlsToChannels(control_set,
+                                       unstained_pattern = "unstained")
 match_file <- file.path(kOutputDir, "spillover_match.csv")
 WriteMatchFile(match_table, match_file)
 
@@ -207,10 +214,12 @@ automated_gs <- RunAutomatedGating(transformed_set, template)
 
 automated_paths <- gs_get_pop_paths(automated_gs, path = "auto")
 Log("Automated hierarchy holds", length(automated_paths), "populations")
-writeLines(automated_paths, file.path(kOutputDir, "automated_paths_extended.txt"))
+writeLines(automated_paths, file.path(kOutputDir,
+           "automated_paths_extended.txt"))
 
 automated_stats <- CollectPopulationStats(automated_gs)
-write.csv(automated_stats, file.path(kOutputDir, "automated_stats_extended.csv"),
+write.csv(automated_stats, file.path(kOutputDir,
+          "automated_stats_extended.csv"),
           row.names = FALSE)
 
 # The template gates each marker directly inside each NKG2C branch, so the
@@ -264,7 +273,8 @@ write.csv(automated_result, file.path(kOutputDir, "claims_automated.csv"),
 
 cat("\n=== Route 2: the automated template ===\n")
 print(automated_result[, c("marker", "direction", "test_percent",
-                           "reference_percent", "difference_points", "verdict")],
+                           "reference_percent", "difference_points",
+                           "verdict")],
       digits = 3)
 
 # ---------------------------------------------------------------------------
@@ -272,7 +282,8 @@ print(automated_result[, c("marker", "direction", "test_percent",
 # ---------------------------------------------------------------------------
 
 both <- rbind(manual_result, automated_result)
-write.csv(both, file.path(kOutputDir, "claims_both_routes.csv"), row.names = FALSE)
+write.csv(both, file.path(kOutputDir, "claims_both_routes.csv"),
+          row.names = FALSE)
 
 summary_table <- as.data.frame(table(both$route, both$verdict))
 colnames(summary_table) <- c("route", "verdict", "claims")
@@ -283,7 +294,8 @@ cat("\n=== Summary ===\n")
 print(summary_table)
 
 plot_data <- both[!is.na(both$difference_points), ]
-plot_data$expected <- ifelse(plot_data$direction == "higher", "higher in NKG2C+",
+plot_data$expected <- ifelse(plot_data$direction == "higher",
+                             "higher in NKG2C+",
                              "lower in NKG2C+")
 
 claim_plot <- ggplot(

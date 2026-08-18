@@ -86,17 +86,20 @@ if (length(missing) > 0) {
 found <- installed[names(expected)]
 mismatched <- names(expected)[found != expected]
 
-cat(sprintf("%-24s %-12s %-12s %s\n", "PACKAGE", "EXPECTED", "INSTALLED", "STATUS"))
+cat(sprintf("%-24s %-12s %-12s %s\n", "PACKAGE", "EXPECTED", "INSTALLED",
+    "STATUS"))
 for (pkg in names(expected)) {
   status <- if (found[[pkg]] == expected[[pkg]]) "ok" else "MISMATCH"
-  cat(sprintf("%-24s %-12s %-12s %s\n", pkg, expected[[pkg]], found[[pkg]], status))
+  cat(sprintf("%-24s %-12s %-12s %s\n", pkg, expected[[pkg]], found[[pkg]],
+      status))
 }
 
 cat("\nR version:            ", as.character(getRversion()), "\n")
 cat("Bioconductor version: ", as.character(BiocManager::version()), "\n")
 
 if (length(mismatched) > 0) {
-  cat("\nBuild stopped.", length(mismatched), "package(s) do not match the pin.\n")
+  cat("\nBuild stopped.", length(mismatched),
+      "package(s) do not match the pin.\n")
   cat("Either the CRAN snapshot date moved or the Bioconductor release changed.\n")
   cat("Update containers/verify_versions.R and the Containerfile together.\n")
   quit(status = 1)

@@ -98,7 +98,8 @@ if (!dir.exists(kDataDir)) {
        "  ./sync.sh pull datasets/flowrepository/OMIP-43")
 }
 
-claims <- ReadPaperClaims2 <- utils::read.csv(kClaimsPath, stringsAsFactors = FALSE,
+claims <- ReadPaperClaims2 <- utils::read.csv(kClaimsPath,
+                                              stringsAsFactors = FALSE,
                                               check.names = FALSE)
 Log("Read", nrow(claims), "claims from the paper")
 
@@ -142,7 +143,8 @@ for (tissue in kTissues) {
   }
 }
 manual <- do.call(rbind, manual_rows)
-write.csv(manual, file.path(kOutputDir, "manual_asc_counts.csv"), row.names = FALSE)
+write.csv(manual, file.path(kOutputDir, "manual_asc_counts.csv"),
+          row.names = FALSE)
 
 cat("\n=== ASC per replicate, manual gates ===\n")
 print(manual[, c("tissue", "asc_events", "parent_events", "asc_percent",
@@ -202,7 +204,8 @@ for (tissue in kTissues) {
   files <- list.files(
     kDataDir,
     pattern = paste0("^", switch(tissue, PBMC = "PBMC", `Bone Marrow` = "BM",
-                                 Spleen = "Spleen", Tonsil = "Tonsil"), "_.*\\.fcs$"),
+                                 Spleen = "Spleen", Tonsil = "Tonsil"),
+                                 "_.*\\.fcs$"),
     full.names = TRUE
   )
   if (length(files) == 0) {
@@ -211,7 +214,8 @@ for (tissue in kTissues) {
   }
 
   flow_set <- read.flowSet(files[1], truncate_max_range = FALSE)
-  spillover <- tryCatch(ExtractSpillover(flow_set[[1]]), error = function(e) NULL)
+  spillover <- tryCatch(ExtractSpillover(flow_set[[1]]),
+                        error = function(e) NULL)
   if (!is.null(spillover)) flow_set <- compensate(flow_set, spillover)
   transformed <- ApplyLogicleTransform(flow_set)$data
 
@@ -288,7 +292,8 @@ for (tissue in kTissues) {
   )
 
   # Purity and recall per metacluster, against the manual gate.
-  per_cluster <- lapply(sort(unique(clustering$metacluster)), function(cluster) {
+  per_cluster <- lapply(sort(unique(clustering$metacluster)),
+                        function(cluster) {
     in_cluster <- clustering$metacluster == cluster
     data.frame(
       tissue = tissue,
@@ -323,13 +328,15 @@ for (tissue in kTissues) {
 
   write.csv(per_cluster,
             file.path(kOutputDir, paste0("clusters_",
-                                         gsub(" ", "_", tolower(tissue)), ".csv")),
+                                         gsub(" ", "_",
+                                              tolower(tissue)), ".csv")),
             row.names = FALSE)
 
   # One UMAP, from the tissue with the most ASC, so the figure shows them
   # clearly.
   if (tissue == "Spleen" && !umap_saved) {
-    embedding <- RunUmapEmbedding(events, channels = kClusterChannels, seed = kSeed)
+    embedding <- RunUmapEmbedding(events, channels = kClusterChannels,
+                                  seed = kSeed)
     plot_data <- cbind(
       embedding,
       manual_label = ifelse(truth, "ASC by the manual gate", "other"),
@@ -360,7 +367,8 @@ for (tissue in kTissues) {
     SaveFigure(umap_manual, file.path(kOutputDir, "umap_spleen_manual.png"),
       width = 9, height = 7)
 
-    umap_cluster <- ggplot(plot_data, aes(x = umap_1, y = umap_2, colour = cluster)) +
+    umap_cluster <- ggplot(plot_data, aes(x = umap_1, y = umap_2,
+                           colour = cluster)) +
       geom_point(size = 0.4, alpha = 0.7, shape = 16) +
       ScaleColourPublication(name = "Metacluster") +
       LegendPoints() +
@@ -415,7 +423,8 @@ for (tissue in kTissues) {
     tissue = tissue,
     manual_cd38_threshold = manual_low,
     mindensity_cd38_threshold = automatic_cut,
-    percent_above_manual = 100 * mean(events[, kChannels[["CD38"]]] >= manual_low),
+    percent_above_manual = 100 * mean(events[,
+                                      kChannels[["CD38"]]] >= manual_low),
     percent_above_mindensity = if (is.na(automatic_cut)) NA_real_ else
       100 * mean(events[, kChannels[["CD38"]]] >= automatic_cut),
     manual_asc_percent = 100 * mean(truth),
@@ -510,7 +519,8 @@ Log("Annotating the spleen metaclusters")
 definitions <- ReadCellTypeDefinitions(kDefinitionsPath)
 
 withr::with_seed(kSeed, {
-  keep <- sample.int(nrow(spleen_events), min(kSubsampleSize, nrow(spleen_events)))
+  keep <- sample.int(nrow(spleen_events), min(kSubsampleSize,
+                     nrow(spleen_events)))
 })
 spleen_sub <- spleen_events[keep, , drop = FALSE]
 spleen_truth_sub <- spleen_truth[keep]
@@ -533,7 +543,8 @@ ScaleColumn <- function(x) {
   span <- max(x) - min(x)
   if (span == 0) rep(0.5, length(x)) else (x - min(x)) / span
 }
-scaled_expression <- median_expression[, c("cluster", "events", "percent_of_total")]
+scaled_expression <- median_expression[, c("cluster", "events",
+                                       "percent_of_total")]
 for (i in seq_along(kClusterChannels)) {
   scaled_expression[[names(kChannels)[i]]] <-
     round(ScaleColumn(median_expression[[kClusterChannels[i]]]), 3)
@@ -560,7 +571,8 @@ print(annotation[, c("cluster", "events", "percent_of_total", "cell_type",
       digits = 3, row.names = FALSE)
 
 marker_names <- names(kChannels)
-expression_long <- do.call(rbind, lapply(seq_along(kClusterChannels), function(i) {
+expression_long <- do.call(rbind, lapply(seq_along(kClusterChannels),
+                           function(i) {
   data.frame(
     cluster = factor(median_expression$cluster),
     marker = marker_names[i],
@@ -606,7 +618,8 @@ marker_long <- do.call(rbind, lapply(seq_along(kClusterChannels), function(i) {
   )
 }))
 
-marker_plot <- ggplot(marker_long, aes(x = umap_1, y = umap_2, colour = value)) +
+marker_plot <- ggplot(marker_long, aes(x = umap_1, y = umap_2,
+                      colour = value)) +
   geom_point(size = 0.25, alpha = 0.6, shape = 16) +
   facet_wrap(~marker, ncol = 4) +
   scale_colour_viridis_c(option = "viridis", name = "Intensity",
@@ -780,10 +793,12 @@ verdict_rows <- list(
 
 verdicts <- merge(claims, do.call(rbind, verdict_rows), by = "claim_id")
 verdicts <- verdicts[order(verdicts$claim_id), ]
-write.csv(verdicts, file.path(kOutputDir, "claims_verdicts.csv"), row.names = FALSE)
+write.csv(verdicts, file.path(kOutputDir, "claims_verdicts.csv"),
+          row.names = FALSE)
 
 cat("\n=== Every claim, with a verdict ===\n")
-print(verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+print(verdicts[, c("claim_id", "short_name", "expected", "observed",
+      "verdict")],
       row.names = FALSE)
 
 Log("Claims reproduced:", sum(verdicts$verdict == "reproduced"), "of",
@@ -829,7 +844,8 @@ for (tissue in kTissues) {
     grid_size = kSomGrid, n_metaclusters = kMetaclusters,
     scale_channels = kScaleChannels, seed = kSeed
   )
-  medians <- ClusterMedianExpression(events, clusters$metacluster, kClusterChannels)
+  medians <- ClusterMedianExpression(events, clusters$metacluster,
+                                     kClusterChannels)
   labels <- AnnotateClusters(medians, definitions)
 
   # The paper identifies ASC by CD38 being highest, not by the shape of the
@@ -867,20 +883,24 @@ for (tissue in kTissues) {
     hladr_asc = MedianIn(kChannels[["HLA-DR"]], is_asc),
     stringsAsFactors = FALSE
   )
-  Log("  ", tissue, sprintf("%d cluster(s), %.2f%% of the parent against %.2f%% manual",
-                            length(asc_clusters), 100 * mean(is_asc), 100 * mean(truth)))
+  Log("  ", tissue,
+      sprintf("%d cluster(s), %.2f%% of the parent against %.2f%% manual",
+                            length(asc_clusters), 100 * mean(is_asc),
+                            100 * mean(truth)))
 }
 
 cluster_phenotype <- do.call(rbind, cluster_phenotype_rows)
 cluster_phenotype$ssc_ratio <- cluster_phenotype$ssc_asc / cluster_phenotype$ssc_other
 cluster_phenotype$cd20_difference <- cluster_phenotype$cd20_asc -
   cluster_phenotype$cd20_other
-write.csv(cluster_phenotype, file.path(kOutputDir, "cluster_route_phenotype.csv"),
+write.csv(cluster_phenotype, file.path(kOutputDir,
+          "cluster_route_phenotype.csv"),
           row.names = FALSE)
 
 cat("\n=== ASC defined by clustering alone ===\n")
 print(cluster_phenotype[, c("tissue", "asc_percent", "manual_percent",
-                            "agreement_percent", "ssc_ratio", "cd20_difference")],
+                            "agreement_percent", "ssc_ratio",
+                            "cd20_difference")],
       digits = 3, row.names = FALSE)
 
 # The same claims, scored against this population.
@@ -895,7 +915,8 @@ route_rows <- list(
           "Tested on clusters, not on the manual gate."),
   Verdict(4,
           sprintf("side scatter ratio %.2f to %.2f",
-                  min(cluster_phenotype$ssc_ratio), max(cluster_phenotype$ssc_ratio)),
+                  min(cluster_phenotype$ssc_ratio),
+                  max(cluster_phenotype$ssc_ratio)),
           if (all(cluster_phenotype$ssc_ratio > 1)) "reproduced" else "not reproduced",
           "Tested on clusters, not on the manual gate."),
   Verdict(5,
@@ -907,14 +928,16 @@ route_rows <- list(
           "Tested on clusters, not on the manual gate."),
   Verdict(6,
           sprintf("CD19 median %.0f to %.0f, CV %.1f%%",
-                  min(cluster_phenotype$cd19_asc), max(cluster_phenotype$cd19_asc),
+                  min(cluster_phenotype$cd19_asc),
+                  max(cluster_phenotype$cd19_asc),
                   MeasuredCv(cluster_phenotype$cd19_asc)),
           if (MeasuredCv(cluster_phenotype$cd19_asc) > 5) "reproduced" else
             "too small to call",
           "Tested on clusters, not on the manual gate."),
   Verdict(7,
           sprintf("HLA-DR median %.0f to %.0f, CV %.1f%%",
-                  min(cluster_phenotype$hladr_asc), max(cluster_phenotype$hladr_asc),
+                  min(cluster_phenotype$hladr_asc),
+                  max(cluster_phenotype$hladr_asc),
                   MeasuredCv(cluster_phenotype$hladr_asc)),
           if (MeasuredCv(cluster_phenotype$hladr_asc) > 5) "reproduced" else
             "too small to call",
@@ -925,9 +948,11 @@ route_two <- merge(claims, do.call(rbind, route_rows), by = "claim_id")
 route_two <- route_two[order(route_two$claim_id), ]
 
 both_routes <- rbind(
-  cbind(verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+  cbind(verdicts[, c("claim_id", "short_name", "expected", "observed",
+        "verdict")],
         route = "the authors' gates"),
-  cbind(route_two[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+  cbind(route_two[, c("claim_id", "short_name", "expected", "observed",
+        "verdict")],
         route = "clustering")
 )
 both_routes <- both_routes[order(both_routes$claim_id), ]
@@ -935,7 +960,8 @@ write.csv(both_routes, file.path(kOutputDir, "claims_both_routes.csv"),
           row.names = FALSE)
 
 cat("\n=== The same claims by two independent routes ===\n")
-print(both_routes[, c("claim_id", "short_name", "route", "observed", "verdict")],
+print(both_routes[, c("claim_id", "short_name", "route", "observed",
+      "verdict")],
       row.names = FALSE)
 
 # ---------------------------------------------------------------------------

@@ -858,6 +858,26 @@ def check_chain(work: Path) -> list[Result]:
         )
     )
 
+    # Definitions written against markers the clustering never saw cannot score
+    # anything, and a bundle that holds no result looks like one.
+    wrong = work / "wrong_definitions.csv"
+    wrong.write_text("cell_type,IL17,IFNg,note\nTh17,pos,neg,\n")
+    refused_out = work / "annotate_refused"
+    status, output, seconds = run_cli(
+        ["annotate", "--clusters", str(cluster_bundle), "--definitions", str(wrong),
+         "--out", str(refused_out)]
+    )
+    left = newest_bundle(refused_out)
+    results.append(
+        Result(
+            "chain",
+            "annotate with definitions that share no marker",
+            status != 0 and left is None,
+            "refuses, and writes no bundle" if left is None else f"left {left.name}",
+            seconds,
+        )
+    )
+
     metadata = work / "metadata.csv"
     metadata.write_text("sample,treatment\n100715.fcs,control\n109567.fcs,drug\n113548.fcs,drug\n")
     proportions_out = work / "proportions"

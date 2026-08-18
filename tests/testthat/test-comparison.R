@@ -34,7 +34,8 @@ test_that("PopulationProportions matches on the base name", {
   expect_true(PopulationProportions(stats, metadata)$metadata_found)
 })
 
-test_that("PopulationProportions rejects a metadata row that repeats a sample", {
+test_that("PopulationProportions rejects a metadata row that repeats a sample",
+          {
   stats <- data.frame(sample = "a.fcs", population = "T cells", count = 10,
                       percent_of_parent = 30, stringsAsFactors = FALSE)
   metadata <- data.frame(sample = c("a.fcs", "a.fcs"),
@@ -180,7 +181,8 @@ test_that("CompareGatingResults reports NA when a population is absent", {
   expect_true(is.na(result$difference))
 })
 
-test_that("JudgeAgreement calls a difference inside the tolerance an agreement", {
+test_that("JudgeAgreement calls a difference inside the tolerance an agreement",
+          {
   comparison <- data.frame(difference = c(2, -3, 9, NA))
   judged <- JudgeAgreement(comparison, tolerance_points = 5)
   expect_equal(judged$verdict, c("agree", "agree", "differ", "missing"))

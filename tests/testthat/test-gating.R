@@ -26,7 +26,8 @@ test_that("ReadGatingTemplate names the columns that are missing", {
 
 test_that("the repository template holds every required column", {
   path <- testthat::test_path("..", "..", "gating", "pbmc_gating_template.csv")
-  skip_if_not(file.exists(path), "the gating template is not at the expected path")
+  skip_if_not(file.exists(path),
+              "the gating template is not at the expected path")
 
   template <- utils::read.csv(path, check.names = FALSE)
   required <- c("alias", "pop", "parent", "dims", "gating_method")
@@ -37,7 +38,8 @@ test_that("the repository template holds every required column", {
 
 test_that("the repository template names a parent that is defined before it", {
   path <- testthat::test_path("..", "..", "gating", "pbmc_gating_template.csv")
-  skip_if_not(file.exists(path), "the gating template is not at the expected path")
+  skip_if_not(file.exists(path),
+              "the gating template is not at the expected path")
 
   template <- utils::read.csv(path, check.names = FALSE)
   defined <- "root"

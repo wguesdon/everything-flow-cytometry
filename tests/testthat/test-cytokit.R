@@ -172,7 +172,8 @@ test_that("PanelNamingState reports a file that names everything", {
   expect_equal(PanelNamingState(panel)$state, "every detector named")
 })
 
-test_that("DisplayPath maps the container path back to the one that was typed", {
+test_that("DisplayPath maps the container path back to the one that was typed",
+          {
   # Both variables carry the folder that the CLI mounted, never the file that
   # --data or --out named. One substitution then covers every case.
   withr::local_envvar(CYTOKIT_DATA_HOST = "/home/scientist/study",
@@ -197,7 +198,8 @@ test_that("DisplayPath leaves a path alone when the mapping is unknown", {
   expect_equal(DisplayPath("relative/path.csv"), "relative/path.csv")
 })
 
-test_that("AcquisitionKind reads a mass cytometer from the instrument keyword", {
+test_that("AcquisitionKind reads a mass cytometer from the instrument keyword",
+          {
   panel <- data.frame(channel = c("FSC-A", "SSC-A", "APC-A"),
                       kind = c("scatter", "scatter", "stain"),
                       stringsAsFactors = FALSE)
