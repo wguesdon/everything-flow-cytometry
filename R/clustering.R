@@ -263,10 +263,9 @@ AnnotateClusters <- function(median_expression, definitions) {
   colnames(scaled) <- marker_columns
 
   # The score is a weighted mean over the markers a definition specifies, not a
-  # sum. A sum rewards a definition simply for naming more markers: the adaptive
-  # NK definition names eight and the T cell definition names two, so under a sum
-  # the adaptive label wins every cluster, including the one that is 90 percent of
-  # the file and obviously T cells. Dividing by the total weight removes that.
+  # sum. A sum rewards a definition for naming more markers: with eight markers
+  # against two, the longer definition scores higher on its length alone.
+  # Dividing by the total weight removes that. test-clustering.R holds the case.
   score_matrix <- vapply(seq_len(nrow(definitions)), function(d) {
     total <- rep(0, nrow(scaled))
     weight <- 0

@@ -266,11 +266,22 @@ GateOmip51File <- function(path, spillover, thresholds = NULL,
     mixture_cut <- if (sum(parent) < min_events) NA_real_ else MixtureCut(column)
     threshold <- if (is.null(thresholds)) density_cut else
       unname(thresholds[[name]])
+    # The fraction each candidate cut would keep is recorded next to the cut
+    # itself, because that fraction is what says a rule failed. A threshold
+    # alone does not, and a report that states the fraction has to be able to
+    # point at the file it came from.
+    PercentAbove <- function(value) {
+      if (is.na(value) || length(column) == 0) NA_real_ else
+        100 * mean(column > value)
+    }
     cuts[[length(cuts) + 1]] <<- data.frame(
       label = label, marker = name, channel = Channel(name),
       cut = threshold,
       rule = if (is.null(thresholds)) "density" else "unstained control",
       density_cut = density_cut, mixture_cut = mixture_cut,
+      percent_above_cut = PercentAbove(threshold),
+      percent_above_density_cut = PercentAbove(density_cut),
+      percent_above_mixture_cut = PercentAbove(mixture_cut),
       parent_events = sum(parent), stringsAsFactors = FALSE
     )
     if (is.na(threshold)) {
