@@ -448,3 +448,39 @@ test_that("ReportNotes prints nothing when nothing was reported", {
   empty <- data.frame(note = character(0), times = integer(0))
   expect_equal(length(capture.output(ReportNotes(empty, NULL))), 0)
 })
+
+test_that("ShortLabel strips the recipe name and the timestamp", {
+  # A chained recipe uses the bundle it read as its label. Without this the new
+  # bundle carries two recipe names and two timestamps.
+  expect_equal(ShortLabel("gate_my_study_2026_08_18_205932"), "my_study")
+  expect_equal(ShortLabel("cluster_my_study_2026_08_18_205932"), "my_study")
+  expect_equal(ShortLabel("/a/path/annotate_my_study_2026_08_18_205932"),
+               "my_study")
+})
+
+test_that("ShortLabel leaves a name that carries neither", {
+  expect_equal(ShortLabel("my_study"), "my_study")
+})
+
+test_that("ShortLabel never returns an empty label", {
+  expect_equal(ShortLabel("gate_2026_08_18_205932"), "study")
+})
+
+test_that("CloseCytokitBundle checksums the files inside a folder input", {
+  # A saved hierarchy is a folder, and md5sum fails on a folder.
+  bundle <- withr::local_tempdir()
+  folder <- withr::local_tempdir()
+  writeLines("a", file.path(folder, "one.txt"))
+  writeLines("b", file.path(folder, "two.txt"))
+  CloseCytokitBundle(bundle, "gate", list(data = folder), inputs = folder)
+  manifest <- jsonlite::fromJSON(file.path(bundle, "manifest.json"))
+  expect_equal(sort(names(manifest$inputs)), c("one.txt", "two.txt"))
+})
+
+test_that("CloseCytokitBundle writes a manifest with no input at all", {
+  bundle <- withr::local_tempdir()
+  CloseCytokitBundle(bundle, "inspect", list(data = "x"))
+  manifest <- jsonlite::fromJSON(file.path(bundle, "manifest.json"))
+  expect_equal(manifest$recipe, "inspect")
+  expect_true(file.exists(file.path(bundle, "REPRODUCE.md")))
+})

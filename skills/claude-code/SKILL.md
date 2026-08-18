@@ -30,8 +30,20 @@ cytokit definitions --data PATH --out FILE      # an empty cell type table for t
 cytokit compensate  --data PATH [--controls DIR] [--out DIR]
                                     [--cofactor 150] [--unstained PATTERN]
                                     [--seed INTEGER]
+cytokit gate        --data PATH --template FILE [--out DIR] [--cores N]
+                                    [--seed N] [--no-compensate] [--no-transform]
+                                    [--no-save-gates]
+cytokit cluster     --gates BUNDLE [--parent POP] | --data PATH
+                                    [--markers "CD3,CD4"] [--metaclusters N]
+                                    [--grid N] [--events N] [--no-umap] [--seed N]
+                                    [--out DIR]
+cytokit annotate    --clusters BUNDLE --definitions FILE [--margin N] [--out DIR]
+cytokit proportions --counts BUNDLE --metadata FILE [--out DIR]
+                                    [--sample-column sample]
+cytokit compare     --proportions BUNDLE --group COL [--population NAME]
+                                    [--all-populations] [--out DIR]
 
-# Add --recursive to any of the four when the FCS files sit below the folder
+# Add --recursive to an FCS data command when the files sit below the folder
 # you name, which is how a deposit arrives when you unzip it.
 ```
 
@@ -53,6 +65,68 @@ INTEGER` changes the seed, which defaults to `42`. `flowStats::norm2Filter`
 draws a random subset while it gates each control, so a different seed
 changes the computed matrix. Do not run `compensate` on mass cytometry data. A
 mass cytometer counts an isotope, so there is no spillover to compensate.
+
+`gate` runs an openCyto gating template that the scientist fills in. The
+template records the scientist's decision. The recipe applies the stored
+compensation matrix before it applies the logicle transform. A gate drawn on
+uncompensated values counts spillover as signal. openCyto cuts values on a
+transformed scale.
+
+Use `--no-compensate` to skip the stored matrix. Use `--no-transform` when the
+values already sit on a gating scale. The `--template FILE` flag is required.
+The `--cores N` flag sets the number of cores. The `--seed N` flag sets the
+seed.
+
+Run `cytokit template` first to get a valid empty template. The recipe writes
+`population_stats.csv` with one row for each sample and population. It writes
+`gate_tree.csv` with the parent of each population. It also writes
+`gate_tree.svg`.
+
+The recipe names every gate that keeps more than 99.5 percent of its parent. It
+also names every gate that keeps less than 1 percent of its parent. A gate that
+keeps every event did not cut. A gate that keeps almost no events cut in the
+wrong place. Both cases can look like a result in a table.
+
+When the input has more than one file, the recipe reports the frequency spread
+of each population across samples as a coefficient of variation.
+
+`gate` saves the gated hierarchy in the bundle as a `gating_set` folder. Use
+that folder with `cluster` to cluster events inside a gate. Use
+`--no-save-gates` to stop this save.
+
+`cluster` groups events with FlowSOM and draws them with UMAP. It does not name
+a cluster, because a name is a claim about an antibody. Use `--gates BUNDLE`
+and `--parent POP` to cluster events from a saved hierarchy. Use `--data PATH`
+to cluster events from FCS files. Clustering inside a gate is the usual case,
+because a clustering over debris spends its clusters on debris.
+
+`--metaclusters N` sets the number of clusters and defaults to `12`. `--grid
+N` sets the FlowSOM grid and defaults to `10`. `--events N` caps the subsample
+and defaults to `50000`. `--markers` narrows the channels. `--no-umap` skips
+the embedding. `--seed N` sets the seed.
+
+The recipe replaces a detector name with the marker name when the file supplies
+one. It names every cluster with fewer than 20 events. A median from that few
+events is noise. The recipe writes `cluster_medians.csv` and
+`cluster_medians.svg`. It writes `umap.csv` and `umap.png` unless `--no-umap`
+skips the embedding. The UMAP uses a raster, because a vector records every
+point.
+
+`annotate` puts a cell type name on every cluster. The name comes from the
+scientist's definitions table. `--clusters BUNDLE` and `--definitions FILE`
+are required. `--margin N` sets the close-call margin and defaults to `0.1`.
+
+The recipe scores every cluster against every definition. The margin between
+the best score and the second-best score decides whether a label is a fact or a
+close call. It names every label below the margin threshold. Report one of
+those labels as a candidate and not as a cell type.
+
+The recipe names every definition that wins no cluster. The population is
+absent, or the definition does not suit the panel. It reports how many markers
+from each definition occur in the clustering. A definition scores on its other
+markers when the clustering lacks one, so its label is weaker than it looks.
+The recipe writes `cluster_labels.csv`, `cell_type_summary.csv`,
+`cell_type_summary.svg` and `close_calls.csv` when a close call occurs.
 
 ## Workflow
 
@@ -83,20 +157,19 @@ mass cytometer counts an isotope, so there is no spillover to compensate.
    already compensated. The recipe measures one file of the folder and names
    it, so measure a second file when the run spans more than one day or one
    instrument.
-7. A gating template and a cell type definitions table are per panel, and the
-   scientist will not have one. Run `cytokit template` and `cytokit
-   definitions` to get a valid empty file, then fill it in with them. Both
-   recipes read the file back with the function that will consume it and report
-   whether it parses.
-8. Confirm the design with the scientist before you draw a gate. How many
-   populations, which marker separates each one, and what the negative control
-   is.
-
+7. Confirm the gate design with the scientist. Record how many populations the
+   design has, which marker separates each one and the negative control.
+8. Run `cytokit template` first to get a valid empty template. Fill in the
+   template with the scientist. Run `cytokit gate`. Read the gates that the
+   recipe names before you report a population.
+9. Run `cytokit cluster` inside the gate that holds the events of interest. Read every cluster with fewer than 20 events as noise. Do not name a cluster before the scientist supplies a cell type definition.
+10. A cell type definitions table is per panel, and the scientist will not have one. Run `cytokit definitions` to get a valid empty file. Fill it in with the scientist. The recipe reads the file back and reports whether it parses.
+11. Run `cytokit annotate` with the cluster bundle and the definitions table. Report every close call as a candidate and not as a cell type.
 ## What is not built yet
 
 `cytokit list` marks a recipe `ready` or `planned`. The planned recipes are
-`gate`, `cluster`, `annotate`, `proportions`, `compare`, `claims` and
-`reproduce`. Do not invent a command that `cytokit list` does not show. If the
+`proportions`, `compare`, `claims` and `reproduce`. Do not invent a command
+that `cytokit list` does not show. If the
 scientist asks for one, say it is not built and point at `docs/cytokit.md`,
 which holds the plan and the build order.
 

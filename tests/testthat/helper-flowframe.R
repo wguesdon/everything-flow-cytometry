@@ -110,3 +110,34 @@ MakeTestControlSet <- function() {
 
   flowCore::flowSet(frames)
 }
+
+#' Build a small gated GatingSet for a test
+#'
+#' `CollectGateTree` reads a real hierarchy, so a test needs one. The gates are
+#' plain rectangles added by hand rather than an openCyto template, because the
+#' function under test reads the hierarchy and not the way it was built.
+#'
+#' The two gates are nested, and each one drops a known share of its parent, so
+#' a test can assert the arithmetic as well as the shape.
+#'
+#' @param n_events The number of events. Defaults to 400.
+#' @return A `GatingSet` with `nonDebris` under root and `singlets` under
+#'   `nonDebris`.
+MakeGatedSet <- function(n_events = 400) {
+  frame <- MakeTestFlowFrame(n_events = n_events)
+  flow_set <- flowCore::flowSet(sample = frame)
+  gating_set <- flowWorkspace::GatingSet(flow_set)
+
+  wide <- flowCore::rectangleGate(
+    filterId = "nonDebris",
+    list(`FSC-A` = c(80000, Inf), `FSC-H` = c(-Inf, Inf)))
+  flowWorkspace::gs_pop_add(gating_set, wide, parent = "root")
+
+  narrow <- flowCore::rectangleGate(
+    filterId = "singlets",
+    list(`FSC-A` = c(-Inf, Inf), `FSC-H` = c(85000, Inf)))
+  flowWorkspace::gs_pop_add(gating_set, narrow, parent = "nonDebris")
+
+  flowWorkspace::recompute(gating_set)
+  gating_set
+}

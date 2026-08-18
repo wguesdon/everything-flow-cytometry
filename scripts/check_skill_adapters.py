@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 CLI = Path("cli/cytokit")
+DOCUMENT = Path("docs/cytokit.md")
 ADAPTERS = [
     Path("skills/claude-code/SKILL.md"),
     Path("skills/codex/AGENTS.md"),
@@ -111,6 +112,23 @@ def main() -> int:
                 f"{sorted(ready - names)}"
             )
 
+    # docs/cytokit.md carries the same recipe table, and a state that lags the
+    # CLI sends a reader to a recipe they are told does not exist.
+    document = DOCUMENT
+    if not document.exists():
+        problems.append(f"{document} is missing")
+    else:
+        stated = document_states(document)
+        if not stated:
+            problems.append(f"{document} carries no recipe table")
+        for name, state in sorted(table.items()):
+            if name not in stated:
+                problems.append(f"{document} does not list the recipe {name}")
+            elif stated[name] != state:
+                problems.append(
+                    f"{document} calls {name} {stated[name]} and the CLI calls it {state}"
+                )
+
     print(f"routes   {sorted(routes)}")
     print(f"ready    {sorted(ready)}")
     print(f"planned  {sorted(n for n, s in table.items() if s == 'planned')}")
@@ -125,6 +143,23 @@ def main() -> int:
         return 1
     print("\nThe CLI and all three adapters agree.")
     return 0
+
+
+def document_states(path: Path) -> dict[str, str]:
+    """Read the recipe table of docs/cytokit.md.
+
+    Args:
+        path: The document.
+
+    Returns:
+        A mapping from recipe name to the state the document gives it.
+    """
+    states: dict[str, str] = {}
+    for line in path.read_text().splitlines():
+        match = re.match(r"^\|\s*`([a-z]+)`\s*\|\s*(ready|planned)\s*\|", line)
+        if match:
+            states[match.group(1)] = match.group(2)
+    return states
 
 
 if __name__ == "__main__":

@@ -18,6 +18,14 @@ read only, because an FCS file is a measurement that cannot be taken again.
 ./cli/cytokit definitions --data PATH --out FILE   # an empty cell type table
 ./cli/cytokit compensate  --data PATH [--controls DIR] [--out DIR]
                                       [--cofactor 150] [--seed INTEGER]
+./cli/cytokit gate        --data PATH --template FILE [--out DIR] [--cores N]
+                                      [--seed N] [--no-compensate] [--no-transform]
+                                      [--no-save-gates]
+./cli/cytokit cluster     --gates BUNDLE [--parent POP] | --data PATH
+                                      [--markers "CD3,CD4"] [--metaclusters N]
+                                      [--grid N] [--events N] [--no-umap] [--seed N]
+                                      [--out DIR]
+./cli/cytokit annotate    --clusters BUNDLE --definitions FILE [--margin N] [--out DIR]
 ```
 
 Add `--recursive` when the FCS files sit below the data folder you name. That
@@ -33,9 +41,9 @@ Start with `inspect`. Every later recipe reads what it prints.
 | `template` | ready | An empty openCyto gating template for this panel |
 | `definitions` | ready | An empty cell type definitions table for this panel |
 | `compensate` | ready | The stored matrix, and whether it lowers the correlation |
-| `gate` | planned | Run a template, write counts, a gate tree and the flow |
-| `cluster` | planned | FlowSOM and UMAP, inside a gate when asked |
-| `annotate` | planned | Label each cluster from a definitions table |
+| `gate` | ready | Run a template, write counts and a gate tree |
+| `cluster` | ready | FlowSOM and UMAP, inside a gate when asked |
+| `annotate` | ready | Label each cluster from a definitions table |
 | `proportions` | planned | Per sample frequencies joined to a metadata table |
 | `compare` | planned | Box plot of proportion by treatment, with the test |
 | `claims` | planned | A verdict for every claim in a claims table |
@@ -77,15 +85,108 @@ Set the seed once and the answer repeats. `flowStats::norm2Filter` draws a
 random subset while it gates each control, so an unseeded run moves the matrix
 between runs. The seed is recorded in `manifest.json`.
 
+## Gate
+
+`gate` runs an openCyto gating template that the scientist fills in. The
+template records the scientist's decision. The recipe applies the stored
+compensation matrix before it applies the logicle transform. A gate drawn on
+uncompensated values counts spillover as signal. openCyto cuts values on a
+transformed scale.
+
+Use `--no-compensate` to skip the stored matrix. Use `--no-transform` when the
+values already sit on a gating scale. Run `cytokit template` first to get a
+valid empty template.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--template FILE` | The openCyto gating template | Required |
+| `--cores N` | The number of cores | 1 |
+| `--seed N` | The seed | 42 |
+| `--no-compensate` | Skip the stored matrix | False |
+| `--no-transform` | Skip the logicle transform | False |
+| `--no-save-gates` | Do not save the gated hierarchy | False |
+
+The recipe writes `population_stats.csv` with one row for each sample and
+population. It writes `gate_tree.csv` with the parent of each population. It
+also writes `gate_tree.svg`.
+
+The recipe names every gate that keeps more than 99.5 percent of its parent. It
+also names every gate that keeps less than 1 percent of its parent. A gate that
+keeps every event did not cut. A gate that keeps almost no events cut in the
+wrong place. Both cases can look like a result in a table.
+
+When the input has more than one file, the recipe reports the frequency spread
+of each population across samples as a coefficient of variation.
+
+`gate` saves the gated hierarchy in its bundle as a `gating_set` folder.
+`cluster` reads this folder and clusters events inside one of its gates.
+`--no-save-gates` stops this save.
+
+## Cluster
+
+`cluster` groups events with FlowSOM and draws them with UMAP. It does not name
+a cluster, because a name is a claim about an antibody. The scientist owns that
+claim.
+
+Use `--gates BUNDLE` and `--parent POP` to use events from a saved hierarchy.
+Use `--data PATH` to use events from FCS files. Clustering inside a gate is the
+usual case, because a clustering over debris spends its clusters on debris.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--gates BUNDLE` | The gate bundle that holds `gating_set` | None |
+| `--parent POP` | The population in the saved hierarchy | The last population |
+| `--data PATH` | The FCS file or folder | None |
+| `--markers LIST` | The channels for clustering | All marker channels |
+| `--metaclusters N` | The number of clusters | 12 |
+| `--grid N` | The FlowSOM grid size | 10 |
+| `--events N` | The maximum event subsample | 50000 |
+| `--no-umap` | Skip the UMAP embedding | False |
+| `--seed N` | The seed | 42 |
+
+The recipe replaces a detector name with the marker name when the file supplies
+one. It names every cluster with fewer than 20 events. A median from that few
+events is noise.
+
+The recipe writes `cluster_medians.csv` and `cluster_medians.svg`. It writes
+`umap.csv` and `umap.png` unless `--no-umap` is set. The UMAP uses a raster,
+because a vector records every point.
+
+## Annotate
+
+`annotate` puts a cell type name on every cluster. The name comes from the
+scientist's definitions table.
+
+`--clusters BUNDLE` identifies the bundle that `cluster` writes.
+`--definitions FILE` identifies the definitions table. Both flags are
+required.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--clusters BUNDLE` | The cluster bundle | Required |
+| `--definitions FILE` | The cell type definitions table | Required |
+| `--margin N` | The close-call margin | 0.1 |
+
+The recipe scores every cluster against every definition. The margin between
+the best score and the second-best score decides whether a label is a fact or a
+close call. It names every label below the threshold. Report one of these
+labels as a candidate and not as a cell type.
+
+The recipe names every definition that wins no cluster. The population is
+absent, or the definition does not suit the panel. It reports how many markers
+from each definition occur in the clustering. A definition scores on the other
+markers when the clustering lacks one, so its label is weaker than it looks.
+
+The recipe writes `cluster_labels.csv`, `cell_type_summary.csv` and
+`cell_type_summary.svg`. It writes `close_calls.csv` when a close call occurs.
+
 ## The build order
 
-`inspect`, `template`, `definitions` and `compensate` are ready. Build the
-remaining recipes in this order.
+`inspect`, `template`, `definitions`, `compensate`, `gate`, `cluster` and
+`annotate` are ready. Build the remaining recipes in this order.
 
-1. `gate`.
-2. `cluster` and `annotate`.
-3. `proportions` and `compare`.
-4. `claims` and `reproduce`.
+1. `proportions` and `compare`.
+2. `claims` and `reproduce`.
 
 ## What a recipe writes
 
@@ -103,6 +204,17 @@ the tables and the figures, and four files that let the result be rebuilt.
 `stored_matrix.csv` and `stored_matrix.svg` when the file carries a matrix.
 With `--controls` it also writes `computed_matrix.csv`, `computed_matrix.svg`,
 `control_match.csv` and `matrix_comparison.csv`.
+
+`gate` adds `population_stats.csv`, `gate_tree.csv` and `gate_tree.svg`. It
+writes `gates_to_check.csv` when a gate keeps more than 99.5 percent or less
+than 1 percent of its parent. With more than one file, it also writes
+`population_spread.csv`.
+
+`cluster` adds `cluster_medians.csv` and `cluster_medians.svg`. It adds
+`umap.csv` and `umap.png` unless `--no-umap` is set.
+
+`annotate` adds `cluster_labels.csv`, `cell_type_summary.csv` and
+`cell_type_summary.svg`. It adds `close_calls.csv` when a close call occurs.
 
 `template` and `definitions` write one file that you name, plus a `_notes.md`
 beside it. The notes are a separate file because openCyto reads the template

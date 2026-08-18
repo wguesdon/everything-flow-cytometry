@@ -499,6 +499,79 @@ def check_compensate(work: Path) -> list[Result]:
     return results
 
 
+def check_gate(work: Path) -> list[Result]:
+    """Run the scaffolded template through gate, which is the intended chain.
+
+    `template` writes a valid empty file and `gate` runs it. If the two disagree
+    about the schema, a scientist meets the failure only after they have spent
+    an afternoon filling the file in.
+
+    Args:
+        work: A scratch folder outside the repository.
+
+    Returns:
+        One result per rule checked.
+    """
+    data = DEPOSIT_ROOT / "FlowRepository_FR-FCM-ZZLV_files"
+    work.mkdir(parents=True, exist_ok=True)
+    results = []
+
+    template = work / "template.csv"
+    status, output, seconds = run_cli(
+        ["template", "--data", str(data), "--out", str(template)])
+    if status != 0:
+        return [Result("gate", "scaffold a template", False, first_error(output), seconds)]
+
+    out = work / "run"
+    out.mkdir(parents=True, exist_ok=True)
+    status, output, seconds = run_cli(
+        ["gate", "--data", str(data), "--template", str(template), "--out", str(out)])
+    bundle = newest_bundle(out)
+    wanted = ("population_stats.csv", "gate_tree.csv", "gate_tree.svg")
+    missing = [name for name in wanted if not bundle or not (bundle / name).exists()]
+    results.append(
+        Result("gate", "the scaffolded template runs", status == 0 and not missing,
+               f"missing {', '.join(missing)}" if missing else "writes the stats, the tree and the figure",
+               seconds)
+    )
+    if bundle and (bundle / "gate_tree.csv").exists():
+        rows = (bundle / "gate_tree.csv").read_text().splitlines()
+        # PlotGateTree reads a missing parent as the root of the drawing.
+        root_first = len(rows) > 1 and rows[1].startswith('"all_events",NA')
+        results.append(
+            Result("gate", "the tree carries a root row", root_first,
+                   "all_events has no parent" if root_first else f"first row reads {rows[1] if len(rows) > 1 else 'nothing'}",
+                   0.0)
+        )
+        # A vector figure that hides a raster is not a vector figure.
+        drawing = (bundle / "gate_tree.svg").read_text()
+        clean = "<image" not in drawing and "<filter" not in drawing
+        results.append(
+            Result("gate", "the figure is vector", clean,
+                   "no raster inside the svg" if clean else "the svg embeds a raster", 0.0)
+        )
+
+    # A template that does not parse has to be refused with the command that
+    # writes a valid one.
+    broken = work / "broken.csv"
+    broken.write_text("this,is,not,a,template\n1,2,3,4,5\n")
+    status, output, seconds = run_cli(
+        ["gate", "--data", str(data), "--template", str(broken), "--out", str(work / "broken_out")])
+    guides = "cytokit template" in output
+    results.append(
+        Result("gate", "a template that does not parse", status != 0 and guides,
+               "the error names the command that writes a valid one" if guides else first_error(output),
+               seconds)
+    )
+
+    status, output, seconds = run_cli(["gate", "--data", str(data), "--out", str(work / "no_template")])
+    results.append(
+        Result("gate", "no --template at all", status != 0,
+               first_error(output) if status != 0 else "it ran without a template", seconds)
+    )
+    return results
+
+
 def check_refusals(work: Path) -> list[Result]:
     """Assert that the CLI refuses what it has to refuse.
 
@@ -594,7 +667,7 @@ def report(results: list[Result]) -> int:
         print(f"{len(failed)} of {len(results)} checks failed.")
         return 1
     deposits = ({item.what for item in results}
-                - {"refusals", "input shapes", "marker mapping", "compensate"})
+                - {"refusals", "input shapes", "marker mapping", "compensate", "gate"})
     noun = "deposit" if len(deposits) == 1 else "deposits"
     print(f"All {len(results)} checks passed over {len(deposits)} {noun}.")
     if any(item.what == "compensate" for item in results):
@@ -613,7 +686,7 @@ def main() -> int:
     parser.add_argument("--deposit", action="append", help="check one deposit, repeatable")
     parser.add_argument("--skip-refusals", action="store_true", help="skip the refusal cases")
     parser.add_argument("--skip-compensate", action="store_true",
-                        help="skip the compensate cases, which read whole files")
+                        help="skip the compensate and gate cases, which read whole files")
     options = parser.parse_args()
 
     corpus = CORPUS
@@ -641,6 +714,7 @@ def main() -> int:
         results += check_marker_mapping(work_root / "mapping")
         if not options.skip_compensate:
             results += check_compensate(work_root / "compensate")
+            results += check_gate(work_root / "gate")
         if not options.skip_refusals:
             results += check_refusals(work_root / "refusals")
     finally:

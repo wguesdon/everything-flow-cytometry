@@ -146,3 +146,59 @@ SummarisePopulationSpread <- function(stats, group_by = NULL) {
   rownames(result) <- NULL
   result[order(result$population), ]
 }
+
+#' Read the hierarchy of a gated set as a table with a parent column
+#'
+#' `CollectPopulationStats` reports one row per sample and population, which is
+#' what a comparison needs. A drawing of the hierarchy needs the parent of each
+#' population as well, and [PlotGateTree()] takes it in that shape.
+#'
+#' The percentage is of the parent, so a population that keeps every event of
+#' its parent reads 100.
+#'
+#' @param gating_set A gated `GatingSet`.
+#' @param sample The sample to read, by name or by index. Defaults to the first.
+#' @return A `data.frame` with `population`, `parent`, `events`,
+#'   `parent_events` and `percent_of_parent`, in the order the hierarchy walks.
+#'   The first row is `all_events`, whose parent is `NA`, and it holds the count
+#'   every gate starts from.
+#' @examples
+#' \dontrun{
+#' CollectGateTree(gating_set)
+#' }
+#' @export
+CollectGateTree <- function(gating_set, sample = 1) {
+  paths <- flowWorkspace::gs_get_pop_paths(gating_set, path = "full")
+  paths <- paths[paths != "root"]
+  if (length(paths) == 0) {
+    stop("The gating set holds no population below root.")
+  }
+
+  handle <- gating_set[[sample]]
+  events <- vapply(paths, function(path) {
+    as.numeric(flowWorkspace::gh_pop_get_count(handle, path))
+  }, numeric(1))
+  root_events <- as.numeric(
+    flowWorkspace::gh_pop_get_count(handle, "root"))
+
+  parent_path <- dirname(paths)
+  # The root of the drawing carries no parent. PlotGateTree reads NA as the
+  # root, and the root row gives a reader the count every gate starts from.
+  parent <- ifelse(parent_path == "/", "all_events", basename(parent_path))
+  parent_events <- ifelse(parent_path == "/", root_events,
+                          events[match(parent_path, paths)])
+
+  rbind(
+    data.frame(population = "all_events", parent = NA_character_,
+               events = root_events, parent_events = root_events,
+               percent_of_parent = 100, stringsAsFactors = FALSE),
+    data.frame(
+      population = basename(paths),
+      parent = parent,
+      events = events,
+      parent_events = parent_events,
+      percent_of_parent = 100 * events / pmax(parent_events, 1),
+      stringsAsFactors = FALSE
+    )
+  )
+}

@@ -141,8 +141,17 @@ WriteBundleTable <- function(bundle, frame, name) {
 #' @export
 CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
                                command = NA_character_) {
-  checksums <- if (length(inputs) > 0) {
-    present <- inputs[file.exists(inputs)]
+  # An input can be a folder, for example a saved hierarchy. md5sum fails on a
+  # folder, so a folder is expanded into the files it holds.
+  expanded <- unlist(lapply(inputs, function(path) {
+    if (dir.exists(path)) {
+      list.files(path, recursive = TRUE, full.names = TRUE)
+    } else {
+      path
+    }
+  }), use.names = FALSE)
+  checksums <- if (length(expanded) > 0) {
+    present <- expanded[file.exists(expanded) & !dir.exists(expanded)]
     stats::setNames(as.character(tools::md5sum(present)), basename(present))
   } else {
     list()
@@ -226,6 +235,16 @@ DisplayPath <- function(path) {
   if (nzchar(controls_host)) {
     path <- sub("^/incontrols/?",
                 paste0(sub("/$", "", controls_host), "/"), path)
+  }
+  # A table the caller named mounts at /in_<flag>. The CLI records the folder
+  # of each one, so a path printed from any of them maps back.
+  for (flag in c("template", "definitions", "metadata", "counts",
+                 "proportions", "gates", "clusters")) {
+    host <- Sys.getenv(paste0("CYTOKIT_", toupper(flag), "_HOST"), unset = "")
+    if (nzchar(host)) {
+      path <- sub(paste0("^/in_", flag, "/?"),
+                  paste0(sub("/$", "", host), "/"), path)
+    }
   }
   sub("(.)/$", "\\1", path)
 }
@@ -750,4 +769,26 @@ SetCytokitSeed <- function(arguments = list()) {
   }
   set.seed(seed)
   invisible(seed)
+}
+
+#' Shorten a bundle name so that a chained recipe does not stack timestamps
+#'
+#' A bundle is named `<recipe>_<label>_<timestamp>`. When one recipe reads
+#' another's bundle and uses its name as a label, the new bundle carries two
+#' recipe names and two timestamps. This strips the recipe name and the
+#' timestamp so that only the study is left.
+#'
+#' @param name A bundle folder name.
+#' @return The label inside it.
+#' @examples
+#' ShortLabel("gate_my_study_2026_08_18_205932")
+#' @export
+ShortLabel <- function(name) {
+  name <- basename(name)
+  name <- sub("^(inspect|compensate|gate|cluster|annotate|proportions|compare|claims)_",
+              "", name)
+  # The timestamp can be the whole of what is left, so the leading underscore
+  # is optional.
+  name <- sub("(^|_)[0-9]{4}_[0-9]{2}_[0-9]{2}_[0-9]{6}$", "", name)
+  if (nzchar(name)) name else "study"
 }

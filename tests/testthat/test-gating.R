@@ -121,3 +121,40 @@ test_that("SummarisePopulationSpread rejects a table with no frequency", {
     "missing the column"
   )
 })
+
+test_that("CollectGateTree puts the root first and gives it no parent", {
+  # PlotGateTree reads a missing parent as the root of the drawing, so the
+  # first row has to carry NA and not the string root.
+  gating_set <- MakeGatedSet()
+  tree <- CollectGateTree(gating_set)
+  expect_equal(tree$population[1], "all_events")
+  expect_true(is.na(tree$parent[1]))
+  expect_equal(tree$percent_of_parent[1], 100)
+})
+
+test_that("CollectGateTree names the parent of every population below root", {
+  gating_set <- MakeGatedSet()
+  tree <- CollectGateTree(gating_set)
+  below <- tree[!is.na(tree$parent), , drop = FALSE]
+  expect_true(all(below$parent %in% tree$population))
+})
+
+test_that("CollectGateTree reports the percentage of the parent", {
+  gating_set <- MakeGatedSet()
+  tree <- CollectGateTree(gating_set)
+  below <- tree[!is.na(tree$parent), , drop = FALSE]
+  expect_equal(below$percent_of_parent,
+               100 * below$events / below$parent_events)
+  expect_true(all(below$percent_of_parent <= 100))
+})
+
+test_that("CollectGateTree gives PlotGateTree a table it can draw", {
+  gating_set <- MakeGatedSet()
+  expect_s3_class(PlotGateTree(CollectGateTree(gating_set)), "ggplot")
+})
+
+test_that("CollectGateTree rejects a set with no population below root", {
+  flow_set <- flowCore::flowSet(sample = MakeTestFlowFrame())
+  empty <- flowWorkspace::GatingSet(flow_set)
+  expect_error(CollectGateTree(empty), "holds no population below root")
+})

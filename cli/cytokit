@@ -26,6 +26,17 @@ Usage:
   cytokit template    --data PATH --out FILE [--recursive] [--force]
   cytokit compensate  --data PATH [--controls DIR] [--recursive] [--out DIR]
                                   [--cofactor 150] [--unstained PATTERN]
+  cytokit gate        --data PATH --template FILE [--out DIR] [--cores N]
+                                  [--no-compensate] [--no-transform]
+  cytokit cluster     --gates BUNDLE [--parent POP] | --data PATH
+                                  [--markers "CD3,CD4"] [--metaclusters 12]
+                                  [--events 50000] [--no-umap] [--out DIR]
+  cytokit annotate    --clusters BUNDLE --definitions FILE [--out DIR]
+                                  [--margin 0.1]
+  cytokit proportions --counts BUNDLE --metadata FILE [--out DIR]
+                                  [--sample-column sample]
+  cytokit compare     --proportions BUNDLE --group COL [--population NAME]
+                                  [--all-populations] [--out DIR]
   cytokit definitions --data PATH --out FILE [--recursive] [--force]
                                              [--markers "CD3,CD4"]
                                              [--markers "APC-A=CD3,PE-A=CD4"]
@@ -42,6 +53,14 @@ state, and every later recipe reads what it prints.
 A gating template and a cell type definitions table are per panel, so nobody
 arrives with one. template and definitions write a valid empty file with the
 panel's markers in it, for you to fill in with the scientist.
+
+cluster groups the events with FlowSOM and draws them with UMAP. It does not
+name a cluster, because a name is a claim about an antibody. Point it at the
+bundle that gate wrote, so the clustering runs inside a gate.
+
+gate runs a template you filled in and reports what every gate kept. It names
+the gates that kept every event and the gates that kept almost none, because
+both look like a result in a table.
 
 compensate answers "is my data compensated". It correlates every pair of
 markers before and after the stored matrix, because the keyword does not answer
@@ -104,6 +123,7 @@ run_recipe() {
     require_image
 
     local data_host="" out_host="" controls_host="" args=() index=1
+    local -a extra_mounts=() extra_hosts=()
     local -a passthrough=()
 
     # --data is mounted read only. --out is mounted read and write when it points
@@ -121,6 +141,16 @@ run_recipe() {
                     fi
                     shift 2 ;;
             --out)  out_host="${2:?--out needs a path}"; shift 2 ;;
+            # A table the caller wrote is an input like the data, so it
+            # mounts read only. Each flag has its own mount point, so two of
+            # them can name files in two different folders.
+            --template|--definitions|--metadata|--counts|--proportions|--gates|--clusters)
+                    flag="${1#--}"
+                    file_host="$(absolute "${2:?needs a path}")"
+                    extra_mounts+=("$(dirname "$file_host"):/in_${flag}:ro,z")
+                    extra_hosts+=("CYTOKIT_${flag^^}_HOST=$(dirname "$file_host")")
+                    passthrough+=("$1" "/in_${flag}/$(basename "$file_host")")
+                    shift 2 ;;
             # The controls are a second folder of FCS files, and they are as
             # irreplaceable as the samples, so they mount read only too.
             --controls)
@@ -158,6 +188,10 @@ run_recipe() {
         fi
         mounts+=(--volume "$controls_mount:/incontrols:ro,z")
     fi
+    local mount
+    for mount in "${extra_mounts[@]+"${extra_mounts[@]}"}"; do
+        mounts+=(--volume "$mount")
+    done
 
     # An --out inside the repository already has a mount. One outside needs its
     # own, and its parent has to exist so that podman does not create a folder
@@ -200,8 +234,15 @@ run_recipe() {
             ;;
     esac
 
+    local -a host_env=()
+    local pair
+    for pair in "${extra_hosts[@]+"${extra_hosts[@]}"}"; do
+        host_env+=(--env "$pair")
+    done
+
     podman run --rm \
         --userns keep-id \
+        "${host_env[@]+"${host_env[@]}"}" \
         --env "CYTOKIT_IMAGE=$IMAGE" \
         --env "CYTOKIT_DATA_HOST=${data_mount:-}" \
         --env "CYTOKIT_CONTROLS_HOST=${controls_mount:-}" \
@@ -213,7 +254,7 @@ run_recipe() {
 }
 
 case "${1:-help}" in
-    inspect|template|definitions|compensate)
+    inspect|template|definitions|compensate|gate|cluster|annotate|proportions|compare)
         recipe="$1"; shift
         run_recipe "$recipe" "$@"
         ;;
@@ -224,11 +265,11 @@ inspect       ready    Panel, markers, event counts, compensation state
 template      ready    An empty openCyto gating template for this panel
 definitions   ready    An empty cell type definitions table for this panel
 compensate    ready    The stored matrix, and whether it lowers the correlation
-gate          planned  Run a template, write counts, a gate tree and the flow
-cluster       planned  FlowSOM and UMAP, inside a gate when asked
-annotate      planned  Label each cluster from a definitions table
-proportions   planned  Per sample frequencies joined to a metadata table
-compare       planned  Box plot of proportion by treatment, with the test
+gate          ready    Run a template, write counts and a gate tree
+cluster       ready    FlowSOM and UMAP, inside a gate when asked
+annotate      ready    Label each cluster from a definitions table
+proportions   ready    Per sample frequencies joined to a metadata table
+compare       ready    Box plot of proportion by treatment, with the test
 claims        planned  A verdict for every claim in a claims table
 reproduce     planned  Rebuild one of the analyses in this repository
 
