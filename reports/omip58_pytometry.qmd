@@ -277,9 +277,9 @@ kable(
 ```
 
 The two matrices agree at a correlation of 0.687 on the 23 detectors they share.
-The cell matrix is the one applied here. It covers the viability detector, which
-no bead can stain, and a matrix that leaves that detector out cannot correct the
-spillover between it and CD16.
+The cell matrix is the one applied here. It covers the viability detector, for
+which the deposit supplies a cell control and no bead control, and a matrix that
+leaves that detector out cannot correct the spillover between it and CD16.
 
 The bead matrix takes the median absolute correlation from 0.584 to 0.210 in
 donor 112117 and leaves CD4 with CD8 at 0.690, because it has no row for either
@@ -396,9 +396,10 @@ of them on the T cell side and 8 on the other, which matches the 65.8 and 61.7
 percent that the gate itself returned.
 
 Separation across the clusters runs from 0.398 for CD4 and 0.388 for HLA-DR down
-to 0.078 for Vδ1 and 0.055 for CD56. The markers at the bottom are largely the
-ones that defeat a one dimensional cut in Part 4, so the failure follows the
-marker rather than the method.
+to 0.078 for Vδ1 and 0.055 for CD56. The two measures agree in part. Vδ1, Vδ2
+and CD161 fall in the lower half of this ranking and are also excluded in Part
+4. Vγ9 and the tetramer are excluded in Part 4 and sit in the upper half here.
+CD8, Vα7.2 and CD56 sit in the lower half and are not excluded.
 
 The separation table is not used to select markers. An earlier version of the
 analysis chose which markers could vote by putting a threshold on this column,
@@ -505,10 +506,13 @@ and CD4 controls gate to 22 and 11 events, so the bead matrix has no row for
 either and leaves CD4 with CD8 at 0.690. The cell matrix takes that pair to
 -0.311.
 
-The two halves of the workflow fail on the same markers. The tetramer, Vδ1, Vδ2,
-Vγ9 and CD161 defeat a fitted cut inside CD3 positive cells, and they sit at the
-bottom of the cluster separation table as well. Compensation does not repair
-this, and it was measured after compensation.
+The two halves of the workflow fail on overlapping sets of markers rather than
+on the same set. The tetramer, Vδ1, Vδ2, Vγ9 and CD161 all defeat a fitted cut
+inside CD3 positive cells. Three of those five, Vδ1, Vδ2 and CD161, also fall in
+the lower half of the cluster separation ranking, while Vγ9 and the tetramer sit
+in its upper half and CD8, Vα7.2 and CD56 fall in the lower half without being
+excluded. Compensation does not repair either failure, and both were measured
+after compensation.
 
 Where a boundary is solid, sharing it across the two languages is worth more
 than finding it twice. The CD3 cut fitted in R places 16 clusters on the T cell

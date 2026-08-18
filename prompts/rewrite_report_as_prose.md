@@ -164,6 +164,33 @@ compares the file with its git revision and it fails on a changed chunk, a
 changed header, a changed block quote, an em dash, a leftover bullet or a number
 that is not in the original. Your own check and that script should agree.
 
+## Do not invent a mechanism
+
+This is the rule that the last pass broke, and it is the one that matters most,
+because no script catches it.
+
+The report said: "A rule that looks for a second mode either finds nothing, which
+is visible, or places the cut inside the negative population and returns a
+number, which is not." The rewrite made that specific: "The density minimum rule
+finds no second mode on a unimodal distribution. The mixture rule places the cut
+inside the negative population and returns a percentage that exceeds the subset
+frequency."
+
+It reads better and it is wrong. The table printed directly above that paragraph
+shows the density rule placed every cut that selected 38.5 to 62.7 percent of T
+cells, and the mixture rule placed one cut only. The rewrite swapped the two
+rules. It introduced no new number, no new accession and no changed chunk, so
+`check_prose_rewrite.py` passed it as clean.
+
+The rule follows from that. You may cut a sentence, shorten it, or split it. You
+may not add specificity that the original did not carry. If the original says
+"a rule", do not name which rule. If the original says "a marker", do not name
+which marker. If the original gives no cause, do not supply one.
+
+Where a sentence states a cause and you cannot tell from the file whether it is
+right, leave that sentence exactly as it is. An unchanged sentence is never a
+fault in this pass.
+
 ## Do not
 
 Do not run the analysis scripts. Do not render the report. Do not touch anything

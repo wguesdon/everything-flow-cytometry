@@ -19,10 +19,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-# A number as it appears in running text. The trailing group is optional so that a
+# A number as it appears in running text. A thousands separator is only part of
+# the number when three digits follow it, so "1,078,749" matches whole while the
+# comma in "CD161, which" stays outside. The decimal group is optional so that a
 # sentence final full stop, as in "the ASC gate on CD38 and CD27.", does not
-# become part of the number.
-NUMBER_PATTERN = re.compile(r"\d[\d,]*(?:\.\d+)?")
+# become part of the number either. Both forms have produced a false positive.
+NUMBER_PATTERN = re.compile(r"\d+(?:,\d{3})*(?:\.\d+)?")
 DASH_PATTERN = re.compile(r"[–—]")
 # A FlowRepository accession. A rewrite may not introduce one that the original
 # did not carry, because an invented accession points at nothing and reads as a
