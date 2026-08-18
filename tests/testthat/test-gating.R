@@ -158,3 +158,30 @@ test_that("CollectGateTree rejects a set with no population below root", {
   empty <- flowWorkspace::GatingSet(flow_set)
   expect_error(CollectGateTree(empty), "holds no population below root")
 })
+
+test_that("CollectPopulationStats reports one row per sample and population", {
+  gating_set <- MakeGatedSet()
+  stats <- CollectPopulationStats(gating_set)
+  expect_true(all(c("sample", "population", "count", "percent_of_parent") %in%
+                    colnames(stats)))
+  expect_true(all(c("/nonDebris", "/nonDebris/singlets") %in%
+                    stats$population))
+})
+
+test_that("CollectPopulationStats reports the percentage as a percentage", {
+  # gs_pop_get_stats returns a fraction, and a report that prints it as a
+  # percentage without the multiplication is wrong by a factor of one hundred.
+  gating_set <- MakeGatedSet()
+  stats <- CollectPopulationStats(gating_set)
+  expect_true(all(stats$percent_of_parent <= 100))
+  expect_true(any(stats$percent_of_parent > 1))
+})
+
+test_that("CollectPopulationStats joins a sample sheet when it is given", {
+  gating_set <- MakeGatedSet()
+  sheet <- data.frame(file_name = "sample", condition = "control",
+                      stringsAsFactors = FALSE)
+  stats <- CollectPopulationStats(gating_set, sample_sheet = sheet)
+  expect_true("condition" %in% colnames(stats))
+  expect_true(all(stats$condition == "control"))
+})

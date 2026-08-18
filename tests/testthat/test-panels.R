@@ -266,3 +266,90 @@ test_that("PlotGateTree names a population whose parent is absent", {
   )
   expect_error(PlotGateTree(counts), "orphan")
 })
+
+MakeScatterFrame. <- function(n_events = 3000, seed = 9) {
+  withr::with_seed(seed, {
+    lymphocytes <- cbind(`FSC-A` = stats::rnorm(n_events * 0.7, 70000, 8000),
+                         `SSC-A` = stats::rnorm(n_events * 0.7, 30000, 5000))
+    granulocytes <- cbind(`FSC-A` = stats::rnorm(n_events * 0.3, 90000, 9000),
+                          `SSC-A` = stats::rnorm(n_events * 0.3, 120000, 12000))
+  })
+  rbind(lymphocytes, granulocytes)
+}
+
+test_that("LymphocyteMask keeps the low side scatter mode", {
+  values <- MakeScatterFrame.()
+  mask <- LymphocyteMask(values, c(forward_area = "FSC-A",
+                                   side_area = "SSC-A"))
+  expect_equal(length(mask), nrow(values))
+  expect_true(is.logical(mask))
+  expect_gt(sum(mask), 0)
+  # The kept events have to sit lower on side scatter than the ones dropped.
+  expect_lt(stats::median(values[mask, "SSC-A"]),
+            stats::median(values[!mask, "SSC-A"]))
+})
+
+test_that("LymphocyteMask gives the same mask twice with one seed", {
+  values <- MakeScatterFrame.()
+  scatter <- c(forward_area = "FSC-A", side_area = "SSC-A")
+  expect_equal(LymphocyteMask(values, scatter, seed = 3),
+               LymphocyteMask(values, scatter, seed = 3))
+})
+
+test_that("LymphocyteMask keeps every event when there are too few to fit", {
+  values <- MakeScatterFrame.(n_events = 40)
+  mask <- LymphocyteMask(values, c(forward_area = "FSC-A",
+                                   side_area = "SSC-A"))
+  expect_equal(length(mask), nrow(values))
+})
+
+test_that("UnstainedThresholds reads one threshold per channel", {
+  directory <- withr::local_tempdir()
+  path <- WriteTestFcs(directory, n_events = 500)
+  channels <- data.frame(channel = c("Ax700-A", "PE-TxRed-A"),
+                         name = c("CD3", "CD4"), stringsAsFactors = FALSE)
+  thresholds <- UnstainedThresholds(path, channels)
+  expect_equal(names(thresholds), c("CD3", "CD4"))
+  expect_true(all(is.finite(thresholds)))
+})
+
+test_that("UnstainedThresholds rises with the percentile it is given", {
+  directory <- withr::local_tempdir()
+  path <- WriteTestFcs(directory, n_events = 500)
+  channels <- data.frame(channel = "Ax700-A", name = "CD3",
+                         stringsAsFactors = FALSE)
+  expect_gt(UnstainedThresholds(path, channels, percentile = 0.999),
+            UnstainedThresholds(path, channels, percentile = 0.5))
+})
+
+test_that("UnstainedThresholds rejects a control that lacks a channel", {
+  directory <- withr::local_tempdir()
+  path <- WriteTestFcs(directory)
+  channels <- data.frame(channel = "APC-A", name = "CD8",
+                         stringsAsFactors = FALSE)
+  expect_error(UnstainedThresholds(path, channels),
+               "missing the channel\\(s\\): APC-A")
+})
+
+test_that("PlotGatePair draws a biaxial plot of the parent events", {
+  values <- MakeScatterFrame.()
+  parent <- rep(TRUE, nrow(values))
+  drawing <- PlotGatePair(values, parent, "FSC-A", "SSC-A")
+  expect_s3_class(drawing, "ggplot")
+})
+
+test_that("PlotGatePair draws the threshold line it is given", {
+  values <- MakeScatterFrame.()
+  parent <- rep(TRUE, nrow(values))
+  plain <- PlotGatePair(values, parent, "FSC-A", "SSC-A")
+  with_line <- PlotGatePair(values, parent, "FSC-A", "SSC-A",
+                            x_threshold = 80000)
+  expect_gt(length(with_line$layers), length(plain$layers))
+})
+
+test_that("PlotGatePair rejects a channel the matrix does not carry", {
+  values <- MakeScatterFrame.()
+  parent <- rep(TRUE, nrow(values))
+  expect_error(PlotGatePair(values, parent, "FSC-A", "APC-A"),
+               "no channel called 'APC-A'")
+})

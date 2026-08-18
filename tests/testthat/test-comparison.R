@@ -121,3 +121,82 @@ test_that("CompareProportions drops a row with no group before it counts", {
   result <- CompareProportions(proportions, "T cells", "treatment")
   expect_equal(sum(result$summary$samples), nrow(proportions) - 1)
 })
+
+test_that("ReadPopulationMap adds an empty note column when there is none", {
+  path <- withr::local_tempfile(fileext = ".csv")
+  writeLines(c("manual,automated", "Lymphocytes,Lymphocytes"), path)
+  map <- ReadPopulationMap(path)
+  expect_equal(colnames(map), c("manual", "automated", "note"))
+  expect_equal(map$note, "")
+})
+
+test_that("ReadPopulationMap keeps a note column that is already there", {
+  path <- withr::local_tempfile(fileext = ".csv")
+  writeLines(c("manual,automated,note", "Lymphocytes,Lymphocytes,same gate"),
+             path)
+  expect_equal(ReadPopulationMap(path)$note, "same gate")
+})
+
+test_that("ReadPopulationMap rejects a manual population named twice", {
+  # Two rows for one manual population make the comparison silently pick one.
+  path <- withr::local_tempfile(fileext = ".csv")
+  writeLines(c("manual,automated", "T cells,Tcells", "T cells,CD3"), path)
+  expect_error(ReadPopulationMap(path), "names a manual population twice")
+})
+
+test_that("ReadPopulationMap rejects a file with no automated column", {
+  path <- withr::local_tempfile(fileext = ".csv")
+  writeLines(c("manual,other", "T cells,x"), path)
+  expect_error(ReadPopulationMap(path), "missing the column\\(s\\): automated")
+})
+
+test_that("ReadPopulationMap rejects a path that does not exist", {
+  expect_error(ReadPopulationMap(file.path(tempdir(), "absent.csv")),
+               "does not exist")
+})
+
+MakeStats. <- function(populations, percents) {
+  data.frame(sample = "a.fcs", population = populations, count = 100,
+             percent_of_parent = percents, stringsAsFactors = FALSE)
+}
+
+test_that("CompareGatingResults matches on the leaf of a population path", {
+  manual <- MakeStats.(c("/Live/Lymphocytes"), 55)
+  automated <- MakeStats.(c("/Viable/Lymphocytes"), 58)
+  map <- data.frame(manual = "Lymphocytes", automated = "Lymphocytes",
+                    note = "", stringsAsFactors = FALSE)
+  result <- CompareGatingResults(manual, automated, map)
+  expect_equal(result$manual_percent, 55)
+  expect_equal(result$automated_percent, 58)
+  expect_equal(result$difference, 3)
+})
+
+test_that("CompareGatingResults reports NA when a population is absent", {
+  manual <- MakeStats.("Lymphocytes", 55)
+  automated <- MakeStats.("Lymphocytes", 58)
+  map <- data.frame(manual = "Monocytes", automated = "Monocytes", note = "",
+                    stringsAsFactors = FALSE)
+  result <- CompareGatingResults(manual, automated, map)
+  expect_true(is.na(result$difference))
+})
+
+test_that("JudgeAgreement calls a difference inside the tolerance an agreement", {
+  comparison <- data.frame(difference = c(2, -3, 9, NA))
+  judged <- JudgeAgreement(comparison, tolerance_points = 5)
+  expect_equal(judged$verdict, c("agree", "agree", "differ", "missing"))
+})
+
+test_that("JudgeAgreement calls a missing difference missing and not differ", {
+  # A population nobody gated has not disagreed.
+  judged <- JudgeAgreement(data.frame(difference = NA_real_))
+  expect_equal(judged$verdict, "missing")
+})
+
+test_that("JudgeAgreement rejects a tolerance of zero or less", {
+  expect_error(JudgeAgreement(data.frame(difference = 1), 0),
+               "must be above zero")
+})
+
+test_that("JudgeAgreement rejects a table with no difference column", {
+  expect_error(JudgeAgreement(data.frame(a = 1)), "no 'difference' column")
+})

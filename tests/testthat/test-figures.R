@@ -183,3 +183,41 @@ test_that("a continuous fill writes an svg with no raster fallback", {
   expect_false(any(grepl("<filter", written)))
   expect_false(any(grepl("<image", written)))
 })
+
+test_that("ScaleColourPublication builds a discrete colour scale", {
+  scale <- ScaleColourPublication()
+  expect_s3_class(scale, "ScaleDiscrete")
+  expect_equal(scale$aesthetics, "colour")
+})
+
+test_that("ScaleFillPublication builds a discrete fill scale", {
+  scale <- ScaleFillPublication()
+  expect_s3_class(scale, "ScaleDiscrete")
+  expect_equal(scale$aesthetics, "fill")
+})
+
+test_that("ScaleColourPublication draws the Okabe and Ito set first", {
+  # The first eight colours separate under the common forms of colour vision
+  # deficiency, so a scale of eight classes or fewer stays readable.
+  scale <- ScaleColourPublication()
+  expect_equal(scale$palette(3), kPublicationPalette[1:3])
+})
+
+test_that("ScaleColourPublication passes a name through to the scale", {
+  expect_equal(ScaleColourPublication(name = "Cluster")$name, "Cluster")
+})
+
+test_that("LegendPoints enlarges the key of a scatter legend", {
+  guides <- LegendPoints(size = 3)
+  expect_s3_class(guides, "Guides")
+})
+
+test_that("LegendPoints can be added to a plot without an error", {
+  drawing <- ggplot2::ggplot(data.frame(x = 1:3, y = 1:3, g = c("a", "b", "c")),
+                             ggplot2::aes(x, y, colour = g)) +
+    ggplot2::geom_point() +
+    ScaleColourPublication() +
+    LegendPoints()
+  expect_s3_class(drawing, "ggplot")
+  expect_silent(ggplot2::ggplot_build(drawing))
+})

@@ -484,3 +484,63 @@ test_that("CloseCytokitBundle writes a manifest with no input at all", {
   expect_equal(manifest$recipe, "inspect")
   expect_true(file.exists(file.path(bundle, "REPRODUCE.md")))
 })
+
+test_that("WriteBundleTable writes a CSV with no row names", {
+  bundle <- withr::local_tempdir()
+  frame <- data.frame(a = 1:2, b = c("x", "y"), stringsAsFactors = FALSE)
+  path <- WriteBundleTable(bundle, frame, "table.csv")
+  expect_true(file.exists(path))
+  read_back <- utils::read.csv(path, stringsAsFactors = FALSE)
+  expect_equal(read_back, frame)
+  expect_equal(colnames(read_back)[1], "a")
+})
+
+test_that("DescribeFcsFile reads the event count from the header", {
+  directory <- withr::local_tempdir()
+  path <- WriteTestFcs(directory, n_events = 137)
+  described <- DescribeFcsFile(path)
+  expect_equal(described$file, "sample.fcs")
+  expect_equal(described$events, 137L)
+  expect_equal(described$parameters, 4L)
+})
+
+test_that("DescribeFcsFile reports no matrix when the file carries none", {
+  directory <- withr::local_tempdir()
+  described <- DescribeFcsFile(WriteTestFcs(directory))
+  expect_equal(described$compensation_state, "no matrix")
+})
+
+test_that("DescribeFcsPanel names the kind of every channel", {
+  directory <- withr::local_tempdir()
+  panel <- DescribeFcsPanel(WriteTestFcs(directory))
+  expect_equal(panel$channel, c("FSC-A", "FSC-H", "Ax700-A", "PE-TxRed-A"))
+  expect_equal(panel$kind, c("scatter", "scatter", "stain", "stain"))
+  expect_equal(panel$marker[3:4], c("CD3", "CD4"))
+})
+
+test_that("DescribeFcsIdentity reads the keywords that name the specimen", {
+  directory <- withr::local_tempdir()
+  path <- WriteTestFcs(directory,
+                       keywords = list(`$SRC` = "PBMC_001",
+                                       `TUBE NAME` = "13",
+                                       `EXPERIMENT NAME` = "Expt 4"))
+  identity <- DescribeFcsIdentity(path)
+  expect_equal(identity$specimen, "PBMC_001")
+  expect_equal(identity$tube, "13")
+  expect_equal(identity$experiment, "Expt 4")
+})
+
+test_that("DescribeFcsIdentity gives NA for a keyword the file leaves out", {
+  directory <- withr::local_tempdir()
+  identity <- DescribeFcsIdentity(WriteTestFcs(directory))
+  expect_true(is.na(identity$project))
+  expect_equal(identity$file, "sample.fcs")
+})
+
+test_that("DescribeFcsIdentity treats an empty keyword as absent", {
+  # An empty $SRC is not a specimen name, and reading it as one splits a folder
+  # into a group whose name is the empty string.
+  directory <- withr::local_tempdir()
+  path <- WriteTestFcs(directory, keywords = list(`$SRC` = ""))
+  expect_true(is.na(DescribeFcsIdentity(path)$specimen))
+})

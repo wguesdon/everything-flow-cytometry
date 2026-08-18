@@ -141,3 +141,25 @@ MakeGatedSet <- function(n_events = 400) {
   flowWorkspace::recompute(gating_set)
   gating_set
 }
+
+#' Write a small flowFrame to a temporary FCS file
+#'
+#' `DescribeFcsFile` and its siblings read a path rather than a frame, so a test
+#' needs a file. The file is written into a temporary folder that the caller
+#' owns, so nothing is left behind.
+#'
+#' @param directory The folder to write into.
+#' @param name The file name. Defaults to `"sample.fcs"`.
+#' @param keywords Extra FCS keywords to store, as a named list.
+#' @param n_events The number of events.
+#' @return The path that was written.
+WriteTestFcs <- function(directory, name = "sample.fcs", keywords = list(),
+                         n_events = 200) {
+  frame <- MakeTestFlowFrame(n_events = n_events)
+  for (key in names(keywords)) {
+    flowCore::keyword(frame)[[key]] <- keywords[[key]]
+  }
+  path <- file.path(directory, name)
+  suppressWarnings(flowCore::write.FCS(frame, path))
+  path
+}
