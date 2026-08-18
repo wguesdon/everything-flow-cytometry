@@ -361,3 +361,31 @@ test_that("MarkerCorrelation rejects a matrix with two events", {
   events <- matrix(rnorm(4), ncol = 2, dimnames = list(NULL, c("a", "b")))
   expect_error(MarkerCorrelation(events), "needs three events")
 })
+
+test_that("CheckControlQuality reports one row per stained control", {
+  controls <- MakeTestControlSet()
+  match_table <- MatchControlsToChannels(controls)
+  quality <- CheckControlQuality(controls, match_table)
+  stained <- sum(!is.na(match_table$channel) &
+                   match_table$channel != "unstained")
+  expect_equal(nrow(quality), stained)
+  expect_true("filename" %in% colnames(quality))
+})
+
+test_that("CheckControlQuality rejects a match table with no unstained control", {
+  # Without an unstained tube there is no threshold, so a positive fraction
+  # cannot be computed at all.
+  controls <- MakeTestControlSet()
+  match_table <- MatchControlsToChannels(controls)
+  match_table$channel[match_table$channel == "unstained"] <- NA
+  expect_error(CheckControlQuality(controls, match_table),
+               "names no unstained control")
+})
+
+test_that("CheckControlQuality rejects a match table with no stained control", {
+  controls <- MakeTestControlSet()
+  match_table <- MatchControlsToChannels(controls)
+  match_table$channel[match_table$channel != "unstained"] <- NA
+  expect_error(CheckControlQuality(controls, match_table),
+               "holds no stained control")
+})

@@ -88,3 +88,36 @@ test_that("SelectAndScore refuses a split that is too small", {
   expect_error(SelectAndScore(features, labels, c(rep(TRUE, 2), rep(FALSE, 4))),
                "at least four samples")
 })
+
+test_that("ChannelFor. finds the detector that carries a marker", {
+  frame <- MakeTestFlowFrame()
+  expect_equal(ChannelFor.(frame, "CD3"), "Ax700-A")
+  expect_equal(ChannelFor.(frame, "CD4"), "PE-TxRed-A")
+})
+
+test_that("ChannelFor. ignores case and punctuation in a marker name", {
+  # A panel writes CD8a, cd-8a and CD8A for one antibody.
+  frame <- MakeTestFlowFrame()
+  expect_equal(ChannelFor.(frame, "cd-3"), "Ax700-A")
+  expect_equal(ChannelFor.(frame, "Cd3"), "Ax700-A")
+})
+
+test_that("ChannelFor. gives NA when no detector carries the marker", {
+  frame <- MakeTestFlowFrame()
+  expect_true(is.na(ChannelFor.(frame, "CD19")))
+})
+
+test_that("TransformedEvents. transforms only the channels it is given", {
+  frame <- MakeTestFlowFrame()
+  before <- flowCore::exprs(frame)
+  result <- TransformedEvents.(frame, "Ax700-A", cofactor = 150)
+  expect_equal(result$events[, "Ax700-A"],
+               asinh(before[, "Ax700-A"] / 150))
+  expect_equal(result$events[, "FSC-A"], before[, "FSC-A"])
+})
+
+test_that("TransformedEvents. records the cofactor it used", {
+  frame <- MakeTestFlowFrame()
+  expect_equal(TransformedEvents.(frame, "Ax700-A", cofactor = 500)$transform,
+               "arcsinh/500")
+})

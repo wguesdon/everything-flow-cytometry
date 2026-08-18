@@ -83,3 +83,63 @@ test_that("ReadZ282Panel rejects a table that lacks a column", {
   expect_error(ReadZ282Panel(file.path(tempdir(), "absent.csv")),
                "does not exist")
 })
+
+test_that("SplitLabel. breaks a label into its lowercase words", {
+  expect_equal(SplitLabel.("CD3 FITC"), c("cd3", "fitc"))
+  expect_equal(SplitLabel.("CD8-BV421"), c("cd8", "bv421"))
+})
+
+test_that("SplitLabel. returns nothing for an empty or missing label", {
+  expect_equal(SplitLabel.(NA_character_), character())
+  expect_equal(SplitLabel.(""), character())
+})
+
+test_that("ResolveMarkerChannels rejects a material it does not know", {
+  frame <- MakeTestFlowFrame()
+  panel <- data.frame(marker = "CD3", material = "both",
+                      stringsAsFactors = FALSE)
+  expect_error(ResolveMarkerChannels(frame, panel, "saliva"),
+               "must be PBMC or WB")
+})
+
+test_that("ResolveMarkerChannels rejects a panel with nothing for the material", {
+  frame <- MakeTestFlowFrame()
+  panel <- data.frame(marker = "CD3", material = "WB",
+                      stringsAsFactors = FALSE)
+  expect_error(ResolveMarkerChannels(frame, panel, "PBMC"),
+               "names no marker for the material")
+})
+
+test_that("ResolveMarkerChannels finds the channel that carries a marker", {
+  frame <- MakeTestFlowFrame()
+  panel <- data.frame(marker = c("CD3", "CD4"), material = "both",
+                      stringsAsFactors = FALSE)
+  resolved <- ResolveMarkerChannels(frame, panel, "PBMC")
+  expect_equal(resolved$marker, c("CD3", "CD4"))
+  expect_equal(resolved$channel, c("Ax700-A", "PE-TxRed-A"))
+})
+
+test_that("SettleCompensation says no matrix when the file carries none", {
+  frame <- MakeTestFlowFrame()
+  settled <- SettleCompensation(frame)
+  expect_equal(settled$state, "no matrix")
+})
+
+test_that("SettleCompensation applies a matrix that has not been applied", {
+  frame <- MakeTestFlowFrameWithSpillover(spill = 0.2)
+  settled <- SettleCompensation(frame)
+  expect_equal(settled$state, "matrix applied")
+  # Compensation subtracts the spill, so the second channel has to drop.
+  before <- mean(flowCore::exprs(frame)[, "PE-TxRed-A"])
+  after <- mean(flowCore::exprs(settled$frame)[, "PE-TxRed-A"])
+  expect_lt(after, before)
+})
+
+test_that("SettleCompensation leaves a frame the instrument already compensated", {
+  # APPLY COMPENSATION = TRUE beside a real matrix means the values are done.
+  frame <- MakeTestFlowFrameWithSpillover(spill = 0.2)
+  flowCore::keyword(frame)[["APPLY COMPENSATION"]] <- "TRUE"
+  settled <- SettleCompensation(frame)
+  expect_equal(settled$state, "already compensated")
+  expect_equal(flowCore::exprs(settled$frame), flowCore::exprs(frame))
+})

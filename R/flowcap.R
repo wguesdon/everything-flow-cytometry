@@ -55,7 +55,10 @@ ChannelFor. <- function(frame, marker) {
   Normalise <- function(x) toupper(gsub("[^A-Za-z0-9]", "", x))
   parameters <- flowCore::pData(flowCore::parameters(frame))
   hit <- which(Normalise(parameters$desc) == Normalise(marker))
-  if (length(hit) == 0) NA_character_ else parameters$name[hit[1]]
+  # pData returns an AsIs column with row names on it. A caller that puts the
+  # answer in a data.frame would otherwise carry the parameter number with it.
+  if (length(hit) == 0) NA_character_ else
+    as.character(unname(parameters$name[hit[1]]))
 }
 
 #' Gate one file of the HVTN challenge down to its T cell subsets

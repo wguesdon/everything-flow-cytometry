@@ -89,3 +89,25 @@ test_that("ResolveBoneMarrowChannels refuses a panel it does not know", {
   expect_error(ResolveBoneMarrowChannels(frame, panels, "Y"),
                "names no marker for the panel")
 })
+
+test_that("ReadBoneMarrowGates reads a manual gate table", {
+  path <- withr::local_tempfile(fileext = ".csv")
+  writeLines(c("gate,x_channel,y_channel,vertex,x,y",
+               "Lymphocytes,FSC-A,SSC-A,1,10,10",
+               "Lymphocytes,FSC-A,SSC-A,2,20,10"), path)
+  gates <- ReadBoneMarrowGates(path)
+  expect_equal(nrow(gates), 2)
+  expect_equal(unique(gates$gate), "Lymphocytes")
+})
+
+test_that("ReadBoneMarrowGates rejects a table with no vertex column", {
+  path <- withr::local_tempfile(fileext = ".csv")
+  writeLines(c("gate,x_channel,y_channel,x,y",
+               "Lymphocytes,FSC-A,SSC-A,10,10"), path)
+  expect_error(ReadBoneMarrowGates(path), "lacks these columns: vertex")
+})
+
+test_that("ReadBoneMarrowGates rejects a path that does not exist", {
+  expect_error(ReadBoneMarrowGates(file.path(tempdir(), "absent.csv")),
+               "does not exist")
+})

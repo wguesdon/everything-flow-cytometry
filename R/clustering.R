@@ -82,6 +82,27 @@ SubsampleEvents <- function(events, n = 50000, seed = 42) {
 #' @return A list with `metacluster`, an integer per event, `node`, the SOM node
 #'   per event, and `fsom`, the fitted FlowSOM object.
 #' @export
+# Group the SOM codes into k metaclusters.
+#
+# FlowSOM::metaClustering_consensus asks ConsensusClusterPlus for maxK = k and
+# reads the k-th level. At k = 2 that leaves ConsensusClusterPlus with a one row
+# colour matrix, which drops to a vector, and its tracking plot then stops with
+# "argument of length 0". Asking for three levels and reading the second gives
+# the same two clusters and does not hit that path.
+#
+# Every k of three or more keeps the FlowSOM call, so a number already published
+# from this function does not move.
+MetaclusterCodes. <- function(codes, k, seed) {
+  if (k >= 3) {
+    return(FlowSOM::metaClustering_consensus(codes, k = k, seed = seed))
+  }
+  results <- suppressMessages(ConsensusClusterPlus::ConsensusClusterPlus(
+    t(codes), maxK = 3, reps = 100, pItem = 0.9, pFeature = 1,
+    title = tempdir(), plot = "pdf", verbose = FALSE, clusterAlg = "hc",
+    distance = "euclidean", seed = seed))
+  results[[k]]$consensusClass
+}
+
 RunFlowSomClustering <- function(events,
                                  channels,
                                  grid_size = 10,
@@ -105,9 +126,7 @@ RunFlowSomClustering <- function(events,
       fsom, colsToUse = channels, xdim = grid_size, ydim = grid_size, silent = TRUE
     )
     fsom <- FlowSOM::BuildMST(fsom, silent = TRUE)
-    consensus <- FlowSOM::metaClustering_consensus(
-      fsom$map$codes, k = n_metaclusters, seed = seed
-    )
+    consensus <- MetaclusterCodes.(fsom$map$codes, n_metaclusters, seed)
   })
 
   node <- FlowSOM::GetClusters(fsom)

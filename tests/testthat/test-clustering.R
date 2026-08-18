@@ -249,3 +249,15 @@ test_that("RunUmapEmbedding rejects a channel the data does not carry", {
   events <- cbind(CD3 = rnorm(50), CD4 = rnorm(50))
   expect_error(RunUmapEmbedding(events, c("CD3", "CD8")), "not in the data")
 })
+
+test_that("RunFlowSomClustering works at two metaclusters", {
+  # Its own guard allows two, and FlowSOM's wrapper fails at exactly two,
+  # because ConsensusClusterPlus drops a one row matrix to a vector.
+  events <- withr::with_seed(31, rbind(
+    cbind(CD3 = rnorm(300, 1), CD4 = rnorm(300, 1)),
+    cbind(CD3 = rnorm(300, 9), CD4 = rnorm(300, 9))))
+  result <- RunFlowSomClustering(events, c("CD3", "CD4"), grid_size = 4,
+                                 n_metaclusters = 2, seed = 8)
+  expect_equal(length(unique(result$metacluster)), 2)
+  expect_equal(length(result$metacluster), nrow(events))
+})

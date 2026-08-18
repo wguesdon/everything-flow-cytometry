@@ -71,3 +71,38 @@ test_that("StableTimeWindow abandons a window that would cost too much", {
   expect_equal(result$kept, 1)
   expect_equal(nrow(flowCore::exprs(result$frame)), 4000)
 })
+
+test_that("FitTwoComponents. separates two modes", {
+  values <- withr::with_seed(21, c(stats::rnorm(400, 1, 0.3),
+                                   stats::rnorm(400, 6, 0.3)))
+  fit <- FitTwoComponents.(values, iterations = 200, tolerance = 1e-6)
+  expect_false(is.null(fit))
+  expect_equal(length(fit$means), 2)
+  expect_lt(fit$means[1], fit$means[2])
+  expect_gt(fit$means[2] - fit$means[1], 3)
+})
+
+test_that("FitTwoComponents. gives NULL when a side holds too few values", {
+  expect_null(FitTwoComponents.(c(1, 1, 2, 2), iterations = 50,
+                                tolerance = 1e-6))
+})
+
+test_that("LymphocyteGate. gives NULL on too few events to fit", {
+  events <- cbind(`FSC-A` = rnorm(50), `SSC-A` = rnorm(50))
+  expect_null(LymphocyteGate.(events, c(forward_area = "FSC-A",
+                                        side_area = "SSC-A")))
+})
+
+test_that("LymphocyteGate. keeps the low side scatter mode", {
+  events <- withr::with_seed(22, rbind(
+    cbind(`FSC-A` = stats::rnorm(700, 70000, 8000),
+          `SSC-A` = stats::rnorm(700, 30000, 5000)),
+    cbind(`FSC-A` = stats::rnorm(300, 90000, 9000),
+          `SSC-A` = stats::rnorm(300, 120000, 12000))))
+  kept <- LymphocyteGate.(events, c(forward_area = "FSC-A",
+                                    side_area = "SSC-A"))
+  expect_false(is.null(kept))
+  expect_lt(nrow(kept), nrow(events))
+  expect_lt(stats::median(kept[, "SSC-A"]),
+            stats::median(events[, "SSC-A"]))
+})

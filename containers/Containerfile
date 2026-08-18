@@ -77,7 +77,7 @@ RUN R -q -e "BiocManager::install(version = Sys.getenv('BIOC_VERSION'), ask = FA
     BiocManager::install(c( \
         'flowCore', 'flowWorkspace', 'openCyto', 'CytoML', 'ggcyto', \
         'flowAI', 'PeacoQC', 'flowClust', 'flowDensity', 'flowStats', 'flowViz', \
-        'FlowSOM', 'diffcyt', 'CATALYST', \
+        'FlowSOM', 'ConsensusClusterPlus', 'diffcyt', 'CATALYST', \
         'SingleCellExperiment', 'BiocParallel', \
         'ExperimentHub', 'HDCytoData' \
     ), ask = FALSE, update = FALSE)"

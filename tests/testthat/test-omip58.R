@@ -62,3 +62,9 @@ test_that("GateOmip58File stops when the matrix names a missing detector", {
   dimnames(wrong) <- list(c("V510-A", "B999-A"), c("V510-A", "B999-A"))
   expect_error(GateOmip58File(path, wrong), "detector\\(s\\) that the file does not carry")
 })
+
+test_that("MatchOmip58Controls rejects a panel with no viability marker", {
+  # The fix it applies needs exactly one channel whose name carries "live".
+  controls <- MakeTestControlSet()
+  expect_error(MatchOmip58Controls(controls), "token 'live'")
+})
