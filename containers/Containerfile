@@ -68,6 +68,7 @@ RUN R -q -e "install.packages(c( \
         'ggplot2', 'dplyr', 'tidyr', 'readr', \
         'here', 'patchwork', 'matrixStats', \
         'uwot', 'Rtsne', 'pheatmap', 'ggpubr', 'rstatix', \
+        'ragg', 'systemfonts', 'textshaping', 'jsonlite', \
         'testthat', 'roxygen2', 'knitr', 'rmarkdown', 'withr' \
     )); if (!all(c('IRkernel','ggplot2','dplyr','testthat') %in% rownames(installed.packages()))) quit(status = 1)"
 

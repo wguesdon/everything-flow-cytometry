@@ -9,6 +9,9 @@
 #
 # The versions were read on 2026-08-16 from two sources:
 #   CRAN         https://packagemanager.posit.co/cran/2026-08-15
+# The four figure and manifest packages were read on 2026-08-18 from the image
+# built against that same snapshot, because they arrived transitively before
+# they were named here.
 #   Bioconductor https://bioconductor.org/packages/3.23/bioc/VIEWS
 #
 # To move a pin, change the number here and change the snapshot date or the
@@ -31,6 +34,14 @@ expected <- c(
   pheatmap    = "1.0.13",
   ggpubr      = "1.0.0",
   rstatix     = "1.1.0",
+  # R/figures.R writes every raster figure through ragg and picks the font
+  # through systemfonts, and textshaping draws the glyphs. A change in any of
+  # the three changes a figure, so all three are pinned. R/cytokit.R writes a
+  # bundle manifest with jsonlite.
+  ragg        = "1.5.2",
+  systemfonts = "1.3.2",
+  textshaping = "1.0.5",
+  jsonlite    = "2.0.0",
   testthat    = "3.3.2",
   roxygen2    = "8.1.0",
   knitr       = "1.51",
