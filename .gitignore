@@ -35,8 +35,9 @@ AGENTS.md
 # Session working notes, kept local
 SESSION_SUMMARY.md
 
-# A prompt for pasting into a chat model, kept local
+# Prompts kept local, not part of the pushed harness
 prompts/openrouter_scientific_prose.md
+prompts/restructure_reports_as_papers.md
 
 # Published papers kept locally for comparison, not redistributed
 papers/
