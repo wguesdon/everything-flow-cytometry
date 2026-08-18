@@ -2,7 +2,8 @@
 
 # Improving the clustering route on OMIP-043.
 #
-# The first attempt recovered antibody secreting cells well in tonsil and spleen,
+# The first attempt recovered antibody secreting cells well in tonsil and
+# spleen,
 # loosely in blood, and not at all in bone marrow. Bone marrow holds the fewest
 # ASC of the four tissues, so the working explanation is that a rare population
 # cannot claim a metacluster of its own when there are only fifteen to go round.
@@ -12,7 +13,8 @@
 #
 #   Side scatter. The paper states that ASC carry more cytoplasm and sit above a
 #   normal lymphocyte scatter gate, and Part 5 of the report confirms a ratio of
-#   1.8 to 2.7. That is a strong discriminating feature and the first attempt did
+#   1.8 to 2.7. That is a strong discriminating feature and the first attempt
+# did
 #   not give it to the clustering at all.
 #
 #   More metaclusters. With fifteen groups over 44,000 bone marrow events, the
@@ -25,11 +27,13 @@
 #
 # The manual gate is used here to score configurations, which makes this a
 # calibration step and not an independent test. The report must say so. Once a
-# configuration is chosen, script 06 runs it and the independent comparison there
+# configuration is chosen, script 06 runs it and the independent comparison
+# there
 # stands or falls on its own.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/07_omip43_clustering_sweep.R
 
 suppressPackageStartupMessages({
@@ -81,7 +85,8 @@ if (!dir.exists(kDataDir)) {
 #' @param selected A logical vector, `TRUE` where the method calls an event ASC.
 #' @param truth A logical vector, `TRUE` where the manual gate does.
 #' @return A one row `data.frame` with `precision`, `recall` and `f1`, all as
-#'   percentages. `f1` is the harmonic mean, which punishes a method that wins on
+#'   percentages. `f1` is the harmonic mean, which punishes a method that wins
+#' on
 #'   one at the cost of the other.
 ScoreSelection <- function(selected, truth) {
   true_positive <- sum(selected & truth)
@@ -127,9 +132,12 @@ for (tissue in kTissues) {
       sprintf("(%.2f%%)", 100 * mean(tissue_data[[tissue]]$truth)))
 }
 
-# The selection rule is the fourth dimension and it turned out to matter more than
-# the other three together. "profile" scores each cluster against the definitions
-# file and takes every cluster labelled ASC. "cd38 top N" ranks clusters on median
+# The selection rule is the fourth dimension and it turned out to matter more
+# than
+# the other three together. "profile" scores each cluster against the
+# definitions
+# file and takes every cluster labelled ASC. "cd38 top N" ranks clusters on
+# median
 # CD38 and takes the highest, which is what the paper's own identification
 # criterion says: "very high CD38 expression is in fact considered adequate for
 # basic identification of ASC".

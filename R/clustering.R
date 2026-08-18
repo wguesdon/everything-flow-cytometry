@@ -6,17 +6,20 @@
 # can still appear.
 #
 # The two routes are compared on the same pre-gated events. Debris, dead cells
-# and doublets are removed by gating first, because a cluster of debris is not an
+# and doublets are removed by gating first, because a cluster of debris is not
+# an
 # interesting finding and it distorts the embedding.
 #
 # The annotation rule is in a file, not in this code. A cluster is labelled by
-# scoring its median marker expression against gating/omip39_cell_type_definitions.csv,
+# scoring its median marker expression against
+# gating/omip39_cell_type_definitions.csv,
 # so no cluster is named by eye.
 
 #' Pull the expression matrix of one gated population out of a GatingSet
 #'
 #' @param gating_set A gated `GatingSet`.
-#' @param population The population path to extract, for example `"Lymphocytes"`.
+#' @param population The population path to extract, for example
+#' `"Lymphocytes"`.
 #' @param sample The sample name or index. Defaults to the first.
 #' @return A numeric matrix of events by channels.
 #' @export
@@ -37,7 +40,8 @@ ExtractGatedEvents <- function(gating_set, population, sample = 1) {
 
 #' Take a reproducible subsample of events
 #'
-#' A UMAP on a million events is slow and the picture is no clearer than one on a
+#' A UMAP on a million events is slow and the picture is no clearer than one on
+#' a
 #' hundred thousand. The seed is an argument rather than a global, so a caller
 #' cannot forget to set it.
 #'
@@ -75,7 +79,8 @@ SubsampleEvents <- function(events, n = 50000, seed = 42) {
 #'   every channel, so a cluster is defined by identity and not by activation.
 #' @param grid_size The side of the square SOM grid. 10 gives 100 nodes.
 #' @param n_metaclusters The number of metaclusters to merge down to.
-#' @param scale_channels Scale each channel to zero mean and unit variance before
+#' @param scale_channels Scale each channel to zero mean and unit variance
+#' before
 #'   the map is fitted. Without it a channel with a wide range pulls harder than
 #'   one with a narrow range, whether or not it separates anything.
 #' @param seed The random seed.
@@ -214,7 +219,8 @@ ClusterMedianExpression <- function(events, clusters, channels) {
 
 #' Read the marker signature that defines each cell type
 #'
-#' @param path Path to a CSV whose first column is `cell_type`, whose last column
+#' @param path Path to a CSV whose first column is `cell_type`, whose last
+#' column
 #'   is `note`, and whose remaining columns are channel names holding `pos`,
 #'   `neg`, `high` or an empty string. An empty string means the marker does not
 #'   take part in defining that cell type.
@@ -245,9 +251,11 @@ ReadCellTypeDefinitions <- function(path) {
 
 #' Label each cluster by scoring it against the cell type definitions
 #'
-#' Every marker's median expression is scaled across clusters to run from 0 to 1,
+#' Every marker's median expression is scaled across clusters to run from 0 to
+#' 1,
 #' so a bright marker and a dim one contribute equally. A definition then scores
-#' each cluster by adding the scaled value where it expects `pos`, subtracting it
+#' each cluster by adding the scaled value where it expects `pos`, subtracting
+#' it
 #' where it expects `neg`, and weighting `high` twice, which separates
 #' CD56bright from CD56dim. The best scoring definition wins.
 #'
@@ -363,16 +371,19 @@ SummariseCellTypes <- function(annotation) {
 #'
 #' An FCS file names its columns after detectors, such as `yg-LP635 670/30-B-A`.
 #' Every downstream file here names markers, such as `CD3 PECy5`, because a
-#' detector name means nothing without the panel beside it. This translates once,
+#' detector name means nothing without the panel beside it. This translates
+#' once,
 #' at the point where events leave the flow objects.
 #'
 #' A channel with no marker, which is scatter or time, keeps its detector name.
-#' So does a channel whose marker is a placeholder. OMIP-39 labels its two unused
+#' So does a channel whose marker is a placeholder. OMIP-39 labels its two
+#' unused
 #' detectors `Available`, and that word is not a marker.
 #'
 #' @param events A numeric matrix of events by channels.
 #' @param frame A `flowFrame` from the same file, used for the panel.
-#' @param placeholders Marker labels that mean "no marker here". Matching ignores
+#' @param placeholders Marker labels that mean "no marker here". Matching
+#' ignores
 #'   case.
 #' @return The matrix with renamed columns.
 #' @export
@@ -406,11 +417,14 @@ RenameChannelsToMarkers <- function(events, frame,
 #'
 #' A definitions file scores a cluster on the shape of its whole marker profile.
 #' That is the right rule when a population is defined by a combination, and the
-#' wrong one when a paper defines a population as the extreme of a single marker.
+#' wrong one when a paper defines a population as the extreme of a single
+#' marker.
 #'
 #' OMIP-043 is the second case. It states that antibody secreting cells "express
-#' very high levels of the ectoenzyme CD38" and that "very high CD38 expression is
-#' in fact considered adequate for basic identification of ASC". Ranking clusters
+#' very high levels of the ectoenzyme CD38" and that "very high CD38 expression
+#' is
+#' in fact considered adequate for basic identification of ASC". Ranking
+#' clusters
 #' on CD38 encodes that sentence directly.
 #'
 #' The difference is large where a tissue holds a second population that is

@@ -1,8 +1,10 @@
 # The COVID-19 intracellular cytokine deposit of Vanderbeke 2021.
 #
 # FR-FCM-Z2KP holds 49 files from a 34 colour intracellular cytokine panel on a
-# BD Symphony, and it ships the FlowJo workspace the authors used. That workspace
-# is the first one in this repository that gates every sample rather than one, so
+# BD Symphony, and it ships the FlowJo workspace the authors used. That
+# workspace
+# is the first one in this repository that gates every sample rather than one,
+# so
 # the manual arm covers the whole cohort instead of a single donor.
 #
 # Three properties of the deposit shape the code.
@@ -17,7 +19,8 @@
 #
 # The manual hierarchy is shallow and wide. CD3 carries CD4 and CD8 beneath it,
 # while CD14 monocytes and CD19 sit beside CD3 rather than under it. The
-# automated route reproduces that shape rather than a deeper one, so the two arms
+# automated route reproduces that shape rather than a deeper one, so the two
+# arms
 # count the same denominators.
 
 #' Read the manual gates of the deposited FlowJo workspace
@@ -85,7 +88,8 @@ ParseCovidFileNames <- function(file_names) {
 #'
 #' The hierarchy matches the deposited workspace. CD3 sits at the top, CD4 and
 #' CD8 sit inside it, and CD14 and CD19 sit beside it. The naive and memory
-#' subsets and the cytokine gates are added below, because the panel carries them
+#' subsets and the cytokine gates are added below, because the panel carries
+#' them
 #' and the paper's claims need them.
 #'
 #' @param path Path to the FCS file.

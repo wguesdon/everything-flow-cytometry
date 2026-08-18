@@ -12,7 +12,8 @@
 # panel. A template that names `PE-Cy7-A` gates some of the deposit and fails
 # silently on the rest.
 #
-# `ResolveMarkerChannels()` therefore resolves a channel per file, in two passes.
+# `ResolveMarkerChannels()` therefore resolves a channel per file, in two
+# passes.
 # The first pass reads the marker name that the operator typed. The second pass
 # falls back on the fluorochrome, through the table in `gating/z282_panel.csv`.
 # Every resolution records which pass produced it, so a weaker match is visible.
@@ -95,7 +96,8 @@ NormaliseDetector. <- function(detector) {
 #'
 #' @param frame A `flowFrame`.
 #' @param panel The table returned by [ReadZ282Panel()].
-#' @param material Either `"PBMC"` or `"WB"`. It decides whether the sixth colour
+#' @param material Either `"PBMC"` or `"WB"`. It decides whether the sixth
+#' colour
 #'   is read as the viability dye or as CD45.
 #' @return A `data.frame` with one row per expected marker and the columns
 #'   `marker`, `channel` and `resolved_by`. `channel` is `NA` when neither pass
@@ -160,7 +162,8 @@ ResolveMarkerChannels <- function(frame, panel, material) {
 
 #' Name the scatter and time channels of one file
 #'
-#' Beckman Coulter writes `FS-A` and `SS-A` where Becton Dickinson writes `FSC-A`
+#' Beckman Coulter writes `FS-A` and `SS-A` where Becton Dickinson writes
+#' `FSC-A`
 #' and `SSC-A`, so a fixed name fails on a third of the deposit.
 #'
 #' @param frame A `flowFrame`.
@@ -190,7 +193,8 @@ ScatterChannels <- function(frame) {
 
 #' Report and settle the compensation state of one file
 #'
-#' The deposit holds three states. A Becton Dickinson export carries `SPILL` with
+#' The deposit holds three states. A Becton Dickinson export carries `SPILL`
+#' with
 #' `APPLY COMPENSATION` set to `TRUE`, which means the values are compensated
 #' already. A Kaluza export carries `$SPILLOVER` and no such keyword, so the
 #' matrix still has to be applied. Eighteen files carry no matrix at all.
@@ -242,7 +246,8 @@ SettleCompensation <- function(frame) {
 #' collapses. The bin count halves until fewer than a tenth of the bins are
 #' empty.
 #'
-#' The second is `min_kept`. A smooth change of acquisition rate is not a fluidic
+#' The second is `min_kept`. A smooth change of acquisition rate is not a
+#' fluidic
 #' disturbance, and the rule cannot tell the two apart. When the window would
 #' discard more than `1 - min_kept` of the events the function keeps the whole
 #' file and reports `applied = FALSE`, so the report can count how often that
@@ -251,11 +256,13 @@ SettleCompensation <- function(frame) {
 #' @param frame A `flowFrame`.
 #' @param time_channel The name of the time channel.
 #' @param bins The starting number of time bins. Defaults to 100.
-#' @param tolerance A length two vector of multipliers on the median bin count. A
+#' @param tolerance A length two vector of multipliers on the median bin count.
+#' A
 #'   bin passes when its count lies between them.
 #' @param min_kept The smallest fraction of events the window may keep before it
 #'   is abandoned.
-#' @return A list with `frame`, the filtered `flowFrame`, `kept`, the fraction of
+#' @return A list with `frame`, the filtered `flowFrame`, `kept`, the fraction
+#' of
 #'   events that survived, and `applied`, whether the window was used.
 #' @examples
 #' \dontrun{
@@ -302,7 +309,8 @@ StableTimeWindow <- function(frame, time_channel, bins = 100,
 #' Coefficient of variation
 #'
 #' @param x A numeric vector.
-#' @return The standard deviation divided by the mean. `NA` when the mean is zero
+#' @return The standard deviation divided by the mean. `NA` when the mean is
+#' zero
 #'   or when fewer than two finite values are present.
 #' @examples
 #' CoefficientOfVariation(c(10, 12, 11))

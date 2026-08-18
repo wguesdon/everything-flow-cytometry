@@ -26,8 +26,8 @@ for (module in c("figures", "io", "panels", "compensation", "transform",
 
 arguments <- ParseCytokitArguments(
   commandArgs(trailingOnly = TRUE),
-  allowed = c("data", "gates", "parent", "out", "label", "markers", "metaclusters",
-              "grid", "events", "seed", "sample"),
+  allowed = c("data", "gates", "parent", "out", "label", "markers",
+              "metaclusters", "grid", "events", "seed", "sample"),
   required = character(0),
   flags = c("recursive", "no-compensate", "no-transform", "no-umap")
 )
@@ -44,7 +44,8 @@ n_metaclusters <- if (is.null(arguments$metaclusters)) 12L else
 grid_size <- if (is.null(arguments$grid)) 10L else as.integer(arguments$grid)
 max_events <- if (is.null(arguments$events)) 50000L else
   as.integer(arguments$events)
-sample_index <- if (is.null(arguments$sample)) 1L else as.integer(arguments$sample)
+sample_index <- if (is.null(arguments$sample)) 1L else
+  as.integer(arguments$sample)
 
 Say <- function(...) cat(..., "\n", sep = "")
 
@@ -186,7 +187,8 @@ heatmap <- ggplot2::ggplot(long,
   ggplot2::geom_tile() +
   ggplot2::scale_fill_viridis_c(name = "Scaled median",
                                 guide = ColourbarGuide()) +
-  ggplot2::labs(title = "Median expression per cluster", x = NULL, y = "Cluster") +
+  ggplot2::labs(title = "Median expression per cluster", x = NULL,
+                y = "Cluster") +
   ThemePublication() +
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 SaveFigure(heatmap, file.path(bundle, "cluster_medians.svg"),
@@ -207,7 +209,8 @@ if (!isTRUE(arguments$`no-umap`)) {
                                           colour = .data$cluster)) +
     ggplot2::geom_point(size = 0.3, alpha = 0.6) +
     ScaleColourPublication(name = "Cluster") +
-    ggplot2::labs(title = paste("UMAP of", parent), x = "UMAP 1", y = "UMAP 2") +
+    ggplot2::labs(title = paste("UMAP of", parent), x = "UMAP 1",
+                  y = "UMAP 2") +
     ThemeEmbedding() +
     LegendPoints()
   SaveFigure(drawing, file.path(bundle, "umap.png"), width = 8, height = 7)

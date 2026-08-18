@@ -26,6 +26,13 @@ read only, because an FCS file is a measurement that cannot be taken again.
                                       [--grid N] [--events N] [--no-umap] [--seed N]
                                       [--out DIR]
 ./cli/cytokit annotate    --clusters BUNDLE --definitions FILE [--margin N] [--out DIR]
+./cli/cytokit proportions --counts BUNDLE --metadata FILE [--out DIR]
+                                      [--sample-column sample]
+./cli/cytokit compare     --proportions BUNDLE --group COL [--population NAME]
+                                      [--all-populations] [--value COLUMN] [--out DIR]
+./cli/cytokit claims      --claims FILE --results FILE [--out DIR]
+                                      [--tolerance 0.05]
+./cli/cytokit reproduce   [--analysis NAME] [--out DIR]
 ```
 
 Add `--recursive` when the FCS files sit below the data folder you name. That
@@ -44,14 +51,82 @@ Start with `inspect`. Every later recipe reads what it prints.
 | `gate` | ready | Run a template, write counts and a gate tree |
 | `cluster` | ready | FlowSOM and UMAP, inside a gate when asked |
 | `annotate` | ready | Label each cluster from a definitions table |
-| `proportions` | planned | Per sample frequencies joined to a metadata table |
-| `compare` | planned | Box plot of proportion by treatment, with the test |
-| `claims` | planned | A verdict for every claim in a claims table |
-| `reproduce` | planned | Rebuild one of the analyses in this repository |
+| `proportions` | ready | Per sample frequencies joined to a metadata table |
+| `compare` | ready | Box plot of proportion by treatment, with the test |
+| `claims` | ready | A verdict for every claim in a claims table |
+| `reproduce` | ready | Rebuild one of the analyses in this repository |
 
 A recipe that `cytokit list` calls planned does not exist. It is not a command
 you can run, and an agent that invents one sends you to a failure that reads
 like your own fault.
+
+## Inspect
+
+`inspect` reports the panel, the markers, the event counts, the acquisition
+kind and the compensation state. Every later recipe reads what it prints, so
+run it first.
+
+It also reads nine keywords that identify the specimen and the run, and gives
+each one a role. A keyword with one value across every file describes the run.
+A keyword with a value per file is an identifier. A keyword between the two
+splits the folder, and that split is the only candidate grouping that ships
+with the data. A timestamp never groups anything. Five of the nine deposits in
+the corpus check carry a grouping that no file name reveals.
+
+It states whether the run is mass cytometry or fluorescence, because the answer
+changes what the next step is allowed to be. It warns when a file leaves `$PnS`
+empty, because the tool then falls back to the detector name and a detector
+name is not an antibody.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--recursive` | Look for FCS files below the folder | Off |
+| `--out DIR` | Where the bundle goes | `output` |
+| `--label NAME` | The name inside the bundle folder | The data folder |
+
+The bundle holds `files.csv`, `samples.csv`, `panel.csv`, `naming.csv`,
+`markers.txt` and `reader_notes.csv`.
+
+## Template
+
+`template` writes a valid empty openCyto gating template for your panel. When
+the panel carries FSC-A, SSC-A and FSC-H, the file already holds the two
+scatter rows, so you can see the shape before you add your own populations. The
+recipe reads the file back with the function that will consume it and reports
+whether it parses.
+
+The guidance goes in a `_notes.md` file beside the CSV and never inside it.
+openCyto reads the template with `read.csv`, whose comment character is empty,
+so a comment line would become the header and the template would stop parsing.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--out FILE` | The file to write | Required |
+| `--recursive` | Look for FCS files below the folder | Off |
+| `--force` | Overwrite a file that is already there | Off |
+
+The recipe refuses to overwrite an existing file without `--force`. A template
+holds decisions that took work.
+
+## Definitions
+
+`definitions` writes a valid empty cell type definitions table whose columns are
+the markers of your panel. Fill a cell with `pos`, `neg` or `high`, and leave it
+empty when the marker does not decide that population.
+
+`--markers` takes a selection such as `CD3,CD4`. When the file names no
+antibody, it takes a mapping such as `APC-A=CD3,PE-A=CD4` instead, and the
+recipe writes the antibody names. It records that mapping in the notes, because
+a column called CD3 with nothing to say which detector it came from is not
+provenance. It warns whenever a column is still a detector name.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--out FILE` | The file to write | Required |
+| `--markers` | A selection, or a detector to antibody mapping | Every marker |
+| `--populations` | The rows to write | None |
+| `--recursive` | Look for FCS files below the folder | Off |
+| `--force` | Overwrite a file that is already there | Off |
 
 ## Compensate
 
@@ -180,13 +255,117 @@ markers when the clustering lacks one, so its label is weaker than it looks.
 The recipe writes `cluster_labels.csv`, `cell_type_summary.csv` and
 `cell_type_summary.svg`. It writes `close_calls.csv` when a close call occurs.
 
-## The build order
+## Proportions
 
-`inspect`, `template`, `definitions`, `compensate`, `gate`, `cluster` and
-`annotate` are ready. Build the remaining recipes in this order.
+`proportions` joins a population count table to a metadata table that the
+scientist writes. An FCS file carries no treatment, so the metadata table comes
+from the scientist.
 
-1. `proportions` and `compare`.
-2. `claims` and `reproduce`.
+`--counts BUNDLE` identifies the bundle that `gate` writes. It can also
+identify a CSV with `sample`, `population` and `percent_of_parent` columns.
+`--metadata FILE` identifies the metadata table. Both flags are required.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--counts BUNDLE` | The gate bundle or count CSV | Required |
+| `--metadata FILE` | The metadata table | Required |
+| `--sample-column COLUMN` | The metadata column that holds the file name | `sample` |
+
+The recipe matches sample names on the base name. A path or extension on one
+side only still matches. The recipe keeps and reports a sample that the
+metadata does not name. A dropped sample can remove a replicate from a group.
+
+The recipe reports which metadata columns can carry a test. A test needs two
+groups and two samples in each group. The recipe names each column that does
+not meet this condition.
+
+The recipe writes `proportions.csv` and `design.csv`.
+
+## Compare
+
+`compare` draws one population frequency by group and puts the test on the
+figure. The recipe reads the bundle that `proportions` writes.
+
+`--proportions BUNDLE` identifies the proportions bundle. `--group COLUMN`
+identifies the metadata column that splits the samples. Both flags are
+required. Use `--population NAME` for one population. Use `--all-populations`
+for every population.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--proportions BUNDLE` | The proportions bundle | Required |
+| `--group COLUMN` | The metadata column that splits samples | Required |
+| `--population NAME` | One population to compare | None |
+| `--all-populations` | Compare every population | False |
+| `--value COLUMN` | The frequency column | `percent_of_parent` |
+
+The design chooses the test. Two groups use a Wilcoxon rank sum test. More
+than two groups use a Kruskal Wallis test. A cell frequency is bounded, skewed
+and measured on a small sample count, so the recipe does not use a t test.
+
+A group with one sample carries no spread, so no test runs. The recipe still
+draws the figure and shows one point for each sample. Report this figure as a
+picture of the samples and not as a difference.
+
+The figure always draws the points on top of the box. A box over three points
+draws a quartile that three points cannot support.
+
+When the recipe runs more than one test from one table, `tests.csv` adds the
+Benjamini and Hochberg adjusted column. Read the adjusted column and not the
+raw column.
+
+The recipe writes `tests.csv`, one group summary CSV for each population and
+one SVG for each population.
+
+## Claims
+
+`claims` puts one verdict on every claim, which is supported, contradicted or
+unresolved. Unresolved is a real answer and not a failure to answer. A claim
+whose measure nobody computed has not been contradicted, and recording it as
+anything else overstates what was checked.
+
+The claims table needs the columns `claim_id`, `claim`, `measure`, `test` and
+`expected`. The results table needs the columns `measure` and `value`.
+
+| Test | What it asks | What `expected` holds |
+|---|---|---|
+| `at_least` | Is the value at or above a floor | One number |
+| `at_most` | Is the value at or below a ceiling | One number |
+| `between` | Is the value inside a range | Two numbers, separated by a comma |
+| `equals` | Is the value near a target | One number |
+| `greater_than` | Is the value above another measure | The name of that measure |
+| `present` | Was the measure computed at all | Nothing |
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--claims FILE` | The claims table | Required |
+| `--results FILE` | The measured values | Required |
+| `--tolerance N` | How far an `equals` claim may sit from its target | 0.05 |
+| `--out DIR` | Where the bundle goes | `output` |
+
+The bundle holds `verdicts.csv`, `verdict_tally.csv` and `verdicts.svg`.
+
+## Reproduce
+
+`reproduce` lists the analyses in this repository and runs one. This is the
+secondary use of the tool. The first use is your own data.
+
+With no `--analysis` it lists every analysis with its script, its deposit and
+its report. `docs/analyses.csv` holds that map.
+
+| Flag | What it sets | Default |
+|---|---|---|
+| `--analysis NAME` | The analysis to run | List them and stop |
+| `--out DIR` | Where the bundle goes | `output` |
+
+The bundle holds `outcome.csv` and `run_log.txt`. An analysis reads from
+`data/` and writes into `output/`.
+
+## Everything is built
+
+Every recipe in the table above is ready. `cytokit list` is the authority, and
+`scripts/check_skill_adapters.py` fails when this document, the three adapters
+or `README.md` disagree with it.
 
 ## What a recipe writes
 
@@ -215,6 +394,11 @@ than 1 percent of its parent. With more than one file, it also writes
 
 `annotate` adds `cluster_labels.csv`, `cell_type_summary.csv` and
 `cell_type_summary.svg`. It adds `close_calls.csv` when a close call occurs.
+
+`proportions` adds `proportions.csv` and `design.csv`.
+
+`compare` adds `tests.csv`, one `_by_group.csv` file for each population and
+one SVG for each population.
 
 `template` and `definitions` write one file that you name, plus a `_notes.md`
 beside it. The notes are a separate file because openCyto reads the template

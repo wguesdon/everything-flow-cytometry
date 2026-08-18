@@ -7,7 +7,8 @@
 #' Build a small flowFrame for a test
 #'
 #' The frame carries two scatter channels with no marker and two fluorescence
-#' channels with a marker, which is the smallest shape that exercises the channel
+#' channels with a marker, which is the smallest shape that exercises the
+#' channel
 #' and marker code.
 #'
 #' @param n_events The number of events. Defaults to 200.
@@ -86,7 +87,8 @@ MakeTestFlowFrameWithSpillover <- function(spill = 0.1) {
 
 #' Build a small flowSet of compensation controls for a test
 #'
-#' The set holds one control per fluorescence channel plus one unstained control.
+#' The set holds one control per fluorescence channel plus one unstained
+#' control.
 #' The control names are deliberately spelled in three different ways, so the
 #' exact, collapsed and unstained matching passes are each exercised.
 #'

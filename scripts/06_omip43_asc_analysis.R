@@ -4,13 +4,15 @@
 #
 # The target population is defined as CD38 high and CD27 positive. That word
 # "high" is the difficulty: CD38 high is the bright tail of one continuous
-# distribution rather than a separated peak, and a density based gating method has
+# distribution rather than a separated peak, and a density based gating method
+# has
 # no valley to find.
 #
 # Five parts:
 #   1. The manual gates, which are the reference throughout.
 #   2. The paper's counting claims. It states a 5 percent CV target and 400 to
-#      2,000 events in the ASC gate, and both are arithmetic that can be checked.
+#      2,000 events in the ASC gate, and both are arithmetic that can be
+# checked.
 #   3. Automated gating from a template that mirrors the manual hierarchy. It
 #      fails, and the script records the failure rather than tuning until it
 #      agrees.
@@ -23,7 +25,8 @@
 # them measures acquisition plus analysis.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/06_omip43_asc_analysis.R
 #
 # Reference: Carrell J, Groves CJ. OMIP-043: Identification of human antibody
@@ -323,7 +326,8 @@ for (tissue in kTissues) {
                                          gsub(" ", "_", tolower(tissue)), ".csv")),
             row.names = FALSE)
 
-  # One UMAP, from the tissue with the most ASC, so the figure shows them clearly.
+  # One UMAP, from the tissue with the most ASC, so the figure shows them
+  # clearly.
   if (tissue == "Spleen" && !umap_saved) {
     embedding <- RunUmapEmbedding(events, channels = kClusterChannels, seed = kSeed)
     plot_data <- cbind(
@@ -790,13 +794,16 @@ Log("Claims reproduced:", sum(verdicts$verdict == "reproduced"), "of",
 # ---------------------------------------------------------------------------
 #
 # Everything above defines ASC by the gate the authors drew. That tests whether
-# the paper's conclusions follow from its own analysis, which is worth knowing and
+# the paper's conclusions follow from its own analysis, which is worth knowing
+# and
 # is not the same as reproducing them independently.
 #
 # Here the ASC population is defined by clustering instead. Each tissue is
 # clustered, every metacluster is labelled from the definitions file, and the
-# clusters labelled as antibody secreting cells become the population. The manual
-# gate is not consulted at any point, so the claims below are tested against cells
+# clusters labelled as antibody secreting cells become the population. The
+# manual
+# gate is not consulted at any point, so the claims below are tested against
+# cells
 # selected by a route that shares nothing with the original analysis.
 
 Log("Rebuilding the ASC population from clustering, per tissue")
@@ -825,11 +832,13 @@ for (tissue in kTissues) {
   medians <- ClusterMedianExpression(events, clusters$metacluster, kClusterChannels)
   labels <- AnnotateClusters(medians, definitions)
 
-  # The paper identifies ASC by CD38 being highest, not by the shape of the whole
+  # The paper identifies ASC by CD38 being highest, not by the shape of the
+  # whole
   # profile: "very high CD38 expression is in fact considered adequate for basic
   # identification of ASC". Ranking clusters on CD38 encodes that sentence.
   # Scoring the profile instead selects a second CD38 positive population that
-  # bone marrow carries and the other tissues do not, and the F1 there falls from
+  # bone marrow carries and the other tissues do not, and the F1 there falls
+  # from
   # 90.9 to 12.6. Script 07 holds that measurement.
   asc_clusters <- SelectByHighestMarker(
     medians, kChannels[["CD38"]], n_clusters = kAscClusters

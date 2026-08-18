@@ -32,6 +32,9 @@ cytokit proportions --counts BUNDLE --metadata FILE [--out DIR]
                                     [--sample-column sample]
 cytokit compare     --proportions BUNDLE --group COL [--population NAME]
                                     [--all-populations] [--out DIR]
+cytokit claims      --claims FILE --results FILE [--out DIR]
+                                    [--tolerance 0.05]
+cytokit reproduce   [--analysis NAME] [--out DIR]
 
 # Add --recursive to an FCS data command when the files sit below the folder
 # you name, which is how a deposit arrives when you unzip it.
@@ -155,14 +158,21 @@ The recipe writes `cluster_labels.csv`, `cell_type_summary.csv`,
 9. Run `cytokit cluster` inside the gate that holds the events of interest. Read every cluster with fewer than 20 events as noise. Do not name a cluster before the scientist supplies a cell type definition.
 10. A cell type definitions table is per panel, and the scientist will not have one. Run `cytokit definitions` to get a valid empty file. Fill it in with the scientist. The recipe reads the file back and reports whether it parses.
 11. Run `cytokit annotate` with the cluster bundle and the definitions table. Report every close call as a candidate and not as a cell type.
-## What is not built yet
-
-`cytokit list` marks a recipe `ready` or `planned`. The planned recipes are
-`proportions`, `compare`, `claims` and `reproduce`. Do not invent a command
-that `cytokit list` does not show. If the
-scientist asks for one, say it is not built and point at `docs/cytokit.md`,
-which holds the plan and the build order.
-
+12. Run `cytokit proportions` with the gate bundle and the metadata table. The
+    metadata table comes from the scientist, because an FCS file carries no
+    treatment. Use `--sample-column` when its file name column is not
+    `sample`. Read every unmatched sample that the recipe reports. The recipe
+    keeps that sample, because a dropped sample can remove a replicate from a
+    group. Read `design.csv` before a comparison. A test needs two groups and
+    two samples in each group.
+13. Run `cytokit compare` with the proportions bundle and the metadata group
+    column. Use `--population` for one population or `--all-populations` for
+    every population. Use `--value` when the frequency column is not
+    `percent_of_parent`. Two groups use a Wilcoxon rank sum test. More than two
+    groups use a Kruskal Wallis test. A group with one sample has no test, but
+    the figure still shows each sample. Report that figure as a picture of the
+    samples and not as a difference. Read `p_value_adjusted` and not
+    `p_value` when more than one test runs.
 ## The rule this repository runs on
 
 Measure before you decide, and record what you measured.

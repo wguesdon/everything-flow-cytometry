@@ -125,7 +125,9 @@ writeLines(c(
   if (nrow(guessed) > 0) "" else NULL,
   # A mapping the scientist supplied is provenance. Losing it leaves a column
   # called CD3 with nothing to say which detector it came from.
-  if (any(chosen$from != chosen$column)) "## The mapping you supplied" else NULL,
+  if (any(chosen$from != chosen$column)) {
+    "## The mapping you supplied"
+  } else NULL,
   if (any(chosen$from != chosen$column)) "" else NULL,
   if (any(chosen$from != chosen$column)) {
     "The file names no antibody for these detectors. The names below came from"

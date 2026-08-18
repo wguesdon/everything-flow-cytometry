@@ -1,7 +1,9 @@
 # Tests for R/counting.R
 #
-# The paper states a 5 percent CV target and a 400 to 2000 event range. Those two
-# numbers are consistent with each other only if the arithmetic below is right, so
+# The paper states a 5 percent CV target and a 400 to 2000 event range. Those
+# two
+# numbers are consistent with each other only if the arithmetic below is right,
+# so
 # the arithmetic is tested against the paper's own pair.
 
 test_that("PoissonCv reproduces the paper's own pairing of 400 events and 5 percent", {

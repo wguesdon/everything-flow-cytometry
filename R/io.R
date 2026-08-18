@@ -1,13 +1,15 @@
 # Read FCS files and build the sample sheet that describes them.
 #
-# The example dataset is the FlowJo Basic Tutorial data. Its file names carry the
+# The example dataset is the FlowJo Basic Tutorial data. Its file names carry
+# the
 # experimental design, so the sample sheet is derived rather than typed. A typed
 # sheet drifts from the files; a derived sheet cannot.
 
 #' Parse the design out of a FlowJo tutorial file name
 #'
 #' The file names in the FlowJo Basic Tutorial dataset follow the pattern
-#' `<donor>_<condition>_<well>_exp.fcs`, for example `LD1_NS+PI_C01_exp.fcs`. The
+#' `<donor>_<condition>_<well>_exp.fcs`, for example `LD1_NS+PI_C01_exp.fcs`.
+#' The
 #' condition holds two stimulation codes joined by a plus sign, where `NS` means
 #' not stimulated and `PI` means stimulated with PMA and ionomycin.
 #'

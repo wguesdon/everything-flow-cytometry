@@ -183,7 +183,8 @@ ScaleFillPublication <- function(...) {
 #' The colour bar for a continuous scale
 #'
 #' ggplot2 draws a continuous colour bar as an embedded raster image by default.
-#' The cairo SVG device cannot express that inside a vector file, so it wraps the
+#' The cairo SVG device cannot express that inside a vector file, so it wraps
+#' the
 #' whole plot in an `feImage` filter and falls back to rasterising it. Several
 #' renderers draw that filter wrongly, and one of them drew a heat map as a
 #' black rectangle. `display = "rectangles"` draws the bar as a stack of
@@ -316,7 +317,8 @@ PointDensity <- function(x, y, bins = 128) {
 #' @param point_size The point size.
 #' @param bins The number of density bins on each axis.
 #' @param shades How many steps the shading uses. The scale reads as continuous
-#'   well below the number of events, so the steps cost nothing and they keep the
+#'   well below the number of events, so the steps cost nothing and they keep
+#' the
 #'   colour count of the PNG in a range that compresses.
 #' @return A `ggplot` object.
 #' @examples

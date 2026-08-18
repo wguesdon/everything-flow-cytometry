@@ -1,18 +1,21 @@
 # Rare event counting.
 #
 # OMIP-043 is a rare cell panel, and it states its design target in counting
-# terms: a 5 percent coefficient of variation, reached by collecting 400 to 2,000
+# terms: a 5 percent coefficient of variation, reached by collecting 400 to
+# 2,000
 # events in the antibody secreting cell gate. Both halves of that sentence are
 # arithmetic, so both can be checked against the deposited data.
 #
-# Two coefficients of variation appear below and they answer different questions.
+# Two coefficients of variation appear below and they answer different
+# questions.
 # The Poisson CV is the floor set by counting statistics alone, and no amount of
 # care in the laboratory goes below it. The measured CV is what the replicates
 # actually did. The gap between them is everything that is not counting noise.
 
 #' Coefficient of variation from counting statistics alone
 #'
-#' A count of rare events follows a Poisson distribution, whose standard deviation
+#' A count of rare events follows a Poisson distribution, whose standard
+#' deviation
 #' is the square root of the count. The relative spread is therefore
 #' `sqrt(n) / n`, which is `1 / sqrt(n)`. Collecting 400 events gives 5 percent
 #' and collecting 2,500 gives 2 percent.
@@ -38,7 +41,8 @@ PoissonCv <- function(count) {
 #' The inverse of [PoissonCv()]. Rearranging `cv = 100 / sqrt(n)` gives
 #' `n = (100 / cv)^2`.
 #'
-#' @param target_cv_percent The wanted coefficient of variation, as a percentage.
+#' @param target_cv_percent The wanted coefficient of variation, as a
+#' percentage.
 #' @return The number of events, rounded up.
 #' @examples
 #' EventsForCv(5)
@@ -53,7 +57,8 @@ EventsForCv <- function(target_cv_percent) {
 #' Coefficient of variation of a set of measurements
 #'
 #' @param values A numeric vector, for example one frequency per replicate.
-#' @return The coefficient of variation as a percentage, or `NA` when the mean is
+#' @return The coefficient of variation as a percentage, or `NA` when the mean
+#' is
 #'   zero or fewer than two values are given.
 #' @export
 MeasuredCv <- function(values) {
@@ -70,8 +75,10 @@ MeasuredCv <- function(values) {
 
 #' Compare the measured spread against the counting floor
 #'
-#' The measured CV holds counting noise plus everything else: pipetting, staining,
-#' acquisition and the gate. Subtracting in quadrature separates the two, because
+#' The measured CV holds counting noise plus everything else: pipetting,
+#' staining,
+#' acquisition and the gate. Subtracting in quadrature separates the two,
+#' because
 #' independent sources of variance add.
 #'
 #' @param counts The event count per replicate.
@@ -79,7 +86,8 @@ MeasuredCv <- function(values) {
 #' @return A one row `data.frame` with `replicates`, `mean_count`,
 #'   `mean_percent`, `poisson_cv_percent`, `measured_cv_percent` and
 #'   `excess_cv_percent`. The excess is `NA` when the measured CV sits below the
-#'   Poisson floor, which is a result worth seeing rather than a number to force.
+#'   Poisson floor, which is a result worth seeing rather than a number to
+#' force.
 #' @export
 CompareSpreadToPoisson <- function(counts, frequencies) {
   if (length(counts) != length(frequencies)) {

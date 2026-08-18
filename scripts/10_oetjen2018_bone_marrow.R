@@ -9,7 +9,8 @@
 # below it is the automated cut rule this repository uses elsewhere.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/10_oetjen2018_bone_marrow.R
 
 suppressPackageStartupMessages({

@@ -261,3 +261,17 @@ test_that("RunFlowSomClustering works at two metaclusters", {
   expect_equal(length(unique(result$metacluster)), 2)
   expect_equal(length(result$metacluster), nrow(events))
 })
+
+test_that("MetaclusterCodes. groups the codes into the number asked for", {
+  codes <- withr::with_seed(33, rbind(
+    matrix(rnorm(40, 1), ncol = 2), matrix(rnorm(40, 9), ncol = 2)))
+  colnames(codes) <- c("CD3", "CD4")
+  expect_equal(length(unique(MetaclusterCodes.(codes, 2, 5))), 2)
+  expect_equal(length(unique(MetaclusterCodes.(codes, 3, 5))), 3)
+})
+
+test_that("MetaclusterCodes. gives one label per code", {
+  codes <- withr::with_seed(34, matrix(rnorm(60), ncol = 2))
+  colnames(codes) <- c("CD3", "CD4")
+  expect_equal(length(MetaclusterCodes.(codes, 2, 5)), nrow(codes))
+})

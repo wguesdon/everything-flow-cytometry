@@ -4,20 +4,25 @@
 #
 # flowStats::spillover_ng() defaults to method = "mode". That suits a bead
 # control, where nearly every event is positive. OMIP-39 uses cell controls, and
-# four of its eleven markers sit on a minority of cells, so the mode lands on the
+# four of its eleven markers sit on a minority of cells, so the mode lands on
+# the
 # negative population and the ratio it produces is meaningless.
 #
-# This script measures that instead of asserting it. It computes the matrix under
+# This script measures that instead of asserting it. It computes the matrix
+# under
 # each combination of method, pregate and normalisation filter, and scores every
 # result against the matrix the instrument stored for the same experiment. The
-# stored matrix is a fair reference: it was built from these same controls, by the
+# stored matrix is a fair reference: it was built from these same controls, by
+# the
 # acquisition software, with an operator checking it.
 #
-# The output feeds the compensation section of reports/omip39_automated_gating.qmd,
+# The output feeds the compensation section of
+# reports/omip39_automated_gating.qmd,
 # so the recommendation in that report rests on a table this script produced.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/03_compensation_method_sweep.R
 
 suppressPackageStartupMessages({

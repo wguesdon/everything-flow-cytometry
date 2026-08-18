@@ -1,20 +1,24 @@
 # Test the claims of Yu 2021 against the data the authors deposited.
 #
-# The paper states its findings as directions between groups, not as effect sizes.
-# "Healthy females had greater frequencies of CD161hi cells relative to males" is a
+# The paper states its findings as directions between groups, not as effect
+# sizes.
+# "Healthy females had greater frequencies of CD161hi cells relative to males"
+# is a
 # direction. The claims live in gating/yu2021_paper_claims.csv with the sentence
 # each one came from, so a reader can check the claim against the paper before
 # checking the number against the data.
 #
 # Two columns are reported for every claim and they answer different questions.
-# `verdict` compares the observed direction against the stated direction. `p_value`
+# `verdict` compares the observed direction against the stated direction.
+# `p_value`
 # is the test the paper itself used, which is Mann-Whitney for a two group
 # comparison and Spearman for a correlation. A direction can reproduce while the
 # test is not significant, and reporting only one of the two hides that.
 
 #' Read the claims a paper makes, with the sentence each one came from
 #'
-#' @param path Path to a CSV with the columns `claim_id`, `short_name`, `measure`,
+#' @param path Path to a CSV with the columns `claim_id`, `short_name`,
+#' `measure`,
 #'   `test`, `expected`, `quote` and `figure`.
 #' @return A `data.frame` of claims.
 #' @export
@@ -91,7 +95,8 @@ CompareBySex <- function(values, sex) {
 #' @param values A numeric vector of the measure.
 #' @param severity_index An integer severity rank, 1 for `normal` up to 4 for
 #'   `hospitalized`.
-#' @return A one row `data.frame` with `n`, `rho`, `p_value` and `observed`, where
+#' @return A one row `data.frame` with `n`, `rho`, `p_value` and `observed`,
+#' where
 #'   `observed` is `"falls with severity"` or `"rises with severity"`.
 #' @export
 CorrelateWithSeverity <- function(values, severity_index) {
@@ -119,7 +124,8 @@ CorrelateWithSeverity <- function(values, severity_index) {
 
 #' Fit one slope against the severity rank for each sex
 #'
-#' Figure 2C of the paper is a linear regression of the CD161hi frequency against
+#' Figure 2C of the paper is a linear regression of the CD161hi frequency
+#' against
 #' the severity rank, drawn once per sex. The claim is about which slope is
 #' steeper downwards.
 #'
@@ -161,9 +167,11 @@ CompareSlopesBySex <- function(values, severity_index, sex) {
 #' Test every claim of the paper against the measured frequencies
 #'
 #' @param claims The output of [ReadYuClaims()].
-#' @param measures A `data.frame` with one row per sample, holding the columns the
+#' @param measures A `data.frame` with one row per sample, holding the columns
+#' the
 #'   claims name in their `measure` column, joined to the sample sheet.
-#' @param alpha The significance level used to judge claim 9, which states that a
+#' @param alpha The significance level used to judge claim 9, which states that
+#' a
 #'   measure does not change.
 #' @return A `data.frame` with one row per claim, holding the claim, the group
 #'   medians, the test statistic, the p value and a `verdict` of `"reproduced"`,

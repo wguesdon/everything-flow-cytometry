@@ -203,9 +203,12 @@ CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
 
 #' Show a path as the caller typed it
 #'
-#' A recipe runs inside the container and sees `/indata` and `/outdata`. A person
-#' reading the output typed a host path, and a command printed with the container
-#' path in it cannot be run. The CLI records the host paths in the environment so
+#' A recipe runs inside the container and sees `/indata` and `/outdata`. A
+#' person
+#' reading the output typed a host path, and a command printed with the
+#' container
+#' path in it cannot be run. The CLI records the host paths in the environment
+#' so
 #' that anything printed can be mapped back.
 #'
 #' Both variables carry the folder that the CLI mounted, and not the path the
@@ -410,7 +413,8 @@ PanelNamingState <- function(panel) {
 #' The two need different work. A mass cytometry file carries no scatter and no
 #' spillover, so a scatter gate and a compensation step are both wrong on it.
 #' FR-FCM-Z244 in this archive is a CyTOF deposit with 66 detectors and no
-#' scatter channel, and a recipe that assumes FSC and SSC produces nothing on it.
+#' scatter channel, and a recipe that assumes FSC and SSC produces nothing on
+#' it.
 #'
 #' The check reads the instrument keyword and the channel names, because a
 #' deposit carries one, the other, or both.
@@ -433,8 +437,10 @@ AcquisitionKind <- function(panel, cytometer = NA_character_) {
   }
   # A mass cytometer names a detector after the isotope it counts, for example
   # Y89Di or Pd102Di. Three of them is past coincidence.
-  mass_channels <- grep("^[A-Z][a-z]?[0-9]{2,3}Di$", panel$channel, value = TRUE)
-  by_instrument <- grepl("CYTOF|HELIOS|DVSSCIENCES", instrument, ignore.case = TRUE)
+  mass_channels <- grep("^[A-Z][a-z]?[0-9]{2,3}Di$", panel$channel,
+                        value = TRUE)
+  by_instrument <- grepl("CYTOF|HELIOS|DVSSCIENCES", instrument,
+                         ignore.case = TRUE)
   by_channels <- length(mass_channels) >= 3
 
   if (by_instrument || by_channels) {
@@ -637,7 +643,8 @@ PanelMarkerSource <- function(panel) {
     data.frame(marker = named$marker, channel = named$channel,
                source = rep("antibody", nrow(named)), stringsAsFactors = FALSE),
     data.frame(marker = unnamed$channel, channel = unnamed$channel,
-               source = rep("detector", nrow(unnamed)), stringsAsFactors = FALSE)
+               source = rep("detector", nrow(unnamed)),
+               stringsAsFactors = FALSE)
   )
   result[!duplicated(result$marker), , drop = FALSE]
 }

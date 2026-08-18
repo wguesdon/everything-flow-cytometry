@@ -3,12 +3,15 @@
 # Compensation and automated gating of the FlowJo Basic Tutorial PBMC dataset.
 #
 # The script runs the whole analysis and writes every intermediate result to
-# output/. The Quarto report reads those files rather than repeating the work, so
-# rendering the report is fast and the numbers in the report are the numbers this
+# output/. The Quarto report reads those files rather than repeating the work,
+# so
+# rendering the report is fast and the numbers in the report are the numbers
+# this
 # script produced.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/01_automated_gating_pbmc.R
 #
 # The dataset is 8 FCS files of about 250,000 events each, from two donors under

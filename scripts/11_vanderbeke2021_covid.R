@@ -6,11 +6,13 @@
 #   manual     the deposited workspace, applied by CytoML
 #   automated  one rule, fitted on each file
 #
-# This is the first deposit in the repository whose workspace gates every sample,
+# This is the first deposit in the repository whose workspace gates every
+# sample,
 # so the manual arm covers the whole cohort rather than one donor.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/11_vanderbeke2021_covid.R
 
 suppressPackageStartupMessages({
@@ -130,10 +132,12 @@ manual_wide$CD14_percent <- 100 * manual_wide$`/CD14 monocytes` /
 manual_wide$CD19_percent <- 100 * manual_wide$`/CD19` / manual_wide$root_events
 manual_wide$arm <- "manual"
 
-# The workspace names a sample by the file name plus the root event count, so the
+# The workspace names a sample by the file name plus the root event count, so
+# the
 # trailing count is removed before the join.
 #
-# Six deposited files carry `ICU_changedW` where the workspace still carries `W`.
+# Six deposited files carry `ICU_changedW` where the workspace still carries
+# `W`.
 # Those patients moved from the ward to intensive care after the workspace was
 # built, and the file name records the move while the workspace does not. The
 # join key removes the marker, so the two arms still meet on those six files.

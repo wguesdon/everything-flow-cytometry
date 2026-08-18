@@ -16,7 +16,8 @@
 # the T panel.
 #
 # The deposit ships the depositors' own scatter gate and viability gate, in a
-# cytoflow workflow file. Both are read from `gating/oetjen2018_manual_gates.csv`
+# cytoflow workflow file. Both are read from
+# `gating/oetjen2018_manual_gates.csv`
 # rather than refitted, so the entry into the analysis is the authors' own.
 #
 # The viability channel runs the opposite way to the usual convention. The
@@ -50,7 +51,8 @@ ReadBoneMarrowPanels <- function(path) {
 
 #' Read the sample sheet of the Oetjen 2018 cohort
 #'
-#' The sheet is derived from Table 1 of the paper and it is committed, so the age
+#' The sheet is derived from Table 1 of the paper and it is committed, so the
+#' age
 #' and the sex of each donor travel with the repository.
 #'
 #' @param path Path to `gating/oetjen2018_donor_metadata.csv`.
@@ -76,8 +78,10 @@ ReadBoneMarrowDonors <- function(path) {
 
 #' Read the gates that the depositors shipped with the experiment
 #'
-#' FR-FCM-ZYQ9 carries a cytoflow workflow file. It holds a scatter polygon named
-#' `lymphocytes` and a second polygon named `dead_lymphocytes`. The vertices were
+#' FR-FCM-ZYQ9 carries a cytoflow workflow file. It holds a scatter polygon
+#' named
+#' `lymphocytes` and a second polygon named `dead_lymphocytes`. The vertices
+#' were
 #' extracted once into a CSV, so the analysis does not parse a workflow format.
 #'
 #' @param path Path to `gating/oetjen2018_manual_gates.csv`.
@@ -155,9 +159,11 @@ LiveMask <- function(values, gates) {
 
 #' Parse the panel and the sample out of a file name
 #'
-#' A stained file is named like `2-13-17 B cell Panel_B_E_C05_004.fcs`, where the
+#' A stained file is named like `2-13-17 B cell Panel_B_E_C05_004.fcs`, where
+#' the
 #' letters after the panel word are the panel code and the next field is the
-#' sample. An unstained control is named `Unstained_Unstained_E_A05_005.fcs`. One
+#' sample. An unstained control is named `Unstained_Unstained_E_A05_005.fcs`.
+#' One
 #' monocyte file carries commas in the sample field.
 #'
 #' @param file_names A character vector of file names.
@@ -200,13 +206,15 @@ ParseBoneMarrowFileNames <- function(file_names) {
 #' Match every marker of one panel to a channel of one file
 #'
 #' The first pass reads the marker name that the operator typed. The second pass
-#' takes the detector name from the published panel design, which is what rescues
+#' takes the detector name from the published panel design, which is what
+#' rescues
 #' the 46 files whose marker fields are empty.
 #'
 #' @param frame A `flowFrame`.
 #' @param panels The table returned by [ReadBoneMarrowPanels()].
 #' @param panel The panel code, one of `"T"`, `"B"`, `"NK"`, `"Mono"` or `"DC"`.
-#' @return A `data.frame` with the columns `marker`, `channel` and `resolved_by`.
+#' @return A `data.frame` with the columns `marker`, `channel` and
+#' `resolved_by`.
 #' @examples
 #' \dontrun{
 #' ResolveBoneMarrowChannels(frame, panels, "T")
@@ -338,7 +346,8 @@ GateBoneMarrowFile <- function(path, panels, panel, gates) {
   entry <- events[keep, , drop = FALSE]
 
   # The paper counts the CD45 positive events it collected, before any scatter
-  # gate. The deposited polygon is a lymphocyte gate, so a CD45 count taken after
+  # gate. The deposited polygon is a lymphocyte gate, so a CD45 count taken
+  # after
   # it answers a different question. Both are recorded.
   wide <- events[singlets & live, , drop = FALSE]
 
@@ -505,7 +514,8 @@ GateTcellSubsets <- function(path, panels, gates) {
   list(counts = cbind(counts, as.list(frequencies)), error = NA_character_)
 }
 
-# The four quadrants of a CD45RA against CCR7 plot, as percentages of the subset.
+# The four quadrants of a CD45RA against CCR7 plot, as percentages of the
+# subset.
 QuadrantFrequencies. <- function(events, ra_channel, ccr7_channel, ra_cut,
                                  ccr7_cut) {
   if (nrow(events) == 0) {

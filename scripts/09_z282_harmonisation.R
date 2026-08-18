@@ -10,7 +10,8 @@
 # deposit. The third is computed here and it exists nowhere else.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/09_z282_harmonisation.R
 
 suppressPackageStartupMessages({
@@ -227,7 +228,8 @@ Say("  files that share an acquisition stamp with another file: ", nrow(repeats)
 # The reference operator does not work that way. One person sets a boundary and
 # holds it across a whole cohort.
 #
-# This pass takes the median of an operator's own fitted cuts, per marker and per
+# This pass takes the median of an operator's own fitted cuts, per marker and
+# per
 # material, and gates every file of that operator at that one value. Nothing
 # outside the operator's own files is consulted, so the pass adds no information
 # from the reference analysis.

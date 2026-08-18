@@ -2,8 +2,10 @@
 #
 # The study SOP gates in this order. It takes the window of stable acquisition,
 # then singlets, then live cells for frozen PBMC or CD45 positive leukocytes for
-# whole blood, then lymphocytes on scatter, then CD3 positive cells, then the CD4
-# and CD8 single positive cells inside CD3, and finally the four naive and memory
+# whole blood, then lymphocytes on scatter, then CD3 positive cells, then the
+# CD4
+# and CD8 single positive cells inside CD3, and finally the four naive and
+# memory
 # quadrants on CD45RA against CCR7 inside CD3, CD4 and CD8.
 #
 # That is fifteen reported frequencies. CD3 is a percentage of lymphocytes, CD4
@@ -12,7 +14,8 @@
 #
 # Two decisions are recorded here rather than buried in the code.
 #
-# The first is the cut rule. `DensityCut()` finds the deepest minimum between the
+# The first is the cut rule. `DensityCut()` finds the deepest minimum between
+# the
 # two tallest modes of the kernel density. When a marker has no such minimum the
 # function returns `NA` and the caller records a failure. It does not fall back
 # on a quantile, because a silent fallback is what made the OMIP-043 template
@@ -78,7 +81,8 @@ DensityCut <- function(values,
   NA_real_
 }
 
-# One bandwidth of the ladder. Returns NA when this width resolves fewer than two
+# One bandwidth of the ladder. Returns NA when this width resolves fewer than
+# two
 # modes, or when the valley between the two tallest is not deep enough.
 DensityCutAt. <- function(values, adjust, depth) {
   estimate <- stats::density(values, adjust = adjust, n = 512)
@@ -112,7 +116,8 @@ DensityCutAt. <- function(values, adjust, depth) {
 #' and cuts where the two weighted densities cross, which is the boundary that
 #' minimises the events assigned to the wrong component.
 #'
-#' The fit is an expectation maximisation loop written out here rather than taken
+#' The fit is an expectation maximisation loop written out here rather than
+#' taken
 #' from a package. `mclust::Mclust` needs its own package attached to the search
 #' path before it runs, which makes a function that calls it fail in a test
 #' session, and the model is twenty lines of arithmetic.
@@ -252,7 +257,8 @@ Fraction. <- function(mask) {
 #' Gate one file of the FR-FCM-Z282 deposit
 #'
 #' Every cut is fitted on the file itself, so the function is one automated
-#' analyst applied to all 234 files. It never reads the operator's own result and
+#' analyst applied to all 234 files. It never reads the operator's own result
+#' and
 #' it never reads the reference operator's result.
 #'
 #' @param path Path to the FCS file.
@@ -265,7 +271,8 @@ Fraction. <- function(mask) {
 #'   per operator turns the function from thirteen automated analysts into one,
 #'   which is what the reference operator does by hand.
 #' @return A list with `counts`, a one row `data.frame` holding the fifteen
-#'   frequencies and the event count at every step, `cuts`, a `data.frame` of the
+#'   frequencies and the event count at every step, `cuts`, a `data.frame` of
+#' the
 #'   cut point of each marker, `channels`, the output of
 #'   [ResolveMarkerChannels()], and `error`, a message or `NA`.
 #' @examples
@@ -307,8 +314,10 @@ GateNaiveMemoryFile <- function(path, panel, material, time_bins = 100,
   frame <- settled$frame
 
   # `estimateLogicle` solves for a linearisation width from the negative values
-  # of each channel. When a channel holds a long negative tail the solution needs
-  # a wider decade count, and the function stops with "w is negative". The ladder
+  # of each channel. When a channel holds a long negative tail the solution
+  # needs
+  # a wider decade count, and the function stops with "w is negative". The
+  # ladder
   # widens `m` until the fit succeeds, and the width that worked is recorded.
   fluorescence <- channels$channel
   transform_list <- NULL
@@ -422,7 +431,8 @@ GateNaiveMemoryFile <- function(path, panel, material, time_bins = 100,
     Quadrants(cd8_events, "CD8")
   )
 
-  # The acquisition stamp travels with the counts. Two files of this deposit that
+  # The acquisition stamp travels with the counts. Two files of this deposit
+  # that
   # carry the same date, the same start time and the same GUID are one
   # acquisition exported twice, and a report that calls them replicates would
   # understate the spread.
@@ -469,7 +479,8 @@ GateNaiveMemoryFile <- function(path, panel, material, time_bins = 100,
 # Fit the lymphocyte gate on the scatter pair.
 #
 # A bivariate normal on its own does not work here. In whole blood the parent is
-# every CD45 positive leukocyte, so the cloud holds granulocytes and monocytes as
+# every CD45 positive leukocyte, so the cloud holds granulocytes and monocytes
+# as
 # well, and a robust centre fitted to all three keeps nearly all of them. The
 # gate therefore runs in two steps. It first cuts side scatter at the density
 # minimum above the lowest mode, which is the boundary that separates

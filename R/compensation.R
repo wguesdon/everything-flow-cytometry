@@ -1,19 +1,26 @@
 # Compensation.
 #
-# Spillover is the light from one fluorochrome that a second detector also reads.
-# The correction is a linear one: measured = true %*% spillover, so the correction
+# Spillover is the light from one fluorochrome that a second detector also
+# reads.
+# The correction is a linear one: measured = true %*% spillover, so the
+# correction
 # multiplies the measured values by the inverse of the spillover matrix.
 #
-# The FlowJo tutorial files carry the matrix in the FCS keyword, so the matrix is
-# read and applied rather than computed. When single stained controls are the only
+# The FlowJo tutorial files carry the matrix in the FCS keyword, so the matrix
+# is
+# read and applied rather than computed. When single stained controls are the
+# only
 # source, flowStats::spillover_ng() computes one instead.
 
 #' Read the spillover matrix out of an FCS file
 #'
-#' A cytometer writes the matrix into one of three keywords, and which one it uses
-#' depends on the acquisition software. [flowCore::spillover()] returns all three
+#' A cytometer writes the matrix into one of three keywords, and which one it
+#' uses
+#' depends on the acquisition software. [flowCore::spillover()] returns all
+#' three
 #' slots, of which at most one is filled, and it raises an error when the file
-#' carries no matrix at all. Both outcomes are turned into one message here, so a
+#' carries no matrix at all. Both outcomes are turned into one message here, so
+#' a
 #' caller does not have to know which shape flowCore chose.
 #'
 #' @param frame A `flowFrame`.
@@ -50,7 +57,8 @@ ExtractSpillover <- function(frame) {
   }
 
   # A stored matrix often carries column names and no row names, because the
-  # acquisition software writes the detector list once. The matrix is square over
+  # acquisition software writes the detector list once. The matrix is square
+  # over
   # the same detectors, so the row names are the column names. Filling them here
   # means no caller downstream has to test for a NULL dimname.
   if (is.null(rownames(matrix_out)) && !is.null(colnames(matrix_out))) {
@@ -68,14 +76,18 @@ ExtractSpillover <- function(frame) {
 
 #' Check that a spillover matrix can be applied to a flowFrame
 #'
-#' Compensation fails when a matrix names a detector that the file does not carry.
-#' The usual cause is a name that the acquisition software wrote differently, for
-#' example `FITC-A` in the file against `FITC.A` in the matrix. This check reports
+#' Compensation fails when a matrix names a detector that the file does not
+#' carry.
+#' The usual cause is a name that the acquisition software wrote differently,
+#' for
+#' example `FITC-A` in the file against `FITC.A` in the matrix. This check
+#' reports
 #' the difference before [flowCore::compensate()] raises a less readable error.
 #'
 #' @param frame A `flowFrame`.
 #' @param spillover A spillover matrix, as returned by [ExtractSpillover()].
-#' @return `TRUE`, invisibly, when every matrix column is a channel of the frame.
+#' @return `TRUE`, invisibly, when every matrix column is a channel of the
+#' frame.
 #' @export
 CheckSpilloverChannels <- function(frame, spillover) {
   available <- flowCore::colnames(frame)
@@ -96,8 +108,10 @@ CheckSpilloverChannels <- function(frame, spillover) {
 
 #' Apply the spillover matrix that the file carries
 #'
-#' @param x A `flowFrame` or a `flowSet`. For a `flowSet` the matrix is read from
-#'   the frame named by `reference`, because every file in one acquisition shares
+#' @param x A `flowFrame` or a `flowSet`. For a `flowSet` the matrix is read
+#' from
+#'   the frame named by `reference`, because every file in one acquisition
+#' shares
 #'   one matrix.
 #' @param reference For a `flowSet`, the name or the index of the frame whose
 #'   matrix is used. Defaults to the first frame.
@@ -126,7 +140,8 @@ ApplyCompensation <- function(x, reference = 1) {
 #' Report how much spillover a matrix corrects
 #'
 #' The diagonal of a spillover matrix is 1 by construction. Every value off the
-#' diagonal is the fraction of one fluorochrome that a second detector reads. The
+#' diagonal is the fraction of one fluorochrome that a second detector reads.
+#' The
 #' largest of those values tells you which pair of detectors the compensation
 #' actually moves, which is the pair worth checking on a plot.
 #'

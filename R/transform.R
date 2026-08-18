@@ -2,7 +2,8 @@
 #
 # Fluorescence data spans several orders of magnitude and holds negative values
 # after compensation, so a plain log transform fails on the negative part. The
-# logicle transform is linear near zero and logarithmic above it, which keeps the
+# logicle transform is linear near zero and logarithmic above it, which keeps
+# the
 # negative population visible and keeps the positive population separated.
 #
 # Estimate the transform on one file and apply the same transform to every file.
@@ -11,11 +12,13 @@
 
 #' Select the fluorescence channels of a flowFrame
 #'
-#' Scatter, time and any channel with no marker are excluded. Only a fluorescence
+#' Scatter, time and any channel with no marker are excluded. Only a
+#' fluorescence
 #' channel needs a logicle transform.
 #'
 #' @param frame A `flowFrame`.
-#' @param exclude Extra channel names to drop, for example a channel whose marker
+#' @param exclude Extra channel names to drop, for example a channel whose
+#' marker
 #'   is a blank. Matching ignores case.
 #' @return A character vector of detector names.
 #' @export
@@ -32,7 +35,8 @@ FluorescenceChannels <- function(frame, exclude = character()) {
 
 #' Estimate one logicle transform and apply it to every sample
 #'
-#' The transform is estimated on a single frame and reused, so a gate drawn on one
+#' The transform is estimated on a single frame and reused, so a gate drawn on
+#' one
 #' sample means the same thing on the next one.
 #'
 #' @param x A `flowFrame` or a compensated `flowSet`.

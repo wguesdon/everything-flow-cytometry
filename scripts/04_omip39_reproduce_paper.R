@@ -17,11 +17,13 @@
 #   Automated route. The openCyto template gates the same file from scratch and
 #   the same claims are tested against it.
 #
-# The first route asks whether the paper's numbers follow from its own gates. The
+# The first route asks whether the paper's numbers follow from its own gates.
+# The
 # second asks whether an automated analysis reaches the same conclusions.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/04_omip39_reproduce_paper.R
 #
 # Reference: Hammer Q, Romagnani C. OMIP-039: Detection and analysis of human
@@ -50,7 +52,8 @@ kClaimsPath <- file.path("gating", "omip39_paper_claims.csv")
 kTemplatePath <- file.path("gating", "omip39_gating_template.csv")
 kOutputDir <- file.path("output", "omip39")
 
-# The six markers the paper combines in Figure 1C. CD7 is not among them, because
+# The six markers the paper combines in Figure 1C. CD7 is not among them,
+# because
 # the paper states CD7 as an intensity difference and not as a frequency.
 kBooleanMarkers <- c("CD2", "CD57", "ILT2", "NKG2A", "NKp30", "Siglec-7")
 
@@ -86,7 +89,8 @@ manual_gs <- ImportFlowJoGates(kWorkspace, kDataDir, group = "Sample")
 manual_stats <- CollectPopulationStats(manual_gs)
 
 # The boolean populations sit directly under each NKG2C branch and their names
-# hold the marker signs. A single marker gate such as "CD2+" is excluded, because
+# hold the marker signs. A single marker gate such as "CD2+" is excluded,
+# because
 # summing it alongside the combinations would count the same events twice.
 IsBooleanLeaf <- function(population, parent) {
   leaf <- basename(as.character(population))
@@ -211,7 +215,8 @@ write.csv(automated_stats, file.path(kOutputDir, "automated_stats_extended.csv")
 
 # The template gates each marker directly inside each NKG2C branch, so the
 # frequency is read rather than derived from combinations. gs_pop_get_stats
-# returns the full path, so the lookup matches on the branch and the leaf instead
+# returns the full path, so the lookup matches on the branch and the leaf
+# instead
 # of building a path by hand.
 AutomatedMarkerFrequency <- function(stats, branch, markers) {
   # The template alias for Siglec-7 drops the hyphen, because openCyto reads a

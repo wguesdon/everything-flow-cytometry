@@ -36,12 +36,17 @@ surface an agent can drive.
 ./cli/cytokit inspect --data path/to/your/fcs   # panel, markers, compensation state
 ```
 
-`inspect`, `template` and `definitions` are built. The rest are planned, and
-`docs/cytokit.md` holds the plan. `skills/` carries an adapter for Claude
-Code, Codex and opencode, so the same guidance reaches whichever agent you use.
+Eleven recipes read a panel, compute a compensation matrix, run a gating
+template, cluster the events, name the clusters, join the counts to your
+metadata and compare a population between treatments. `docs/cytokit.md`
+describes each one. `skills/` carries an adapter for Claude Code, Codex and
+opencode, so the same guidance reaches whichever agent you use.
+
+Start with `inspect`. Every later recipe reads what it prints.
 
 Your data path is mounted read only. An FCS file is a measurement that cannot be
-taken again.
+taken again. Each recipe writes one timestamped bundle that records the
+checksum of every input, the image digest and every package version.
 
 ## Reports
 

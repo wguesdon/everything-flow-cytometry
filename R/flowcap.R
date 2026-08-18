@@ -2,7 +2,8 @@
 #
 # Every other report in this repository tests a claim about a cell frequency.
 # This one tests a claim about an algorithm. FlowCAP II asked whether a pipeline
-# can read a class label out of a set of FCS files, it gave every entrant half of
+# can read a class label out of a set of FCS files, it gave every entrant half
+# of
 # the labels for training, and it scored the entrants on the half it held back.
 #
 # Two of the three challenge datasets are in this archive.
@@ -11,10 +12,12 @@
 #   FR-FCM-ZZZU  Challenge 1, HEUvsUE. HIV exposed uninfected infants against
 #                unexposed infants.
 #
-# A cytokine gate cannot be fitted the way every other gate in this repository is
+# A cytokine gate cannot be fitted the way every other gate in this repository
+# is
 # fitted. An unstimulated T cell is negative for all four cytokines, so the
 # density carries one mode and a two component mixture splits the negative
-# population down the middle. Both challenge deposits ship their own unstimulated
+# population down the middle. Both challenge deposits ship their own
+# unstimulated
 # controls, and the cut is therefore placed on the control and applied to the
 # stimulated file of the same subject. That is how an intracellular staining
 # panel is read at the bench.
@@ -161,7 +164,8 @@ GateHvtnSubsets <- function(path, cytokines = c("IL2", "IL4", "IFNg", "TNFa")) {
 
 #' Gate one file of the HEUvsUE challenge down to its innate populations
 #'
-#' The panel carries no viability dye and no T cell marker, so the hierarchy runs
+#' The panel carries no viability dye and no T cell marker, so the hierarchy
+#' runs
 #' from a scatter debris cut to the monocytes, the myeloid dendritic cells and
 #' the plasmacytoid dendritic cells.
 #'

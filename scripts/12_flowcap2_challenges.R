@@ -1,14 +1,16 @@
 # The FlowCAP II sample classification challenges.
 #
 # FR-FCM-ZZZV is Challenge 3, which asks a pipeline to tell a Gag stimulated
-# sample from an Env stimulated one. FR-FCM-ZZZU is Challenge 1, which asks it to
+# sample from an Env stimulated one. FR-FCM-ZZZU is Challenge 1, which asks it
+# to
 # tell an HIV exposed uninfected infant from an unexposed one.
 #
 # Both are scored the way the benchmark scored them. A rule is fitted on the
 # training half and it is applied, unchanged, to the half that was held back.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/12_flowcap2_challenges.R
 
 suppressPackageStartupMessages({
@@ -123,8 +125,10 @@ for (index in seq_along(subjects)) {
     next
   }
 
-  # One control sets the threshold and the other estimates the background at that
-  # same threshold, so a stimulated frequency is reported above a background that
+  # One control sets the threshold and the other estimates the background at
+  # that
+  # same threshold, so a stimulated frequency is reported above a background
+  # that
   # was measured rather than assumed.
   reference <- gated[[controls[1]]]$cytokines
   background_source <- gated[[controls[2]]]$cytokines

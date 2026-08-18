@@ -131,7 +131,8 @@ acquisition <- AcquisitionKind(panel, summary_table$cytometer)
 Say("\nAcquisition: ", acquisition$kind, ", because ", acquisition$reason)
 if (identical(acquisition$kind, "mass")) {
   Say("  A mass cytometer counts an isotope, so there is no spillover to")
-  Say("  compensate and no forward or side scatter to gate on. Skip compensate.")
+  Say("  compensate and no forward or side scatter to gate on.")
+  Say("  Skip compensate.")
   Say("  Gate on the DNA channel and on event length instead.")
 } else if (!acquisition$has_scatter) {
   Say("  WARNING: this panel carries no scatter detector, so a scatter gate")

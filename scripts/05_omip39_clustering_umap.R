@@ -1,9 +1,11 @@
 #!/usr/bin/env Rscript
 
-# A third route to the OMIP-039 populations: cluster the events instead of gating
+# A third route to the OMIP-039 populations: cluster the events instead of
+# gating
 # them, and draw a UMAP.
 #
-# Debris, dead cells and doublets are removed by gating first, and the clustering
+# Debris, dead cells and doublets are removed by gating first, and the
+# clustering
 # runs on the lymphocyte gate only. A cluster of debris is not a finding, and it
 # stretches the embedding so that everything else is squeezed into a corner.
 #
@@ -13,10 +15,12 @@
 # gating/omip39_cell_type_definitions.csv. No cluster is named by eye.
 #
 # The output is a three way comparison of the frequency of each population:
-# manual gating by the authors, automated gating by the template, and clustering.
+# manual gating by the authors, automated gating by the template, and
+# clustering.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/05_omip39_clustering_umap.R
 
 suppressPackageStartupMessages({
@@ -149,7 +153,8 @@ cat("\n=== Cluster annotation ===\n")
 print(annotation[, c("cluster", "events", "percent_of_total", "cell_type",
                      "runner_up", "margin")], digits = 3)
 
-# The score is a weighted mean on a 0 to 1 scale, so a margin of 0.1 is already a
+# The score is a weighted mean on a 0 to 1 scale, so a margin of 0.1 is already
+# a
 # clear separation between the best and the second best label.
 kCloseCallMargin <- 0.1
 close_calls <- annotation[annotation$margin < kCloseCallMargin, ]
@@ -218,7 +223,8 @@ umap_by_cluster <- ggplot(plot_data, aes(x = umap_1, y = umap_2, colour = cluste
 SaveFigure(umap_by_cluster, file.path(kOutputDir, "umap_metaclusters.png"),
   width = 10, height = 7)
 
-# One panel per lineage marker, so the annotation can be checked against the data.
+# One panel per lineage marker, so the annotation can be checked against the
+# data.
 marker_long <- do.call(rbind, lapply(kLineageChannels, function(channel) {
   data.frame(
     umap_1 = embedding$umap_1,
@@ -305,7 +311,8 @@ PercentOfLymphocytes <- function(stats, ends_with, lymphocyte_path) {
   100 * stats$count[hit[1]] / lymphocyte_count
 }
 
-# CD56bright is included even though the manual workspace has no gate for it. The
+# CD56bright is included even though the manual workspace has no gate for it.
+# The
 # clustering assigns events to it, so leaving the row out would hide where those
 # events went and make the clustering look as though it lost them.
 comparison <- data.frame(

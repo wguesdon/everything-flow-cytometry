@@ -2,8 +2,10 @@
 
 # Assert the version of every pinned R package and stop the build on a mismatch.
 #
-# The Containerfile pins CRAN to a dated snapshot and Bioconductor to one release.
-# Those two pins should give the versions below every time. This script turns that
+# The Containerfile pins CRAN to a dated snapshot and Bioconductor to one
+# release.
+# Those two pins should give the versions below every time. This script turns
+# that
 # expectation into a check, so an upstream change breaks the build instead of
 # changing a result quietly.
 #

@@ -2,7 +2,8 @@
 #
 # The gate hierarchy is not written in this file. It is written in
 # gating/pbmc_gating_template.csv, and openCyto reads that file and fits every
-# gate from the data. The separation is the point of the example. A gate drawn by
+# gate from the data. The separation is the point of the example. A gate drawn
+# by
 # hand lives in a workspace and cannot be read in a diff, while a template is a
 # text file that any reviewer can read and any version control system can track.
 #
@@ -61,7 +62,8 @@ RunAutomatedGating <- function(flow_set, template, n_cores = 1) {
 #'
 #' @param gating_set A gated `GatingSet`.
 #' @param sample_sheet A `data.frame` with a `file_name` column, joined onto the
-#'   result so the design travels with the numbers. Pass `NULL` to skip the join.
+#'   result so the design travels with the numbers. Pass `NULL` to skip the
+#' join.
 #' @return A `data.frame` with one row per sample and population, holding
 #'   `sample`, `population`, `count`, `parent_count` and `percent_of_parent`.
 #' @export
@@ -103,13 +105,15 @@ CollectPopulationStats <- function(gating_set, sample_sheet = NULL) {
 #'
 #' This is the number the whole example exists to show. When one automated
 #' template gates every sample, the coefficient of variation of a population
-#' frequency measures the biological and technical spread only. When each analyst
+#' frequency measures the biological and technical spread only. When each
+#' analyst
 #' draws their own gates, the analyst is added to that spread.
 #'
 #' @param stats The output of [CollectPopulationStats()].
 #' @param group_by A column name to split by before the CV is computed, for
 #'   example `"condition"`. Pass `NULL` to pool every sample.
-#' @return A `data.frame` with the columns `population`, the grouping column when
+#' @return A `data.frame` with the columns `population`, the grouping column
+#' when
 #'   one is given, `n`, `mean_percent`, `sd_percent` and `cv_percent`. The CV is
 #'   reported as a percentage of the mean.
 #' @export

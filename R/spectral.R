@@ -1,7 +1,9 @@
 # Spectral flow cytometry.
 #
-# A spectral analyser records the emission of every fluorochrome across all of its
-# detectors and then solves for the contribution of each one. The file that leaves
+# A spectral analyser records the emission of every fluorochrome across all of
+# its
+# detectors and then solves for the contribution of each one. The file that
+# leaves
 # the instrument is therefore already unmixed, and it carries one column per
 # fluorochrome rather than one column per detector.
 #
@@ -80,8 +82,10 @@ ReadYuSampleSheet <- function(path) {
 
 #' Estimate one logicle transform from a reference file
 #'
-#' Every file in a cohort must share one transform, otherwise a gate fitted on one
-#' sample means something different on the next one. This reads a single file and
+#' Every file in a cohort must share one transform, otherwise a gate fitted on
+#' one
+#' sample means something different on the next one. This reads a single file
+#' and
 #' returns the transform, so the caller can apply it to all of them without
 #' holding the cohort in memory.
 #'
@@ -117,8 +121,10 @@ EstimateSpectralTransform <- function(path, channels = NULL) {
 #'
 #' Every sample is gated at the same cut. The alternative, a cut fitted per
 #' sample, moves the boundary for reasons that have nothing to do with the
-#' biology, and every claim in this analysis is a comparison between samples. One
-#' cut for all 83 files means a difference between two samples is a difference in
+#' biology, and every claim in this analysis is a comparison between samples.
+#' One
+#' cut for all 83 files means a difference between two samples is a difference
+#' in
 #' the data.
 #'
 #' The price is that a sample whose staining drifted is gated at the wrong place
@@ -152,15 +158,18 @@ ReadGateCuts <- function(path) {
 
 #' Keep the singlets of a transformed event matrix
 #'
-#' A doublet gives about twice the area for the same height, so singlets lie on a
+#' A doublet gives about twice the area for the same height, so singlets lie on
+#' a
 #' line through the origin in FSC-A against FSC-H. The line is fitted per sample
-#' and events further than `tolerance` robust deviations from it are dropped. The
+#' and events further than `tolerance` robust deviations from it are dropped.
+#' The
 #' fit is per sample because the scatter gain, not the biology, sets its slope.
 #'
 #' @param events A numeric matrix that carries the two scatter columns.
 #' @param tolerance The number of median absolute deviations to keep.
 #' @param area The forward scatter area column. Beckman Coulter writes `FS-A`
-#'   where Becton Dickinson writes `FSC-A`, so the FR-FCM-Z282 deposit needs this
+#'   where Becton Dickinson writes `FSC-A`, so the FR-FCM-Z282 deposit needs
+#' this
 #'   argument.
 #' @param height The forward scatter height column.
 #' @return A logical vector, `TRUE` for an event to keep.
@@ -196,9 +205,11 @@ SingletMask <- function(events, tolerance = 3,
 #' @param path Path to the FCS file.
 #' @param transform_list A `transformList`, from [EstimateSpectralTransform()].
 #' @param cuts The output of [ReadGateCuts()].
-#' @param panel The output of [DescribeChannels()] on the reference file, used to
+#' @param panel The output of [DescribeChannels()] on the reference file, used
+#' to
 #'   resolve a marker name to a detector name.
-#' @param cd45ra_cut Overrides the CD45RA cut in `cuts`. A vector returns one row
+#' @param cd45ra_cut Overrides the CD45RA cut in `cuts`. A vector returns one
+#' row
 #'   of counts per value, which is how the sweep in
 #'   `scripts/08_yu2021_spectral_mait.R` shows what the choice changes without
 #'   reading every file again.

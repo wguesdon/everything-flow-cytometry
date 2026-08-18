@@ -4,19 +4,22 @@
 # published manual gates.
 #
 # This is the positive control for the repository. OMIP-39 is a published panel,
-# and its FlowRepository deposit ships the FlowJo workspace that the authors used.
+# and its FlowRepository deposit ships the FlowJo workspace that the authors
+# used.
 # The manual result therefore does not come from this project. The script gates
 # the same file from a template and puts the two side by side.
 #
 # Three parts:
-#   1. Compute a spillover matrix from the 12 single stained controls, and compare
+#   1. Compute a spillover matrix from the 12 single stained controls, and
+# compare
 #      it against the matrix the instrument stored in the sample file.
 #   2. Gate the sample with an openCyto template that mirrors the published
 #      hierarchy.
 #   3. Compare every mapped population against the manual gates.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/02_omip39_compensation_and_gating.R
 #
 # Reference: Hammer Q, Romagnani C. OMIP-039: Detection and analysis of human

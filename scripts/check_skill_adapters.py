@@ -139,6 +139,15 @@ def main() -> int:
             if name not in headings:
                 problems.append(f"{document} has no section for the ready recipe {name}")
 
+    # README.md tells a stranger what is built. A sentence that lags the CLI is
+    # the first thing they read and the last thing anybody edits.
+    readme = Path("README.md")
+    if readme.exists():
+        text = readme.read_text()
+        for name, state in sorted(table.items()):
+            if state == "ready" and re.search(rf"`{name}`[^.\n]*\bplanned\b", text):
+                problems.append(f"README.md calls {name} planned and the CLI calls it ready")
+
     print(f"routes   {sorted(routes)}")
     print(f"ready    {sorted(ready)}")
     print(f"planned  {sorted(n for n, s in table.items() if s == 'planned')}")

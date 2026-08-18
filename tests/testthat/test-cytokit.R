@@ -175,15 +175,15 @@ test_that("PanelNamingState reports a file that names everything", {
 test_that("DisplayPath maps the container path back to the one that was typed", {
   # Both variables carry the folder that the CLI mounted, never the file that
   # --data or --out named. One substitution then covers every case.
-  withr::local_envvar(CYTOKIT_DATA_HOST = "/home/will/study",
-                      CYTOKIT_OUT_HOST = "/home/will/out")
-  expect_equal(DisplayPath("/indata"), "/home/will/study")
-  expect_equal(DisplayPath("/indata/a.fcs"), "/home/will/study/a.fcs")
-  expect_equal(DisplayPath("/outdata"), "/home/will/out")
+  withr::local_envvar(CYTOKIT_DATA_HOST = "/home/scientist/study",
+                      CYTOKIT_OUT_HOST = "/home/scientist/out")
+  expect_equal(DisplayPath("/indata"), "/home/scientist/study")
+  expect_equal(DisplayPath("/indata/a.fcs"), "/home/scientist/study/a.fcs")
+  expect_equal(DisplayPath("/outdata"), "/home/scientist/out")
   expect_equal(DisplayPath("/outdata/template.csv"),
-               "/home/will/out/template.csv")
+               "/home/scientist/out/template.csv")
   expect_equal(DisplayPath("/outdata/inspect_study_2026_08_18_1200"),
-               "/home/will/out/inspect_study_2026_08_18_1200")
+               "/home/scientist/out/inspect_study_2026_08_18_1200")
 })
 
 test_that("DisplayPath keeps a root path that is only a slash", {

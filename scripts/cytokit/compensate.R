@@ -222,7 +222,8 @@ if (nrow(correlation_table) > 1) {
   } else if (change < -0.05) {
     "the matrix raises the correlation, which is a fault in the matrix"
   } else {
-    "the matrix changes almost nothing, so the values may already be compensated"
+    paste("the matrix changes almost nothing, so the values may already",
+          "be compensated")
   }
   Say("  Verdict: ", verdict, ".")
 } else {

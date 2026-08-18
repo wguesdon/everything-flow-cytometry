@@ -1,7 +1,8 @@
 # The R half of the OMIP-058 workflow.
 #
 # FR-FCM-ZYRN holds two PBMC files on a 28 colour panel and 59 compensation
-# controls, 55 of them single stains. This script computes the spillover matrix from those
+# controls, 55 of them single stains. This script computes the spillover matrix
+# from those
 # controls, applies it, removes the out of range events, the doublets, the
 # debris and the dead cells, splits the T cells from the rest, and writes the
 # result to disk as FCS.
@@ -10,7 +11,8 @@
 # scripts/14_omip58_pytometry.py explains why that boundary sits where it does.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/13_omip58_prepare.R
 
 suppressPackageStartupMessages({

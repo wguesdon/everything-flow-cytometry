@@ -223,7 +223,8 @@ ComputeOmip58Spillover <- function(control_dir,
 #' The hierarchy follows Figure 1A of the paper and stops at the CD3 split.
 #' Scatter removes the out of range events, the doublets and the debris, the
 #' viability channel removes the dead cells, and CD3 separates the T cells from
-#' the natural killer cells. Each of those four boundaries is a separated pair of
+#' the natural killer cells. Each of those four boundaries is a separated pair
+#' of
 #' modes that a fitted cut resolves.
 #'
 #' The hierarchy stops there on purpose. Inside CD3 positive cells the deposit's

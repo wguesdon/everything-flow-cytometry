@@ -57,21 +57,37 @@ class Deposit(NamedTuple):
 # point: a recipe that only works on the deposits it was written against is not
 # a tool a scientist can use on their own data.
 CORPUS: tuple[Deposit, ...] = (
-    Deposit("FR-FCM-ZZCA", "FR-FCM-ZZCA",
-            "no marker names at all, an identity spillover matrix, and the FCS files one "
-            "folder down, which is how a deposit arrives when you unzip it",
-            recursive=True),
-    Deposit("FR-FCM-ZZLV", "FlowRepository_FR-FCM-ZZLV_files",
-            "a 2007 FACSAria, three files, every detector named"),
+    Deposit(
+        "FR-FCM-ZZCA",
+        "FR-FCM-ZZCA",
+        "no marker names at all, an identity spillover matrix, and the FCS files one "
+        "folder down, which is how a deposit arrives when you unzip it",
+        recursive=True,
+    ),
+    Deposit(
+        "FR-FCM-ZZLV",
+        "FlowRepository_FR-FCM-ZZLV_files",
+        "a 2007 FACSAria, three files, every detector named",
+    ),
     Deposit("FR-FCM-Z6UG", "FR-FCM-Z6UG", "a recent deposit, eight files"),
-    Deposit("OMIP-018", "OMIP-018/FlowRepository_FR-FCM-ZZ36_files", "seventeen files in one folder"),
+    Deposit(
+        "OMIP-018", "OMIP-018/FlowRepository_FR-FCM-ZZ36_files", "seventeen files in one folder"
+    ),
     Deposit("OMIP-40", "OMIP-40/FlowRepository_FR-FCM-ZY6D_files", "nine files"),
-    Deposit("OMIP-60", "OMIP-60/FlowRepository_FR-FCM-ZYRX_files",
-            "thirty three files, so the panel check has to agree across many"),
+    Deposit(
+        "OMIP-60",
+        "OMIP-60/FlowRepository_FR-FCM-ZYRX_files",
+        "thirty three files, so the panel check has to agree across many",
+    ),
     Deposit("FR-FCM-Z4KT", "FlowRepository_FR-FCM-Z4KT_files", "sixteen files"),
-    Deposit("OMIP-47", "OMIP-47/FlowRepository_FR-FCM-ZYFB_files",
-            "a large deposit, so reading the header has to stay cheap"),
-    Deposit("FR-FCM-Z244", "FlowRepository_FR-FCM-Z244_files", "twenty eight files over a gigabyte"),
+    Deposit(
+        "OMIP-47",
+        "OMIP-47/FlowRepository_FR-FCM-ZYFB_files",
+        "a large deposit, so reading the header has to stay cheap",
+    ),
+    Deposit(
+        "FR-FCM-Z244", "FlowRepository_FR-FCM-Z244_files", "twenty eight files over a gigabyte"
+    ),
 )
 
 
@@ -181,11 +197,17 @@ def check_inspect(deposit: Deposit, data: Path, work: Path) -> list[Result]:
     # An FCS file carries no metadata table, so the identity keywords are the
     # only record of the design that ships with the data.
     lines = output.splitlines()
-    heading = next((index for index, line in enumerate(lines)
-                    if "What the files say about themselves" in line), None)
+    heading = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if "What the files say about themselves" in line
+        ),
+        None,
+    )
     roles = []
     if heading is not None:
-        for line in lines[heading + 1:]:
+        for line in lines[heading + 1 :]:
             first = line.strip().split(" ", 1)[0]
             if first in {"grouping", "identifier", "constant", "timing"}:
                 roles.append(first)
@@ -193,10 +215,19 @@ def check_inspect(deposit: Deposit, data: Path, work: Path) -> list[Result]:
                 break
     said_nothing = "Nothing. Every identity" in output
     results.append(
-        Result(deposit.name, "identity", heading is not None and (bool(roles) or said_nothing),
-               ", ".join(sorted(set(roles))) if roles else
-               ("no keyword recorded, and it says so" if said_nothing else "said nothing about the files"),
-               0.0)
+        Result(
+            deposit.name,
+            "identity",
+            heading is not None and (bool(roles) or said_nothing),
+            ", ".join(sorted(set(roles)))
+            if roles
+            else (
+                "no keyword recorded, and it says so"
+                if said_nothing
+                else "said nothing about the files"
+            ),
+            0.0,
+        )
     )
 
     # Every panel is either mass or fluorescence, and the answer changes what
@@ -204,12 +235,19 @@ def check_inspect(deposit: Deposit, data: Path, work: Path) -> list[Result]:
     # scatter gate on a CyTOF file.
     stated = [line for line in output.splitlines() if line.startswith("Acquisition:")]
     results.append(
-        Result(deposit.name, "acquisition", bool(stated),
-               stated[0].strip() if stated else "the kind was not stated", 0.0)
+        Result(
+            deposit.name,
+            "acquisition",
+            bool(stated),
+            stated[0].strip() if stated else "the kind was not stated",
+            0.0,
+        )
     )
 
     # A container path in the output is a path the scientist cannot type.
-    leaked = [line.strip() for line in output.splitlines() if "/indata" in line or "/outdata" in line]
+    leaked = [
+        line.strip() for line in output.splitlines() if "/indata" in line or "/outdata" in line
+    ]
     results.append(
         Result(
             deposit.name,
@@ -275,8 +313,13 @@ def check_scaffold(deposit: Deposit, data: Path, work: Path, recipe: str) -> lis
         return [Result(deposit.name, recipe, False, "wrote no row and gave no reason", seconds)]
     reason = " (and said why)" if rows == 0 else ""
     return [
-        Result(deposit.name, recipe, parsed,
-               f"{rows} row(s){reason}, read back {'ok' if parsed else 'silent'}", seconds)
+        Result(
+            deposit.name,
+            recipe,
+            parsed,
+            f"{rows} row(s){reason}, read back {'ok' if parsed else 'silent'}",
+            seconds,
+        )
     ]
 
 
@@ -324,8 +367,13 @@ def check_input_shapes(work: Path) -> list[Result]:
     status, output, seconds = run_cli(["inspect", "--data", str(one_file), "--out", str(out)])
     counted = "files  1" in output
     results.append(
-        Result("input shapes", "--data names one file", status == 0 and counted,
-               "reads the one file" if counted else first_error(output), seconds)
+        Result(
+            "input shapes",
+            "--data names one file",
+            status == 0 and counted,
+            "reads the one file" if counted else first_error(output),
+            seconds,
+        )
     )
 
     # A file name with a space and a comma in it survives the mount and the
@@ -337,25 +385,39 @@ def check_input_shapes(work: Path) -> list[Result]:
     out.mkdir(parents=True, exist_ok=True)
     status, output, seconds = run_cli(["inspect", "--data", str(awkward), "--out", str(out)])
     results.append(
-        Result("input shapes", "a path with a space and a comma", status == 0,
-               "reads it" if status == 0 else first_error(output), seconds)
+        Result(
+            "input shapes",
+            "a path with a space and a comma",
+            status == 0,
+            "reads it" if status == 0 else first_error(output),
+            seconds,
+        )
     )
 
     # A scientist names an output folder that does not exist yet. Podman would
     # otherwise create it owned by root, or the recipe would fail on a mount.
     deep = work / "not" / "here" / "yet" / "template.csv"
-    status, output, seconds = run_cli(
-        ["template", "--data", str(folder), "--out", str(deep)])
+    status, output, seconds = run_cli(["template", "--data", str(folder), "--out", str(deep)])
     results.append(
-        Result("input shapes", "--out in a folder that is not there", status == 0 and deep.exists(),
-               "creates the folder" if deep.exists() else first_error(output), seconds)
+        Result(
+            "input shapes",
+            "--out in a folder that is not there",
+            status == 0 and deep.exists(),
+            "creates the folder" if deep.exists() else first_error(output),
+            seconds,
+        )
     )
 
     # The bundle has to land where it was asked for, and not inside the image.
     wrote = list(out.iterdir()) if out.exists() else []
     results.append(
-        Result("input shapes", "--out outside the repository", bool(wrote),
-               f"wrote {wrote[0].name}" if wrote else "wrote nothing to the folder given", 0.0)
+        Result(
+            "input shapes",
+            "--out outside the repository",
+            bool(wrote),
+            f"wrote {wrote[0].name}" if wrote else "wrote nothing to the folder given",
+            0.0,
+        )
     )
     return results
 
@@ -379,24 +441,53 @@ def check_marker_mapping(work: Path) -> list[Result]:
     plain = work / "unnamed.csv"
     plain.parent.mkdir(parents=True, exist_ok=True)
     status, output, seconds = run_cli(
-        ["definitions", "--data", str(data), "--recursive", "--out", str(plain),
-         "--populations", "T cells"])
+        [
+            "definitions",
+            "--data",
+            str(data),
+            "--recursive",
+            "--out",
+            str(plain),
+            "--populations",
+            "T cells",
+        ]
+    )
     warned = "detector names, not antibodies" in output
     results.append(
-        Result("marker mapping", "a panel that names no antibody", status == 0 and warned,
-               "says the columns are detectors" if warned else "wrote the file with no warning",
-               seconds)
+        Result(
+            "marker mapping",
+            "a panel that names no antibody",
+            status == 0 and warned,
+            "says the columns are detectors" if warned else "wrote the file with no warning",
+            seconds,
+        )
     )
 
     mapped = work / "mapped.csv"
     status, output, seconds = run_cli(
-        ["definitions", "--data", str(data), "--recursive", "--out", str(mapped),
-         "--markers", "APC-A=CD3,FITC-A=CD4", "--populations", "T cells"])
+        [
+            "definitions",
+            "--data",
+            str(data),
+            "--recursive",
+            "--out",
+            str(mapped),
+            "--markers",
+            "APC-A=CD3,FITC-A=CD4",
+            "--populations",
+            "T cells",
+        ]
+    )
     header = mapped.read_text().splitlines()[0] if mapped.exists() else ""
     correct = header.startswith("cell_type,CD3,CD4")
     results.append(
-        Result("marker mapping", "a detector=antibody mapping", status == 0 and correct,
-               f"writes {header}" if correct else first_error(output), seconds)
+        Result(
+            "marker mapping",
+            "a detector=antibody mapping",
+            status == 0 and correct,
+            f"writes {header}" if correct else first_error(output),
+            seconds,
+        )
     )
 
     # Losing the mapping leaves a column called CD3 with nothing to say where
@@ -404,17 +495,36 @@ def check_marker_mapping(work: Path) -> list[Result]:
     notes = mapped.with_name("mapped_notes.md")
     recorded = notes.exists() and "| APC-A | CD3 |" in notes.read_text()
     results.append(
-        Result("marker mapping", "the mapping is recorded", recorded,
-               "the notes name each detector" if recorded else "the mapping was not written down", 0.0)
+        Result(
+            "marker mapping",
+            "the mapping is recorded",
+            recorded,
+            "the notes name each detector" if recorded else "the mapping was not written down",
+            0.0,
+        )
     )
 
     status, output, seconds = run_cli(
-        ["definitions", "--data", str(data), "--recursive", "--out", str(work / "bad.csv"),
-         "--markers", "CD3"])
+        [
+            "definitions",
+            "--data",
+            str(data),
+            "--recursive",
+            "--out",
+            str(work / "bad.csv"),
+            "--markers",
+            "CD3",
+        ]
+    )
     guides = "give the mapping instead" in output
     results.append(
-        Result("marker mapping", "a marker name the panel lacks", status != 0 and guides,
-               "the error says what to do instead" if guides else first_error(output), seconds)
+        Result(
+            "marker mapping",
+            "a marker name the panel lacks",
+            status != 0 and guides,
+            "the error says what to do instead" if guides else first_error(output),
+            seconds,
+        )
     )
     return results
 
@@ -446,14 +556,24 @@ def check_compensate(work: Path) -> list[Result]:
     rows = len(table.read_text().splitlines()) - 1 if table and table.exists() else 0
     lowered = "the matrix lowers the correlation" in output
     results.append(
-        Result("compensate", "a deposit with a real matrix", status == 0 and rows == 2 and lowered,
-               f"{rows} row(s), and the verdict is earned" if lowered else first_error(output), seconds)
+        Result(
+            "compensate",
+            "a deposit with a real matrix",
+            status == 0 and rows == 2 and lowered,
+            f"{rows} row(s), and the verdict is earned" if lowered else first_error(output),
+            seconds,
+        )
     )
     if bundle:
         drawn = [name.name for name in bundle.iterdir() if name.suffix == ".svg"]
         results.append(
-            Result("compensate", "the matrix is drawn", bool(drawn),
-                   ", ".join(drawn) if drawn else "no heat map was written", 0.0)
+            Result(
+                "compensate",
+                "the matrix is drawn",
+                bool(drawn),
+                ", ".join(drawn) if drawn else "no heat map was written",
+                0.0,
+            )
         )
 
     # A deposit with an identity matrix. There is nothing to apply, so the
@@ -462,11 +582,17 @@ def check_compensate(work: Path) -> list[Result]:
     out = work / "identity"
     out.mkdir(parents=True, exist_ok=True)
     status, output, seconds = run_cli(
-        ["compensate", "--data", str(identity), "--recursive", "--out", str(out)])
+        ["compensate", "--data", str(identity), "--recursive", "--out", str(out)]
+    )
     guides = "--controls" in output and "no matrix was supplied" in output.lower()
     results.append(
-        Result("compensate", "a deposit with an identity matrix", status == 0 and guides,
-               "says no matrix was supplied and what to do" if guides else first_error(output), seconds)
+        Result(
+            "compensate",
+            "a deposit with an identity matrix",
+            status == 0 and guides,
+            "says no matrix was supplied and what to do" if guides else first_error(output),
+            seconds,
+        )
     )
 
     # A mass cytometry run. The refusal has to come before the bundle is made.
@@ -476,9 +602,15 @@ def check_compensate(work: Path) -> list[Result]:
     status, output, seconds = run_cli(["compensate", "--data", str(mass), "--out", str(out)])
     left_behind = newest_bundle(out)
     results.append(
-        Result("compensate", "a mass cytometry run", status != 0 and left_behind is None,
-               "refuses, and writes no bundle" if left_behind is None else
-               f"refused but left {left_behind.name}", seconds)
+        Result(
+            "compensate",
+            "a mass cytometry run",
+            status != 0 and left_behind is None,
+            "refuses, and writes no bundle"
+            if left_behind is None
+            else f"refused but left {left_behind.name}",
+            seconds,
+        )
     )
 
     # Two runs of one recipe have to give one answer. flowStats draws a random
@@ -492,9 +624,15 @@ def check_compensate(work: Path) -> list[Result]:
         table = bundle / "marker_correlation.csv" if bundle else None
         digests.append(table.read_text() if table and table.exists() else run)
     results.append(
-        Result("compensate", "two runs give one answer", digests[0] == digests[1],
-               "the correlation table is the same" if digests[0] == digests[1] else
-               "the two runs disagree, so a seed is missing", 0.0)
+        Result(
+            "compensate",
+            "two runs give one answer",
+            digests[0] == digests[1],
+            "the correlation table is the same"
+            if digests[0] == digests[1]
+            else "the two runs disagree, so a seed is missing",
+            0.0,
+        )
     )
     return results
 
@@ -517,38 +655,55 @@ def check_gate(work: Path) -> list[Result]:
     results = []
 
     template = work / "template.csv"
-    status, output, seconds = run_cli(
-        ["template", "--data", str(data), "--out", str(template)])
+    status, output, seconds = run_cli(["template", "--data", str(data), "--out", str(template)])
     if status != 0:
         return [Result("gate", "scaffold a template", False, first_error(output), seconds)]
 
     out = work / "run"
     out.mkdir(parents=True, exist_ok=True)
     status, output, seconds = run_cli(
-        ["gate", "--data", str(data), "--template", str(template), "--out", str(out)])
+        ["gate", "--data", str(data), "--template", str(template), "--out", str(out)]
+    )
     bundle = newest_bundle(out)
     wanted = ("population_stats.csv", "gate_tree.csv", "gate_tree.svg")
     missing = [name for name in wanted if not bundle or not (bundle / name).exists()]
     results.append(
-        Result("gate", "the scaffolded template runs", status == 0 and not missing,
-               f"missing {', '.join(missing)}" if missing else "writes the stats, the tree and the figure",
-               seconds)
+        Result(
+            "gate",
+            "the scaffolded template runs",
+            status == 0 and not missing,
+            f"missing {', '.join(missing)}"
+            if missing
+            else "writes the stats, the tree and the figure",
+            seconds,
+        )
     )
     if bundle and (bundle / "gate_tree.csv").exists():
         rows = (bundle / "gate_tree.csv").read_text().splitlines()
         # PlotGateTree reads a missing parent as the root of the drawing.
         root_first = len(rows) > 1 and rows[1].startswith('"all_events",NA')
         results.append(
-            Result("gate", "the tree carries a root row", root_first,
-                   "all_events has no parent" if root_first else f"first row reads {rows[1] if len(rows) > 1 else 'nothing'}",
-                   0.0)
+            Result(
+                "gate",
+                "the tree carries a root row",
+                root_first,
+                "all_events has no parent"
+                if root_first
+                else f"first row reads {rows[1] if len(rows) > 1 else 'nothing'}",
+                0.0,
+            )
         )
         # A vector figure that hides a raster is not a vector figure.
         drawing = (bundle / "gate_tree.svg").read_text()
         clean = "<image" not in drawing and "<filter" not in drawing
         results.append(
-            Result("gate", "the figure is vector", clean,
-                   "no raster inside the svg" if clean else "the svg embeds a raster", 0.0)
+            Result(
+                "gate",
+                "the figure is vector",
+                clean,
+                "no raster inside the svg" if clean else "the svg embeds a raster",
+                0.0,
+            )
         )
 
     # A template that does not parse has to be refused with the command that
@@ -556,18 +711,32 @@ def check_gate(work: Path) -> list[Result]:
     broken = work / "broken.csv"
     broken.write_text("this,is,not,a,template\n1,2,3,4,5\n")
     status, output, seconds = run_cli(
-        ["gate", "--data", str(data), "--template", str(broken), "--out", str(work / "broken_out")])
+        ["gate", "--data", str(data), "--template", str(broken), "--out", str(work / "broken_out")]
+    )
     guides = "cytokit template" in output
     results.append(
-        Result("gate", "a template that does not parse", status != 0 and guides,
-               "the error names the command that writes a valid one" if guides else first_error(output),
-               seconds)
+        Result(
+            "gate",
+            "a template that does not parse",
+            status != 0 and guides,
+            "the error names the command that writes a valid one"
+            if guides
+            else first_error(output),
+            seconds,
+        )
     )
 
-    status, output, seconds = run_cli(["gate", "--data", str(data), "--out", str(work / "no_template")])
+    status, output, seconds = run_cli(
+        ["gate", "--data", str(data), "--out", str(work / "no_template")]
+    )
     results.append(
-        Result("gate", "no --template at all", status != 0,
-               first_error(output) if status != 0 else "it ran without a template", seconds)
+        Result(
+            "gate",
+            "no --template at all",
+            status != 0,
+            first_error(output) if status != 0 else "it ran without a template",
+            seconds,
+        )
     )
     return results
 
@@ -597,25 +766,49 @@ def check_chain(work: Path) -> list[Result]:
 
     gate_out = work / "gate"
     status, output, seconds = run_cli(
-        ["gate", "--data", str(data), "--template", str(template), "--out", str(gate_out)])
+        ["gate", "--data", str(data), "--template", str(template), "--out", str(gate_out)]
+    )
     gate_bundle = newest_bundle(gate_out)
     saved = gate_bundle is not None and (gate_bundle / "gating_set").is_dir()
     results.append(
-        Result("chain", "gate saves its hierarchy", status == 0 and saved,
-               "cluster can read it" if saved else first_error(output), seconds)
+        Result(
+            "chain",
+            "gate saves its hierarchy",
+            status == 0 and saved,
+            "cluster can read it" if saved else first_error(output),
+            seconds,
+        )
     )
     if not saved:
         return results
 
     cluster_out = work / "cluster"
     status, output, seconds = run_cli(
-        ["cluster", "--gates", str(gate_bundle), "--parent", "singlets",
-         "--metaclusters", "6", "--events", "8000", "--no-umap", "--out", str(cluster_out)])
+        [
+            "cluster",
+            "--gates",
+            str(gate_bundle),
+            "--parent",
+            "singlets",
+            "--metaclusters",
+            "6",
+            "--events",
+            "8000",
+            "--no-umap",
+            "--out",
+            str(cluster_out),
+        ]
+    )
     cluster_bundle = newest_bundle(cluster_out)
     medians = cluster_bundle is not None and (cluster_bundle / "cluster_medians.csv").exists()
     results.append(
-        Result("chain", "cluster reads the gate bundle", status == 0 and medians,
-               "writes cluster_medians.csv" if medians else first_error(output), seconds)
+        Result(
+            "chain",
+            "cluster reads the gate bundle",
+            status == 0 and medians,
+            "writes cluster_medians.csv" if medians else first_error(output),
+            seconds,
+        )
     )
     if not medians:
         return results
@@ -624,8 +817,18 @@ def check_chain(work: Path) -> list[Result]:
     # actually carries, which is what a scientist does with the agent.
     definitions = work / "definitions.csv"
     status, output, seconds = run_cli(
-        ["definitions", "--data", str(data), "--out", str(definitions),
-         "--markers", "CD3,CD4,CD8,CD19", "--populations", "T cells,B cells"])
+        [
+            "definitions",
+            "--data",
+            str(data),
+            "--out",
+            str(definitions),
+            "--markers",
+            "CD3,CD4,CD8,CD19",
+            "--populations",
+            "T cells,B cells",
+        ]
+    )
     rows = definitions.read_text().splitlines()
     rows[1] = "T cells,pos,,,neg"
     rows[2] = "B cells,neg,,,pos"
@@ -633,49 +836,92 @@ def check_chain(work: Path) -> list[Result]:
 
     annotate_out = work / "annotate"
     status, output, seconds = run_cli(
-        ["annotate", "--clusters", str(cluster_bundle), "--definitions", str(definitions),
-         "--out", str(annotate_out)])
+        [
+            "annotate",
+            "--clusters",
+            str(cluster_bundle),
+            "--definitions",
+            str(definitions),
+            "--out",
+            str(annotate_out),
+        ]
+    )
     annotate_bundle = newest_bundle(annotate_out)
     labelled = annotate_bundle is not None and (annotate_bundle / "cluster_labels.csv").exists()
     results.append(
-        Result("chain", "annotate reads the cluster bundle", status == 0 and labelled,
-               "writes one label per cluster" if labelled else first_error(output), seconds)
+        Result(
+            "chain",
+            "annotate reads the cluster bundle",
+            status == 0 and labelled,
+            "writes one label per cluster" if labelled else first_error(output),
+            seconds,
+        )
     )
 
     metadata = work / "metadata.csv"
-    metadata.write_text(
-        "sample,treatment\n100715.fcs,control\n109567.fcs,drug\n113548.fcs,drug\n")
+    metadata.write_text("sample,treatment\n100715.fcs,control\n109567.fcs,drug\n113548.fcs,drug\n")
     proportions_out = work / "proportions"
     status, output, seconds = run_cli(
-        ["proportions", "--counts", str(gate_bundle), "--metadata", str(metadata),
-         "--out", str(proportions_out)])
+        [
+            "proportions",
+            "--counts",
+            str(gate_bundle),
+            "--metadata",
+            str(metadata),
+            "--out",
+            str(proportions_out),
+        ]
+    )
     proportions_bundle = newest_bundle(proportions_out)
     joined = proportions_bundle is not None and (proportions_bundle / "proportions.csv").exists()
     results.append(
-        Result("chain", "proportions reads the gate bundle", status == 0 and joined,
-               "joins the counts to the metadata" if joined else first_error(output), seconds)
+        Result(
+            "chain",
+            "proportions reads the gate bundle",
+            status == 0 and joined,
+            "joins the counts to the metadata" if joined else first_error(output),
+            seconds,
+        )
     )
     if not joined:
         return results
 
     compare_out = work / "compare"
     status, output, seconds = run_cli(
-        ["compare", "--proportions", str(proportions_bundle), "--group", "treatment",
-         "--all-populations", "--out", str(compare_out)])
+        [
+            "compare",
+            "--proportions",
+            str(proportions_bundle),
+            "--group",
+            "treatment",
+            "--all-populations",
+            "--out",
+            str(compare_out),
+        ]
+    )
     compare_bundle = newest_bundle(compare_out)
     tested = compare_bundle is not None and (compare_bundle / "tests.csv").exists()
     # One sample in the control arm, so no test may run. The figure still has to.
     refused = "carry no test" in output
     results.append(
-        Result("chain", "compare reads the proportions bundle", status == 0 and tested and refused,
-               "runs no test on one sample per group, and says so" if refused else first_error(output),
-               seconds)
+        Result(
+            "chain",
+            "compare reads the proportions bundle",
+            status == 0 and tested and refused,
+            "runs no test on one sample per group, and says so" if refused else first_error(output),
+            seconds,
+        )
     )
     if compare_bundle:
         drawn = [name for name in compare_bundle.iterdir() if name.suffix == ".svg"]
         results.append(
-            Result("chain", "compare draws even with no test", bool(drawn),
-                   f"{len(drawn)} figure(s)" if drawn else "no figure was drawn", 0.0)
+            Result(
+                "chain",
+                "compare draws even with no test",
+                bool(drawn),
+                f"{len(drawn)} figure(s)" if drawn else "no figure was drawn",
+                0.0,
+            )
         )
     return results
 
@@ -697,35 +943,57 @@ def check_claims_and_reproduce(work: Path) -> list[Result]:
         "claim_id,claim,measure,test,expected\n"
         "1,a is at least ten,a,at_least,10\n"
         "2,a is at most five,a,at_most,5\n"
-        "3,nobody measured this,missing,at_least,1\n")
+        "3,nobody measured this,missing,at_least,1\n"
+    )
     measured = work / "results.csv"
     measured.write_text("measure,value\na,12\n")
 
     out = work / "claims_out"
     status, output, seconds = run_cli(
-        ["claims", "--claims", str(claims), "--results", str(measured), "--out", str(out)])
+        ["claims", "--claims", str(claims), "--results", str(measured), "--out", str(out)]
+    )
     bundle = newest_bundle(out)
-    verdicts = (bundle / "verdicts.csv").read_text() if bundle and (bundle / "verdicts.csv").exists() else ""
+    verdicts = (
+        (bundle / "verdicts.csv").read_text()
+        if bundle and (bundle / "verdicts.csv").exists()
+        else ""
+    )
     # One of each verdict. Unresolved is the one a tool is tempted to skip.
     all_three = all(word in verdicts for word in ("supported", "contradicted", "unresolved"))
     results.append(
-        Result("claims", "one verdict per claim", status == 0 and all_three,
-               "supported, contradicted and unresolved all appear" if all_three else first_error(output),
-               seconds)
+        Result(
+            "claims",
+            "one verdict per claim",
+            status == 0 and all_three,
+            "supported, contradicted and unresolved all appear"
+            if all_three
+            else first_error(output),
+            seconds,
+        )
     )
 
     status, output, seconds = run_cli(["reproduce"])
     lists = "The analyses in this repository" in output and "scripts/01" in output
     results.append(
-        Result("claims", "reproduce lists the analyses", status == 0 and lists,
-               "names every analysis and its script" if lists else first_error(output), seconds)
+        Result(
+            "claims",
+            "reproduce lists the analyses",
+            status == 0 and lists,
+            "names every analysis and its script" if lists else first_error(output),
+            seconds,
+        )
     )
 
     status, output, seconds = run_cli(["reproduce", "--analysis", "nonsense"])
     named = "The names are:" in output
     results.append(
-        Result("claims", "an analysis that is not there", status != 0 and named,
-               "the error lists the names" if named else first_error(output), seconds)
+        Result(
+            "claims",
+            "an analysis that is not there",
+            status != 0 and named,
+            "the error lists the names" if named else first_error(output),
+            seconds,
+        )
     )
     return results
 
@@ -754,7 +1022,9 @@ def check_refusals(work: Path) -> list[Result]:
             "refusals",
             "a path that does not exist",
             status != 0 and named_host_path,
-            "names the path the caller typed" if named_host_path else f"says: {first_error(output)}",
+            "names the path the caller typed"
+            if named_host_path
+            else f"says: {first_error(output)}",
             seconds,
         )
     )
@@ -762,8 +1032,13 @@ def check_refusals(work: Path) -> list[Result]:
     status, output, seconds = run_cli(["inspect", "--data", str(empty)])
     hints = "--recursive" in output
     results.append(
-        Result("refusals", "a folder with no FCS file", status != 0 and hints,
-               "suggests --recursive" if hints else first_error(output), seconds)
+        Result(
+            "refusals",
+            "a folder with no FCS file",
+            status != 0 and hints,
+            "suggests --recursive" if hints else first_error(output),
+            seconds,
+        )
     )
 
     # A scaffold that overwrites a filled in template destroys work that only the
@@ -775,10 +1050,13 @@ def check_refusals(work: Path) -> list[Result]:
     before = kept.read_text()
     status, output, seconds = run_cli(["template", "--data", str(deposit), "--out", str(kept)])
     results.append(
-        Result("refusals", "an --out that already exists",
-               status != 0 and kept.read_text() == before,
-               "the file is untouched" if kept.read_text() == before else "the file was overwritten",
-               seconds)
+        Result(
+            "refusals",
+            "an --out that already exists",
+            status != 0 and kept.read_text() == before,
+            "the file is untouched" if kept.read_text() == before else "the file was overwritten",
+            seconds,
+        )
     )
 
     # --label belongs to a recipe that writes a timestamped bundle. Accepting it
@@ -787,14 +1065,24 @@ def check_refusals(work: Path) -> list[Result]:
         ["template", "--data", str(deposit), "--out", str(work / "labelled.csv"), "--label", "x"]
     )
     results.append(
-        Result("refusals", "--label on a recipe without a bundle", status != 0,
-               first_error(output) if status != 0 else "the flag was accepted", seconds)
+        Result(
+            "refusals",
+            "--label on a recipe without a bundle",
+            status != 0,
+            first_error(output) if status != 0 else "the flag was accepted",
+            seconds,
+        )
     )
 
     status, output, seconds = run_cli(["inspect", "--data", str(deposit), "--nonsense"])
     results.append(
-        Result("refusals", "an unknown flag", status != 0,
-               first_error(output) if status != 0 else "the flag was accepted", seconds)
+        Result(
+            "refusals",
+            "an unknown flag",
+            status != 0,
+            first_error(output) if status != 0 else "the flag was accepted",
+            seconds,
+        )
     )
     return results
 
@@ -824,14 +1112,22 @@ def report(results: list[Result]) -> int:
     if failed:
         print(f"{len(failed)} of {len(results)} checks failed.")
         return 1
-    deposits = ({item.what for item in results}
-                - {"refusals", "input shapes", "marker mapping", "compensate", "gate",
-                   "chain", "claims"})
+    deposits = {item.what for item in results} - {
+        "refusals",
+        "input shapes",
+        "marker mapping",
+        "compensate",
+        "gate",
+        "chain",
+        "claims",
+    }
     noun = "deposit" if len(deposits) == 1 else "deposits"
     print(f"All {len(results)} checks passed over {len(deposits)} {noun}.")
     if any(item.what == "compensate" for item in results):
-        print("compensate ran on 3 of those deposits, not on all of them, "
-              "because it reads every event of a file.")
+        print(
+            "compensate ran on 3 of those deposits, not on all of them, "
+            "because it reads every event of a file."
+        )
     return 0
 
 
@@ -844,8 +1140,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--deposit", action="append", help="check one deposit, repeatable")
     parser.add_argument("--skip-refusals", action="store_true", help="skip the refusal cases")
-    parser.add_argument("--skip-compensate", action="store_true",
-                        help="skip the compensate and gate cases, which read whole files")
+    parser.add_argument(
+        "--skip-compensate",
+        action="store_true",
+        help="skip the compensate and gate cases, which read whole files",
+    )
     options = parser.parse_args()
 
     corpus = CORPUS

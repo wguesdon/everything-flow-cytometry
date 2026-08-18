@@ -14,24 +14,30 @@
 # APPLY COMPENSATION reads FALSE in every file.
 #
 # The claim is about a cohort rather than a file. It compares 83 samples from 45
-# subjects across four severity ranks and two sexes, so the clinical grouping has
-# to come from somewhere. It comes from Table S1 of the paper, joined to the files
+# subjects across four severity ranks and two sexes, so the clinical grouping
+# has
+# to come from somewhere. It comes from Table S1 of the paper, joined to the
+# files
 # in gating/yu2021_sample_metadata.csv, and all 83 files match a metadata row.
 #
-# Every sample is gated at the same cut, listed in gating/yu2021_gate_cuts.csv. A
+# Every sample is gated at the same cut, listed in gating/yu2021_gate_cuts.csv.
+# A
 # cut fitted per sample moves the boundary for reasons that are not biology, and
 # every claim here is a comparison between samples. The cuts were fitted on a
 # pooled subsample of all 83 files and six of the seven sit on a real density
-# minimum. The seventh, CD45RA, does not, and the sweep in step 6 shows what that
+# minimum. The seventh, CD45RA, does not, and the sweep in step 6 shows what
+# that
 # costs.
 #
 # The paper reads MAIT cells as CD8+ CD161hi T cells, because the flow panel
-# carries no Va7.2. It validates that surrogate with scRNA-seq, where the CD161hi
+# carries no Va7.2. It validates that surrogate with scRNA-seq, where the
+# CD161hi
 # cluster co-expresses KLRB1, CD3D, CD8A and TRAV1-2. This script tests the flow
 # claims only, so it inherits the surrogate and does not check it.
 #
 # Run it in the container:
-#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+#   podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest
+# \
 #     Rscript scripts/08_yu2021_spectral_mait.R
 
 suppressPackageStartupMessages({
@@ -55,7 +61,8 @@ kCutsPath <- file.path("gating", "yu2021_gate_cuts.csv")
 kClaimsPath <- file.path("gating", "yu2021_paper_claims.csv")
 kOutputDir <- file.path("output", "yu2021")
 
-# The paper pooled every participant and drew 3000 live CD45+ cells per sample for
+# The paper pooled every participant and drew 3000 live CD45+ cells per sample
+# for
 # its clustering figure. The same draw is used here so the two are comparable.
 kEventsPerSample <- 3000
 
@@ -149,7 +156,8 @@ for (i in seq_len(nrow(sheet))) {
     Log(sprintf("Gating %d of %d", i, nrow(sheet)))
   }
 
-  # The chosen CD45RA cut comes first, so counts[1, ] is the primary analysis and
+  # The chosen CD45RA cut comes first, so counts[1, ] is the primary analysis
+  # and
   # the rest of the rows answer the sweep from the same read.
   gated <- GateSpectralFile(
     path = files[i],
@@ -314,7 +322,8 @@ Log("Drawing the figures")
 # 33.6, both well clear of their floors, and both above 3:1 contrast.
 kSexPalette <- c(Female = "#2a78d6", Male = "#eb6834")
 
-# A boxplot with the points drawn on top. The group sizes run from 4 to 23, and a
+# A boxplot with the points drawn on top. The group sizes run from 4 to 23, and
+# a
 # box alone hides an n of 4.
 SexBoxplot <- function(data, x, y, x_label, y_label, title, subtitle,
                        comparison_label = "p.format") {

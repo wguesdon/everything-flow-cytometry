@@ -2,10 +2,12 @@
 #
 # This is the positive control for the whole repository. OMIP-39 ships a FlowJo
 # workspace with the gating that the authors published, so the manual result is
-# not a result this project produced. CytoML reads those gates, openCyto gates the
+# not a result this project produced. CytoML reads those gates, openCyto gates
+# the
 # same file from a template, and the two frequencies sit side by side.
 #
-# The comparison is honest about what it can show. One donor file gives agreement
+# The comparison is honest about what it can show. One donor file gives
+# agreement
 # per gate. It does not give a coefficient of variation across samples, and it
 # does not show that either method is right. It shows whether an automated
 # template lands where an expert landed.
@@ -37,10 +39,12 @@ ImportFlowJoGates <- function(workspace_path, fcs_path, group = "Sample") {
 #'
 #' The two gating strategies name the same population differently. The analyst
 #' wrote `CD56+ CD3-` in FlowJo and the template writes `CD56posCD3neg`. That
-#' mapping is a judgement, so it lives in a file that a reviewer can check rather
+#' mapping is a judgement, so it lives in a file that a reviewer can check
+#' rather
 #' than inside a function.
 #'
-#' @param path Path to a CSV with the columns `manual` and `automated`. A row may
+#' @param path Path to a CSV with the columns `manual` and `automated`. A row
+#' may
 #'   also carry a `note` column, which is ignored here and printed by a report.
 #' @return A `data.frame` with the columns `manual`, `automated` and `note`.
 #' @export
@@ -74,12 +78,14 @@ ReadPopulationMap <- function(path) {
 #'
 #' @param manual_stats The output of [CollectPopulationStats()] on the imported
 #'   FlowJo `GatingSet`.
-#' @param automated_stats The output of [CollectPopulationStats()] on the openCyto
+#' @param automated_stats The output of [CollectPopulationStats()] on the
+#' openCyto
 #'   `GatingSet`.
 #' @param population_map The output of [ReadPopulationMap()].
 #' @return A `data.frame` with one row per mapped population, holding `manual`,
 #'   `automated`, `manual_percent`, `automated_percent`, `difference` and
-#'   `ratio`. `difference` is in percentage points. A population that either side
+#'   `ratio`. `difference` is in percentage points. A population that either
+#' side
 #'   did not produce keeps `NA` on that side, so a gap is visible.
 #' @export
 CompareGatingResults <- function(manual_stats, automated_stats, population_map) {
@@ -120,7 +126,8 @@ CompareGatingResults <- function(manual_stats, automated_stats, population_map) 
 #' @param comparison The output of [CompareGatingResults()].
 #' @param tolerance_points The absolute difference, in percentage points, at or
 #'   below which the two methods are called in agreement.
-#' @return The input with two columns added. `agrees` is `TRUE`, `FALSE` or `NA`,
+#' @return The input with two columns added. `agrees` is `TRUE`, `FALSE` or
+#' `NA`,
 #'   and `verdict` is `"agree"`, `"differ"` or `"missing"`.
 #' @export
 JudgeAgreement <- function(comparison, tolerance_points = 5) {
@@ -204,7 +211,8 @@ PopulationProportions <- function(stats, metadata, sample_column = "sample") {
 #' Wilcoxon rank sum test and more than two get a Kruskal Wallis test, because a
 #' cell frequency is bounded, skewed, and measured on a handful of samples.
 #'
-#' A group with one sample carries no spread, so no test runs on it. The function
+#' A group with one sample carries no spread, so no test runs on it. The
+#' function
 #' says so and still draws the points, because a picture of five samples is
 #' useful and a p value over one sample per group is not.
 #'

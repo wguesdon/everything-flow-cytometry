@@ -1,20 +1,27 @@
 # Compute a spillover matrix from single stained controls.
 #
-# The example in scripts/01 applies the matrix that the instrument wrote into the
+# The example in scripts/01 applies the matrix that the instrument wrote into
+# the
 # file. That covers the common case, where compensation was set on the cytometer
-# in Diva. It does not cover the case where the files were acquired uncompensated,
+# in Diva. It does not cover the case where the files were acquired
+# uncompensated,
 # or where the stored matrix is wrong and has to be recomputed.
 #
-# FlowJo computes the matrix in its interface and shows an N by N grid so you can
+# FlowJo computes the matrix in its interface and shows an N by N grid so you
+# can
 # check every pair by eye. R can do both. flowStats::spillover_ng() computes the
-# matrix, and it needs a match file that maps each control file to the channel it
+# matrix, and it needs a match file that maps each control file to the channel
+# it
 # stains. FlowJo builds that mapping through its interface. The functions here
-# build it from the FCS metadata instead, so the mapping is derived and not typed.
+# build it from the FCS metadata instead, so the mapping is derived and not
+# typed.
 
 #' Strip the prefix and the well suffix from a control sample name
 #'
-#' A compensation control is usually named for the stain it carries, wrapped in a
-#' prefix that names the control type and a suffix that names the plate well. The
+#' A compensation control is usually named for the stain it carries, wrapped in
+#' a
+#' prefix that names the control type and a suffix that names the plate well.
+#' The
 #' stain in the middle is the part that has to match a marker in the panel.
 #'
 #' @param sample_names A character vector of sample names or file names.
@@ -46,9 +53,11 @@ StripControlName <- function(sample_names,
 
 #' Normalise a marker or stain name so two spellings of it compare equal
 #'
-#' Control file names and panel markers rarely agree character for character. The
+#' Control file names and panel markers rarely agree character for character.
+#' The
 #' same stain appears as `LD UV Blue` in one place and `Live Dead UV Blue` in
-#' another, or as `TCR Va7_2` against `TCR Va7.2`. Normalising both sides catches
+#' another, or as `TCR Va7_2` against `TCR Va7.2`. Normalising both sides
+#' catches
 #' the difference that is only punctuation or case.
 #'
 #' @param x A character vector.
@@ -63,7 +72,8 @@ NormaliseMarkerName <- function(x) {
 
 #' Collapse a marker name to letters and digits only
 #'
-#' A stricter form of [NormaliseMarkerName()]. It removes every separator instead
+#' A stricter form of [NormaliseMarkerName()]. It removes every separator
+#' instead
 #' of replacing it with a space, so `PerCP-Cy55` and `PerCPCy55` compare equal.
 #' That pair is real: OMIP-39 writes the first form on the control file and the
 #' second in the panel.
@@ -78,8 +88,10 @@ CollapseMarkerName <- function(x) {
 #' Take the antibody name off the front of a stain label
 #'
 #' A control is labelled with the antibody and then the fluorochrome, as in
-#' `CD2 PerCP-Cy55`. When the fluorochrome is spelled differently on the two sides,
-#' the antibody alone still identifies the channel. This returns that first token.
+#' `CD2 PerCP-Cy55`. When the fluorochrome is spelled differently on the two
+#' sides,
+#' the antibody alone still identifies the channel. This returns that first
+#' token.
 #'
 #' @param x A character vector of stain or marker labels.
 #' @return A character vector holding the first whitespace delimited token, in
@@ -94,7 +106,8 @@ AntibodyToken <- function(x) {
 #' Match every compensation control to the channel it stains
 #'
 #' This is the step that FlowJo performs in its interface. Each control file
-#' carries one stain, and that stain names one detector in the panel. The match is
+#' carries one stain, and that stain names one detector in the panel. The match
+#' is
 #' made on the marker names that the FCS files already carry, so no mapping is
 #' typed by hand.
 #'
@@ -107,10 +120,12 @@ AntibodyToken <- function(x) {
 #' @param flow_set A `flowSet` of compensation controls.
 #' @param unstained_pattern A regular expression that identifies the unstained
 #'   control. Matching ignores case.
-#' @param reference The sample whose panel supplies the marker names. Defaults to
+#' @param reference The sample whose panel supplies the marker names. Defaults
+#' to
 #'   the first sample.
 #' @return A `data.frame` with the columns `filename`, `stain`, `channel`,
-#'   `marker` and `matched_by`. `matched_by` is one of `"exact"`, `"normalised"`,
+#'   `marker` and `matched_by`. `matched_by` is one of `"exact"`,
+#' `"normalised"`,
 #'   `"unstained"` or `"none"`.
 #' @export
 MatchControlsToChannels <- function(flow_set,
@@ -150,7 +165,8 @@ MatchControlsToChannels <- function(flow_set,
   marker[use_normal] <- panel$marker[normal_hit[use_normal]]
   matched_by[use_normal] <- "normalised"
 
-  # Pass 3, collapsed: every separator is removed, so PerCP-Cy55 equals PerCPCy55.
+  # Pass 3, collapsed: every separator is removed, so PerCP-Cy55 equals
+  # PerCPCy55.
   collapsed_hit <- match(
     CollapseMarkerName(stains),
     CollapseMarkerName(panel$marker)
@@ -162,7 +178,8 @@ MatchControlsToChannels <- function(flow_set,
 
   # Pass 4, antibody only: the fluorochrome is spelled differently on the two
   # sides, so match on the antibody name alone. This pass is used only when the
-  # antibody name identifies exactly one channel, because a token that appears in
+  # antibody name identifies exactly one channel, because a token that appears
+  # in
   # two markers cannot resolve a channel.
   panel_token <- AntibodyToken(panel$marker)
   unique_token <- panel_token[!duplicated(panel_token) &
@@ -267,7 +284,8 @@ WriteMatchFile <- function(match_table, path, keep_unstained = NULL) {
 #' Compute a spillover matrix from a set of single stained controls
 #'
 #' A thin wrapper over [flowStats::spillover_ng()] that keeps the match file and
-#' the arguments together, so a report can state exactly how the matrix was made.
+#' the arguments together, so a report can state exactly how the matrix was
+#' made.
 #'
 #' @param flow_set A `flowSet` of compensation controls.
 #' @param match_file Path to the CSV written by [WriteMatchFile()].
@@ -277,28 +295,37 @@ WriteMatchFile <- function(match_table, path, keep_unstained = NULL) {
 #'   `"median"`, which is not the flowStats default of `"mode"`. See the note
 #'   below, because the choice changes the result by more than 100 percentage
 #'   points on a real dataset.
-#' @param pregate Gate the control population before the matrix is computed. Keep
+#' @param pregate Gate the control population before the matrix is computed.
+#' Keep
 #'   this `TRUE`. With it off, the OMIP-39 controls produce 12 spillover values
 #'   above 100 percent instead of none.
 #' @return A numeric spillover matrix.
 #'
 #' @section Why the default is median and not mode:
 #' `flowStats::spillover_ng()` defaults to `method = "mode"`. That works on bead
-#' controls, where nearly every event is positive. It fails on cell controls for a
-#' marker that only a minority of cells carry, because the mode then lands on the
+#' controls, where nearly every event is positive. It fails on cell controls for
+#' a
+#' marker that only a minority of cells carry, because the mode then lands on
+#' the
 #' negative population and the ratio it produces is meaningless.
 #'
-#' Measured on the OMIP-39 single stains, which are cells, against the matrix the
+#' Measured on the OMIP-39 single stains, which are cells, against the matrix
+#' the
 #' instrument stored for the same experiment:
 #'
-#' | method | correlation with stored | median difference | values above 100 percent |
-#' | ------ | ----------------------- | ----------------- | ------------------------ |
-#' | mode   | 0.619                   | 0.97 points       | 2                        |
-#' | median | 0.975                   | 0.54 points       | 0                        |
+#' | method | correlation with stored | median difference | values above 100
+#' percent |
+#' | ------ | ----------------------- | ----------------- |
+#' ------------------------ |
+#' | mode   | 0.619                   | 0.97 points       | 2
+#' |
+#' | median | 0.975                   | 0.54 points       | 0
+#' |
 #'
 #' The two impossible values under `"mode"` came from NKG2C, positive on 7.0
 #' percent of events, and NKG2A, positive on 17.2 percent. Run
-#' [CheckControlQuality()] before you compute a matrix, so a control of that kind
+#' [CheckControlQuality()] before you compute a matrix, so a control of that
+#' kind
 #' is visible first.
 #' @export
 ComputeSpilloverFromControls <- function(flow_set,
@@ -401,16 +428,21 @@ PlotSpilloverHeatmap <- function(spillover,
 
 #' Compare a computed matrix against the one the instrument stored
 #'
-#' Use this when the files were compensated on the cytometer and you want to know
+#' Use this when the files were compensated on the cytometer and you want to
+#' know
 #' whether recomputing the matrix would change the result. A large difference on
-#' one pair points at a control that was weak, wrongly matched, or acquired with a
+#' one pair points at a control that was weak, wrongly matched, or acquired with
+#' a
 #' different voltage.
 #'
 #' @param computed The matrix from [ComputeSpilloverFromControls()].
 #' @param stored The matrix from [ExtractSpillover()].
-#' @param top The number of rows to return, sorted by the size of the difference.
-#' @return A `data.frame` with the columns `from`, `to`, `computed`, `stored` and
-#'   `difference`, all as percentages, over the detectors the two matrices share.
+#' @param top The number of rows to return, sorted by the size of the
+#' difference.
+#' @return A `data.frame` with the columns `from`, `to`, `computed`, `stored`
+#' and
+#'   `difference`, all as percentages, over the detectors the two matrices
+#' share.
 #' @export
 CompareSpilloverMatrices <- function(computed, stored, top = 20) {
   shared <- intersect(colnames(computed), colnames(stored))
@@ -455,15 +487,18 @@ CompareSpilloverMatrices <- function(computed, stored, top = 20) {
 #'
 #' A spillover value is a ratio between the signal a fluorochrome puts into its
 #' own detector and the signal it puts into another one. Both terms need a
-#' positive population to measure. A bead control is almost entirely positive and
+#' positive population to measure. A bead control is almost entirely positive
+#' and
 #' always supports the estimate. A cell control does not, because a marker that
 #' sits on a minority of cells leaves most events negative.
 #'
 #' This is the check that explains the failure recorded in
 #' [ComputeSpilloverFromControls()]. NKG2C is positive on 7.0 percent of the
 #' OMIP-39 control events and NKG2A on 17.2 percent, and those two controls are
-#' exactly the pair that produced spillover above 100 percent under the flowStats
-#' default. Run this first and the problem is visible before the matrix is built.
+#' exactly the pair that produced spillover above 100 percent under the
+#' flowStats
+#' default. Run this first and the problem is visible before the matrix is
+#' built.
 #'
 #' @param flow_set A `flowSet` of compensation controls.
 #' @param match_table The output of [MatchControlsToChannels()].

@@ -8,7 +8,8 @@
 # against the data.
 #
 # The FlowJo workspace the authors deposited holds 64 boolean populations under
-# each NKG2C branch. Every marker frequency in Figure 1B can therefore be derived
+# each NKG2C branch. Every marker frequency in Figure 1B can therefore be
+# derived
 # by summing those populations, which means the comparison uses the authors' own
 # gates and adds no gating decision of its own.
 
@@ -45,7 +46,8 @@ ReadPaperClaims <- function(path) {
 #'
 #' FlowJo writes a boolean population as a run of marker names each followed by
 #' `+` or `-`, for example `CD2+CD57-ILT2+NKG2A-NKp30-Siglec-7-`. The marker
-#' names themselves can hold a hyphen, as `Siglec-7` does, so the parse anchors on
+#' names themselves can hold a hyphen, as `Siglec-7` does, so the parse anchors
+#' on
 #' the known marker names rather than splitting on punctuation.
 #'
 #' @param population_name A single boolean population name.
@@ -83,12 +85,15 @@ ParseBooleanPopulation <- function(population_name, markers) {
 
 #' Derive the frequency of every single marker from the boolean populations
 #'
-#' A boolean population set partitions the parent, so the frequency of one marker
+#' A boolean population set partitions the parent, so the frequency of one
+#' marker
 #' is the sum of the counts of every population where that marker is positive,
-#' divided by the sum over all of them. Deriving the frequency this way uses only
+#' divided by the sum over all of them. Deriving the frequency this way uses
+#' only
 #' the gates the analyst already drew.
 #'
-#' @param stats The output of [CollectPopulationStats()], filtered to the boolean
+#' @param stats The output of [CollectPopulationStats()], filtered to the
+#' boolean
 #'   populations of one parent.
 #' @param markers The marker names to derive.
 #' @return A `data.frame` with the columns `marker`, `positive_events`,
@@ -127,12 +132,15 @@ MarkerFrequencyFromBooleans <- function(stats, markers) {
 #' Test each claim against the two populations it compares
 #'
 #' @param claims The output of [ReadPaperClaims()].
-#' @param test_frequencies Marker frequencies in the population the claim is about,
+#' @param test_frequencies Marker frequencies in the population the claim is
+#' about,
 #'   from [MarkerFrequencyFromBooleans()]. For OMIP-039 this is CD56dim NKG2C+.
-#' @param reference_frequencies Marker frequencies in the population it is compared
+#' @param reference_frequencies Marker frequencies in the population it is
+#' compared
 #'   against. For OMIP-039 this is CD56dim NKG2C-.
 #' @param min_difference_points A difference smaller than this, in percentage
-#'   points, is reported as `"too small to call"` rather than as a direction. The
+#'   points, is reported as `"too small to call"` rather than as a direction.
+#' The
 #'   default of 1 point is a judgement and a report must say so.
 #' @return A `data.frame` with one row per claim, holding the claim, both
 #'   measured values, the difference, and a `verdict` of `"reproduced"`,
@@ -178,7 +186,8 @@ TestPaperClaims <- function(claims,
 #' positive and CD2 positive. This locates that population in each branch and
 #' reports its frequency, which is the claim of Figure 1C.
 #'
-#' @param stats The output of [CollectPopulationStats()], filtered to the boolean
+#' @param stats The output of [CollectPopulationStats()], filtered to the
+#' boolean
 #'   populations of one parent.
 #' @param phenotype A named logical vector giving the required sign of every
 #'   marker.
