@@ -35,9 +35,8 @@ AGENTS.md
 # Session working notes, kept local
 SESSION_SUMMARY.md
 
-# Prompts kept local, not part of the pushed harness
-prompts/openrouter_scientific_prose.md
-prompts/restructure_reports_as_papers.md
+# The rewrite briefs, kept local like CLAUDE.md and AGENTS.md
+prompts/
 
 # Published papers kept locally for comparison, not redistributed
 papers/

@@ -3,7 +3,8 @@
 
 The rewrite may change body text and nothing else. This script compares a
 working tree file with a git revision of the same file and reports every
-difference that the briefs in `prompts/` forbid.
+difference that the rewrite briefs forbid. Those briefs are kept outside this
+repository, so this script is the part of the check that travels with the code.
 
 Run it after a rewrite and before a commit:
 

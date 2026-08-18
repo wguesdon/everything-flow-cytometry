@@ -59,7 +59,7 @@ The repository is at an early stage. The table below states what is ready and wh
 | `docs/datasets.md` | Ready. Every repository count was checked on 2026-08-13. |
 | `data/` and `sync.sh` | Ready. About 103 GB of FCS files and reference code, held in S3. |
 | `examples/` | Empty. It needs the analysis scripts and a container. |
-| `reports/` | Nine reports render and their scripts run in the container. The prose of the first eight was written by kimi-k3 through opencode, against the brief in `prompts/rewrite_report_as_prose.md`. |
+| `reports/` | Nine reports render and their scripts run in the container. The prose of the first eight was written by kimi-k3 through opencode, against a brief that is kept outside this repository. |
 | Agent skills | Not started. They come after the example code runs. |
 
 ## Contents
@@ -79,7 +79,6 @@ The repository is at an early stage. The table below states what is ready and wh
 | `scripts/find_spectral_datasets.py` | Read every FCS header in `data/` and report which files came from a spectral analyser |
 | `scripts/z282_derive_metadata.py` | Turn the FR-FCM-Z282 spreadsheet and file names into the committed CSV files in `gating/` |
 | `scripts/check_prose_rewrite.py` | Compare a rewritten report with its git revision and refuse a changed chunk, an em dash or an invented number |
-| `prompts/` | The brief that a second model follows when it rewrites a report into prose |
 | `gating/` | The gating templates, the cut points and the paper claims, each one a CSV a reviewer can read |
 | `reports/` | The rendered analyses, listed above |
 
