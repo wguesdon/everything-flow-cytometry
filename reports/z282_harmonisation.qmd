@@ -13,6 +13,13 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
+    fig-dpi: 300
+knitr:
+  opts_chunk:
+    # knitr writes a display width from the file's own resolution, so raising
+    # the resolution to 300 dpi made every figure smaller on the page. The
+    # figure fills the column instead, and the extra pixels go into sharpness.
+    out.width: "100%"
 execute:
   echo: true
   warning: false
@@ -240,14 +247,14 @@ kable(
 #| label: interoperator-cv-figure
 #| fig-cap: "Interoperator coefficient of variation, per parameter. The dashed line is the paper's acceptability threshold of 0.20."
 
-knitr::include_graphics(OutputImage("interoperator_cv.png"))
+knitr::include_graphics(OutputImage("interoperator_cv.svg"))
 ```
 
 ```{r}
 #| label: interoperator-icc-figure
 #| fig-cap: "Agreement between operators, as the intraclass correlation of a two way random effects model. The dashed line is 0.75."
 
-knitr::include_graphics(OutputImage("interoperator_icc.png"))
+knitr::include_graphics(OutputImage("interoperator_icc.svg"))
 ```
 
 ```{r}
@@ -280,7 +287,7 @@ kable(
 #| label: z-figure
 #| fig-cap: "Every operator and every parameter. Red is an overestimate against the reference value and blue is an underestimate."
 
-knitr::include_graphics(OutputImage("z_score_heatmap.png"))
+knitr::include_graphics(OutputImage("z_score_heatmap.svg"))
 ```
 
 ```{r}
@@ -363,14 +370,14 @@ kable(
 #| label: distribution-figure
 #| fig-cap: "The fifteen frequencies by arm. Every box holds the operator and donor means of one arm."
 
-knitr::include_graphics(OutputImage("distribution_by_arm.png"))
+knitr::include_graphics(OutputImage("distribution_by_arm.svg"))
 ```
 
 ```{r}
 #| label: intraoperator-figure
 #| fig-cap: "Repeatability within an operator, by arm. The dashed line is the acceptability threshold of 0.20."
 
-knitr::include_graphics(OutputImage("intraoperator_cv.png"))
+knitr::include_graphics(OutputImage("intraoperator_cv.svg"))
 ```
 
 ### Comparison of the four arms

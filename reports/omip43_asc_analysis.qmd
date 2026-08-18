@@ -13,6 +13,13 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
+    fig-dpi: 300
+knitr:
+  opts_chunk:
+    # knitr writes a display width from the file's own resolution, so raising
+    # the resolution to 300 dpi made every figure smaller on the page. The
+    # figure fills the column instead, and the extra pixels go into sharpness.
+    out.width: "100%"
 execute:
   echo: true
   warning: false
@@ -169,7 +176,7 @@ kable(
 #| label: count-plot
 #| fig-cap: "Events in the ASC gate. The band is the paper's stated range."
 
-knitr::include_graphics(OutputImage("asc_event_counts.png"))
+knitr::include_graphics(OutputImage("asc_event_counts.svg"))
 ```
 
 None of the 28 replicates falls inside the stated 400 to 2,000 range. Blood and
@@ -199,7 +206,7 @@ kable(
 #| label: cv-plot
 #| fig-cap: "The two coefficients of variation, by tissue."
 
-knitr::include_graphics(OutputImage("cv_comparison.png"))
+knitr::include_graphics(OutputImage("cv_comparison.svg"))
 ```
 
 The excess CV column shows the measured spread minus the Poisson floor. In
@@ -293,7 +300,7 @@ leaves for a density method to find, and this is a rare cell panel.
 #| label: cd38-density
 #| fig-cap: "Spleen. The solid line is the analyst's threshold, the dashed line is where mindensity cuts."
 
-knitr::include_graphics(OutputImage("cd38_density.png"))
+knitr::include_graphics(OutputImage("cd38_density.svg"))
 ```
 
 There is one large mode and a long shoulder, and `mindensity` finds the dip
@@ -301,7 +308,7 @@ between negative and positive rather than the start of the bright tail.
 
 ```{r}
 #| label: cd38-biaxial
-#| fig-cap: "The plot the analyst drew on. The red box is their gate, the dashed line is the density cut."
+#| fig-cap: "The plot the analyst drew on. The box is their rectangleGate, and the dashed line is where mindensity cuts CD38."
 
 knitr::include_graphics(OutputImage("cd38_cd27_biaxial.png"))
 ```
@@ -334,7 +341,7 @@ kable(
 
 ```{r}
 #| label: umap-manual
-#| fig-cap: "Spleen. Red is the ASC gate the authors drew. The embedding was built without it."
+#| fig-cap: "Spleen. The coloured events are the ASC gate the authors drew. The embedding was built without it."
 
 knitr::include_graphics(OutputImage("umap_spleen_manual.png"))
 ```

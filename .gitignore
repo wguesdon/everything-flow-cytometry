@@ -25,6 +25,19 @@ output/
 results/
 *.html_files/
 
+# The rendered reports. A report embeds every figure as base64, so ten of them
+# held 130 MB of the 136 MB that this repository carried. The .qmd source and
+# the script it names are both here, and README.md says how to render one.
+reports/*.html
+
+# Figures, wherever they land. output/ already covers the analysis figures, and
+# this covers anything written elsewhere by hand.
+*.png
+*.svg
+*.pdf
+!docs/**/*.png
+!docs/**/*.svg
+
 # Transfer logs
 logs/*.log
 

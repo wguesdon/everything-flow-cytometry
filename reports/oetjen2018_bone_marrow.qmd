@@ -13,6 +13,13 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
+    fig-dpi: 300
+knitr:
+  opts_chunk:
+    # knitr writes a display width from the file's own resolution, so raising
+    # the resolution to 300 dpi made every figure smaller on the page. The
+    # figure fills the column instead, and the extra pixels go into sharpness.
+    out.width: "100%"
 execute:
   echo: true
   warning: false
@@ -231,7 +238,7 @@ kable(
 #| label: spread-figure
 #| fig-cap: "Every marker of every panel, across the samples. A box that spans the whole axis is a cut the rule could not place."
 
-knitr::include_graphics(OutputImage("marker_spread.png"))
+knitr::include_graphics(OutputImage("marker_spread.svg"))
 ```
 
 Most marker and panel pairs span more than 80 percentage points across samples.
@@ -267,7 +274,7 @@ The correlation does not reach significance for any subset.
 #| label: technology-figure
 #| fig-cap: "Each point is one donor. The dashed line is equality."
 
-knitr::include_graphics(OutputImage("flow_against_mass.png"))
+knitr::include_graphics(OutputImage("flow_against_mass.svg"))
 ```
 
 The paper reports a strong correlation between the two technologies on the CD4
@@ -296,7 +303,7 @@ The memory compartments show positive correlations with age.
 #| label: age-figure
 #| fig-cap: "Each point is one sample. The line is a linear fit, drawn to show the direction."
 
-knitr::include_graphics(OutputImage("age_trend.png"))
+knitr::include_graphics(OutputImage("age_trend.svg"))
 ```
 
 The memory compartment rises with age in both the CD4 and the CD8 lineage. Both

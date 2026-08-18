@@ -30,6 +30,11 @@ The two documents point at each other. Read `docs/packages.md` to choose a tool.
 Each report runs an analysis on a public dataset and writes down what worked and what did not.
 Render one with `quarto render reports/<name>.qmd` after you run the script it names.
 
+The rendered HTML is not in this repository. Each report embeds every figure at full resolution, so
+ten of them held 130 MB of the 136 MB that the repository carried. The `.qmd` source, the script that
+produces the numbers and the `gating/` tables that drive it are all here, and the render command
+above rebuilds the report from them.
+
 | Report | Dataset | What it asks |
 |---|---|---|
 | `reports/automated_gating_pbmc.qmd` | FlowJo tutorial data | Whether one template can gate a whole experiment from a text file |
@@ -80,8 +85,10 @@ The repository is at an early stage. The table below states what is ready and wh
 | `scripts/find_spectral_datasets.py` | Read every FCS header in `data/` and report which files came from a spectral analyser |
 | `scripts/z282_derive_metadata.py` | Turn the FR-FCM-Z282 spreadsheet and file names into the committed CSV files in `gating/` |
 | `scripts/check_prose_rewrite.py` | Compare a rewritten report with its git revision and refuse a changed chunk, an em dash or an invented number |
+| `scripts/check_report_numbers.py` | Look for every number in a report's prose in the CSV files that the same analysis wrote, so a re-run cannot leave a sentence stale |
+| `R/figures.R` and `scripts/figure_style.py` | The figure style, shared by both languages. Every figure is 300 dpi and every discrete scale is colour vision safe |
 | `gating/` | The gating templates, the cut points and the paper claims, each one a CSV a reviewer can read |
-| `reports/` | The rendered analyses, listed above |
+| `reports/` | The Quarto source of each analysis, listed above. Render one to read it |
 
 ## The data
 

@@ -13,6 +13,13 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
+    fig-dpi: 300
+knitr:
+  opts_chunk:
+    # knitr writes a display width from the file's own resolution, so raising
+    # the resolution to 300 dpi made every figure smaller on the page. The
+    # figure fills the column instead, and the extra pixels go into sharpness.
+    out.width: "100%"
 execute:
   echo: true
   warning: false
@@ -222,7 +229,7 @@ kable(
 #| label: gating-tree
 #| fig-cap: "The gate hierarchy that the template produced."
 
-knitr::include_graphics(OutputImage("gating_tree.png"))
+knitr::include_graphics(OutputImage("gating_tree.svg"))
 ```
 
 ### The gates
@@ -266,7 +273,7 @@ kable(
 #| label: frequency-plot
 #| fig-cap: "Population frequency by condition. One template gated all eight samples."
 
-knitr::include_graphics(OutputImage("population_frequencies.png"))
+knitr::include_graphics(OutputImage("population_frequencies.svg"))
 ```
 
 ### Spread across the eight samples

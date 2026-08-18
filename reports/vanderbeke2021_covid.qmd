@@ -13,6 +13,13 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
+    fig-dpi: 300
+knitr:
+  opts_chunk:
+    # knitr writes a display width from the file's own resolution, so raising
+    # the resolution to 300 dpi made every figure smaller on the page. The
+    # figure fills the column instead, and the extra pixels go into sharpness.
+    out.width: "100%"
 execute:
   echo: true
   warning: false
@@ -191,7 +198,7 @@ kable(
 #| label: comparison-figure
 #| fig-cap: "Each point is one file. The dashed line is equality."
 
-knitr::include_graphics(OutputImage("arm_comparison.png"))
+knitr::include_graphics(OutputImage("arm_comparison.svg"))
 ```
 
 CD3, CD8 and CD14 all correlate above rho 0.94 across the files, and the median
@@ -218,7 +225,7 @@ kable(
 #| label: group-figure
 #| fig-cap: "The lineage measures by group, with both arms side by side."
 
-knitr::include_graphics(OutputImage("measures_by_group.png"))
+knitr::include_graphics(OutputImage("measures_by_group.svg"))
 ```
 
 The paper reports that T helper and cytotoxic T cell counts do not separate the
@@ -259,7 +266,7 @@ kable(
 #| label: pd1-figure
 #| fig-cap: "PD-1 by subset. The effector subsets sit at the top and the naive subsets at the bottom."
 
-knitr::include_graphics(OutputImage("pd1_by_subset.png"))
+knitr::include_graphics(OutputImage("pd1_by_subset.svg"))
 ```
 
 The paper reports PD-1 high on the effector T cells, with a predominance in CD8

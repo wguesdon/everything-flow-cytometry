@@ -13,6 +13,13 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
+    fig-dpi: 300
+knitr:
+  opts_chunk:
+    # knitr writes a display width from the file's own resolution, so raising
+    # the resolution to 300 dpi made every figure smaller on the page. The
+    # figure fills the column instead, and the extra pixels go into sharpness.
+    out.width: "100%"
 execute:
   echo: true
   warning: false
@@ -295,7 +302,7 @@ was corrected.
 #| label: severity-figure
 #| fig-cap: "CD161hi cells against severity rank, with the Mann-Whitney p between the sexes within each rank. The paper's Figure 1G and Figure 2B are the same comparison."
 
-knitr::include_graphics(OutputImage("cd161hi_by_severity.png"))
+knitr::include_graphics(OutputImage("cd161hi_by_severity.svg"))
 ```
 
 CD161hi cells fall as severity rises, with a Spearman rho of -0.236 and a p of
@@ -308,7 +315,7 @@ median of 30.1 percent CD161hi cells among CD8 T cells and healthy males carry
 #| label: slope-figure
 #| fig-cap: "The regression of Figure 2C. The female slope is -5.07 percentage points per severity rank and the male slope is -1.31."
 
-knitr::include_graphics(OutputImage("cd161hi_slope_by_sex.png"))
+knitr::include_graphics(OutputImage("cd161hi_slope_by_sex.svg"))
 ```
 
 The female slope is about four times the male slope. The paper writes that
@@ -333,7 +340,7 @@ significance pattern instead.
 #| label: timepoint-figure
 #| fig-cap: "CD161hi cells by time after symptom onset, with the Mann-Whitney p between the sexes in each window. This is the comparison of Figure 2E."
 
-knitr::include_graphics(OutputImage("cd161hi_by_timepoint.png"))
+knitr::include_graphics(OutputImage("cd161hi_by_timepoint.svg"))
 ```
 
 Two of the three windows match the paper exactly. The difference is not
@@ -348,7 +355,7 @@ that runs the wrong way.
 #| label: memory-figure
 #| fig-cap: "CD8 memory cells by time after symptom onset. Claim 6 expects a significant difference in all three windows."
 
-knitr::include_graphics(OutputImage("memory_by_timepoint.png"))
+knitr::include_graphics(OutputImage("memory_by_timepoint.svg"))
 ```
 
 Claim 6 is the same shape of statement about the memory compartment, and it
@@ -405,7 +412,7 @@ kable(
 #| label: sweep-figure
 #| fig-cap: "The same table as a figure. No verdict changes anywhere in the range."
 
-knitr::include_graphics(OutputImage("cd45ra_sweep.png"))
+knitr::include_graphics(OutputImage("cd45ra_sweep.svg"))
 ```
 
 The memory frequency moves from 55.5 to 65.3 percent across the range. No
@@ -465,7 +472,7 @@ named by eye.
 #| label: route-comparison
 #| fig-cap: "Every sample, gated and clustered. The dashed line is equality."
 
-knitr::include_graphics(OutputImage("route_comparison.png"))
+knitr::include_graphics(OutputImage("route_comparison.svg"))
 ```
 
 ```{r}

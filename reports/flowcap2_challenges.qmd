@@ -13,6 +13,13 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
+    fig-dpi: 300
+knitr:
+  opts_chunk:
+    # knitr writes a display width from the file's own resolution, so raising
+    # the resolution to 300 dpi made every figure smaller on the page. The
+    # figure fills the column instead, and the extra pixels go into sharpness.
+    out.width: "100%"
 execute:
   echo: true
   warning: false
@@ -175,7 +182,7 @@ kable(
 #| label: env-gag-figure
 #| fig-cap: "Env against Gag on every feature. The values are background removed, so a value near zero means no response above the subject's own control."
 
-knitr::include_graphics(OutputImage("env_against_gag.png"))
+knitr::include_graphics(OutputImage("env_against_gag.svg"))
 ```
 
 The paper reports that manual gating identified the CD4 interleukin 2 population
@@ -208,7 +215,7 @@ kable(
 #| label: scores-figure
 #| fig-cap: "The two challenges side by side. The dashed line is the accuracy of a coin."
 
-knitr::include_graphics(OutputImage("scores.png"))
+knitr::include_graphics(OutputImage("scores.svg"))
 ```
 
 ```{r}
@@ -227,7 +234,7 @@ kable(
 #| label: selected-figure
 #| fig-cap: "The selected feature, with the threshold that the training half fitted. The testing points were never seen when the threshold was placed."
 
-knitr::include_graphics(OutputImage("hvtn_selected_feature.png"))
+knitr::include_graphics(OutputImage("hvtn_selected_feature.svg"))
 ```
 
 On the HVTN challenge one feature classifies the held out half at an accuracy

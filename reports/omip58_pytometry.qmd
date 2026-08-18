@@ -13,6 +13,13 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
+    fig-dpi: 300
+knitr:
+  opts_chunk:
+    # knitr writes a display width from the file's own resolution, so raising
+    # the resolution to 300 dpi made every figure smaller on the page. The
+    # figure fills the column instead, and the extra pixels go into sharpness.
+    out.width: "100%"
 execute:
   echo: true
   warning: false
@@ -28,6 +35,10 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(knitr)
 })
+
+# The figure style is shared with every script, so the one plot this report
+# draws itself matches the plots it reads off disk.
+source(file.path("..", "R", "figures.R"))
 
 kOutputDir <- file.path("..", "output", "omip58")
 
@@ -207,9 +218,9 @@ kable(
 ggplot(correlations,
        aes(x = compensation, y = median_absolute_r, fill = donor)) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7) +
-  labs(x = NULL, y = "Median absolute correlation over 153 marker pairs",
-       fill = "Donor") +
-  theme_minimal(base_size = 12)
+  ScaleFillPublication(name = "Donor") +
+  labs(x = NULL, y = "Median absolute correlation over 153 marker pairs") +
+  ThemePublication(base_size = 12)
 ```
 
 As deposited, the median absolute correlation over the 153 marker pairs is 0.584
@@ -265,7 +276,7 @@ control to 22, so the bead matrix carries no row for either marker.
 #| label: spillover-heatmap
 #| fig-cap: "The spillover matrix computed from the cell single stains. The diagonal is dropped, because it is 1 everywhere and would set the colour scale."
 
-knitr::include_graphics(OutputImage("spillover_heatmap.png"))
+knitr::include_graphics(OutputImage("spillover_heatmap.svg"))
 ```
 
 ```{r}
@@ -431,7 +442,7 @@ kable(
 #| label: cluster-heatmap
 #| fig-cap: "Median expression of every marker in every cluster, on the arcsinh scale, with the clusters grouped by the label they received."
 
-knitr::include_graphics(OutputImage("cluster_heatmap.png"))
+knitr::include_graphics(OutputImage("cluster_heatmap.svg"))
 ```
 
 ```{r}
