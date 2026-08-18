@@ -109,10 +109,14 @@ The repository is at an early stage. The table below states what is ready and wh
 | `scripts/z282_derive_metadata.py` | Turn the FR-FCM-Z282 spreadsheet and file names into the committed CSV files in `gating/` |
 | `scripts/check_prose_rewrite.py` | Compare a rewritten report with its git revision and refuse a changed chunk, an em dash or an invented number |
 | `scripts/check_report_numbers.py` | Look for every number in a report's prose in the CSV files that the same analysis wrote, so a re-run cannot leave a sentence stale |
-| `scripts/check_skill_adapters.py` | Compare the three skill adapters with the `cytokit` CLI, so an adapter cannot send an agent to a command that does not exist |
+| `scripts/check_skill_adapters.py` | Compare the three skill adapters, `docs/cytokit.md` and this file with the `cytokit` CLI, so none of them can send an agent to a command or a flag that does not exist |
+| `scripts/check_cytokit_corpus.py` | Run every recipe over nine deposits that no analysis here reads, and run the whole chain end to end |
+| `scripts/check_function_tests.py` | Assert that every function in `R/` has a test, or a written reason for none |
+| `scripts/check_line_length.py` | Assert the line length that each language is given |
+| `scripts/make_test_study.py` | Copy a deposit to a folder outside this repository, for a session that starts with nothing but the skill and the data |
 | `cli/cytokit` | The command surface for analysing your own FCS files |
 | `skills/` | One thin adapter per host tool, all pointing at that CLI |
-| `R/figures.R` and `scripts/figure_style.py` | The figure style, shared by both languages. Every figure is 300 dpi and every discrete scale is colour vision safe |
+| `R/figures.R` and `scripts/figure_style.py` | The figure style, shared by both languages. A raster figure is 600 dpi, a countable figure is vector, and every discrete scale is colour vision safe |
 | `gating/` | The gating templates, the cut points and the paper claims, each one a CSV a reviewer can read |
 | `reports/` | The Quarto source of each analysis, listed above. Render one to read it |
 
