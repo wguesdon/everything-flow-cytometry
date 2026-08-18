@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -236,6 +245,7 @@ kable(
 
 ```{r}
 #| label: spread-figure
+#| column: page
 #| fig-cap: "Every marker of every panel, across the samples. A box that spans the whole axis is a cut the rule could not place."
 
 knitr::include_graphics(OutputImage("marker_spread.svg"))
@@ -272,6 +282,7 @@ The correlation does not reach significance for any subset.
 
 ```{r}
 #| label: technology-figure
+#| column: page
 #| fig-cap: "Each point is one donor. The dashed line is equality."
 
 knitr::include_graphics(OutputImage("flow_against_mass.svg"))
@@ -301,6 +312,7 @@ The memory compartments show positive correlations with age.
 
 ```{r}
 #| label: age-figure
+#| column: page
 #| fig-cap: "Each point is one sample. The line is a linear fit, drawn to show the direction."
 
 knitr::include_graphics(OutputImage("age_trend.svg"))

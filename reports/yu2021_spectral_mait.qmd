@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -300,6 +309,7 @@ was corrected.
 
 ```{r}
 #| label: severity-figure
+#| column: page
 #| fig-cap: "CD161hi cells against severity rank, with the Mann-Whitney p between the sexes within each rank. The paper's Figure 1G and Figure 2B are the same comparison."
 
 knitr::include_graphics(OutputImage("cd161hi_by_severity.svg"))
@@ -313,6 +323,7 @@ median of 30.1 percent CD161hi cells among CD8 T cells and healthy males carry
 
 ```{r}
 #| label: slope-figure
+#| column: page
 #| fig-cap: "The regression of Figure 2C. The female slope is -5.07 percentage points per severity rank and the male slope is -1.31."
 
 knitr::include_graphics(OutputImage("cd161hi_slope_by_sex.svg"))
@@ -338,6 +349,7 @@ significance pattern instead.
 
 ```{r}
 #| label: timepoint-figure
+#| column: page
 #| fig-cap: "CD161hi cells by time after symptom onset, with the Mann-Whitney p between the sexes in each window. This is the comparison of Figure 2E."
 
 knitr::include_graphics(OutputImage("cd161hi_by_timepoint.svg"))
@@ -353,6 +365,7 @@ that runs the wrong way.
 
 ```{r}
 #| label: memory-figure
+#| column: page
 #| fig-cap: "CD8 memory cells by time after symptom onset. Claim 6 expects a significant difference in all three windows."
 
 knitr::include_graphics(OutputImage("memory_by_timepoint.svg"))
@@ -410,6 +423,7 @@ kable(
 
 ```{r}
 #| label: sweep-figure
+#| column: page
 #| fig-cap: "The same table as a figure. No verdict changes anywhere in the range."
 
 knitr::include_graphics(OutputImage("cd45ra_sweep.svg"))
@@ -428,6 +442,7 @@ is a genuine second route to the same population.
 
 ```{r}
 #| label: umap
+#| column: page
 #| fig-cap: "FlowSOM metaclusters on 249,000 live CD45+ events, drawn 3,000 per sample, which is the draw the paper used for its Figure 1B."
 
 knitr::include_graphics(OutputImage("umap_metaclusters.png"))
@@ -435,6 +450,7 @@ knitr::include_graphics(OutputImage("umap_metaclusters.png"))
 
 ```{r}
 #| label: umap-markers
+#| column: page
 #| fig-cap: "The same embedding, coloured by each lineage marker."
 
 knitr::include_graphics(OutputImage("umap_markers.png"))
@@ -470,6 +486,7 @@ named by eye.
 
 ```{r}
 #| label: route-comparison
+#| column: page
 #| fig-cap: "Every sample, gated and clustered. The dashed line is equality."
 
 knitr::include_graphics(OutputImage("route_comparison.svg"))

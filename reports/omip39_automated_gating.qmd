@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -209,6 +218,7 @@ of dropping the row.
 
 ```{r}
 #| label: spillover-heatmap
+#| column: page
 #| fig-cap: "Spillover computed from the twelve single stained controls. The diagonal is dropped, because it is 1 everywhere and would set the colour scale."
 
 knitr::include_graphics(OutputImage("spillover_heatmap.svg"))
@@ -262,6 +272,7 @@ kable(
 
 ```{r}
 #| label: automated-tree
+#| column: page
 #| fig-cap: "The hierarchy the template produced."
 
 knitr::include_graphics(OutputImage("automated_tree.svg"))
@@ -298,6 +309,7 @@ kable(
 
 ```{r}
 #| label: comparison-scatter
+#| column: page
 #| fig-cap: "Each population once. The dashed line is exact agreement."
 
 knitr::include_graphics(OutputImage("comparison_scatter.svg"))
@@ -408,6 +420,7 @@ is not fixed yet.
 
 ```{r}
 #| label: claims-plot
+#| column: page
 #| fig-cap: "Both routes. A bar is the difference in percent positive between the two NKG2C branches."
 
 knitr::include_graphics(OutputImage("claims_plot.svg"))
@@ -417,6 +430,7 @@ knitr::include_graphics(OutputImage("claims_plot.svg"))
 
 ```{r}
 #| label: umap-cell-types
+#| column: page
 #| fig-cap: "UMAP of the lymphocyte gate, coloured by the annotated cell type."
 
 knitr::include_graphics(OutputImage("umap_cell_types.png"))
@@ -446,6 +460,7 @@ Dividing by the total weight removes the effect of the length.
 
 ```{r}
 #| label: cluster-heatmap
+#| column: page
 #| fig-cap: "Median marker expression per metacluster, scaled within each marker. This table drives the annotation."
 
 knitr::include_graphics(OutputImage("cluster_heatmap.svg"))
@@ -453,6 +468,7 @@ knitr::include_graphics(OutputImage("cluster_heatmap.svg"))
 
 ```{r}
 #| label: umap-markers
+#| column: page
 #| fig-cap: "The same embedding, coloured by each lineage marker. Read the labels against these panels."
 
 knitr::include_graphics(OutputImage("umap_markers.png"))
@@ -475,6 +491,7 @@ kable(
 
 ```{r}
 #| label: three-way-plot
+#| column: page
 #| fig-cap: "The same table as a figure."
 
 knitr::include_graphics(OutputImage("three_way_comparison.svg"))

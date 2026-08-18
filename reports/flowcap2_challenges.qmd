@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -180,6 +189,7 @@ kable(
 
 ```{r}
 #| label: env-gag-figure
+#| column: page
 #| fig-cap: "Env against Gag on every feature. The values are background removed, so a value near zero means no response above the subject's own control."
 
 knitr::include_graphics(OutputImage("env_against_gag.svg"))
@@ -213,6 +223,7 @@ kable(
 
 ```{r}
 #| label: scores-figure
+#| column: page
 #| fig-cap: "The two challenges side by side. The dashed line is the accuracy of a coin."
 
 knitr::include_graphics(OutputImage("scores.svg"))
@@ -232,6 +243,7 @@ kable(
 
 ```{r}
 #| label: selected-figure
+#| column: page
 #| fig-cap: "The selected feature, with the threshold that the training half fitted. The testing points were never seen when the threshold was placed."
 
 knitr::include_graphics(OutputImage("hvtn_selected_feature.svg"))

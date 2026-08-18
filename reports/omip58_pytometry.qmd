@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -213,6 +222,7 @@ kable(
 
 ```{r}
 #| label: correlation-figure
+#| column: page
 #| fig-cap: "The median absolute correlation over all 153 marker pairs, for each donor and each matrix. A compensated 28 colour file has no reason for two markers to move together."
 
 ggplot(correlations,
@@ -274,6 +284,7 @@ control to 22, so the bead matrix carries no row for either marker.
 
 ```{r}
 #| label: spillover-heatmap
+#| column: page
 #| fig-cap: "The spillover matrix computed from the cell single stains. The diagonal is dropped, because it is 1 everywhere and would set the colour scale."
 
 knitr::include_graphics(OutputImage("spillover_heatmap.svg"))
@@ -382,6 +393,7 @@ corrected.
 
 ```{r}
 #| label: umap
+#| column: page
 #| fig-cap: "The 200,000 sampled live lymphocytes, embedded with UMAP and coloured by the label each cluster received."
 
 knitr::include_graphics(OutputImage("umap_cell_type.png"))
@@ -389,6 +401,7 @@ knitr::include_graphics(OutputImage("umap_cell_type.png"))
 
 ```{r}
 #| label: umap-donor
+#| column: page
 #| fig-cap: "The same embedding coloured by donor. The two donors occupy the same regions, so the clusters are not an artefact of one file."
 
 knitr::include_graphics(OutputImage("umap_donor.png"))
@@ -440,6 +453,7 @@ kable(
 
 ```{r}
 #| label: cluster-heatmap
+#| column: page
 #| fig-cap: "Median expression of every marker in every cluster, on the arcsinh scale, with the clusters grouped by the label they received."
 
 knitr::include_graphics(OutputImage("cluster_heatmap.svg"))

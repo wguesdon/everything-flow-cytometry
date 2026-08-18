@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -174,6 +183,7 @@ kable(
 
 ```{r}
 #| label: count-plot
+#| column: page
 #| fig-cap: "Events in the ASC gate. The band is the paper's stated range."
 
 knitr::include_graphics(OutputImage("asc_event_counts.svg"))
@@ -204,6 +214,7 @@ kable(
 
 ```{r}
 #| label: cv-plot
+#| column: page
 #| fig-cap: "The two coefficients of variation, by tissue."
 
 knitr::include_graphics(OutputImage("cv_comparison.svg"))
@@ -298,6 +309,7 @@ leaves for a density method to find, and this is a rare cell panel.
 
 ```{r}
 #| label: cd38-density
+#| column: page
 #| fig-cap: "Spleen. The solid line is the analyst's threshold, the dashed line is where mindensity cuts."
 
 knitr::include_graphics(OutputImage("cd38_density.svg"))
@@ -308,6 +320,7 @@ between negative and positive rather than the start of the bright tail.
 
 ```{r}
 #| label: cd38-biaxial
+#| column: page
 #| fig-cap: "The plot the analyst drew on. The box is their rectangleGate, and the dashed line is where mindensity cuts CD38."
 
 knitr::include_graphics(OutputImage("cd38_cd27_biaxial.png"))
@@ -341,6 +354,7 @@ kable(
 
 ```{r}
 #| label: umap-manual
+#| column: page
 #| fig-cap: "Spleen. The coloured events are the ASC gate the authors drew. The embedding was built without it."
 
 knitr::include_graphics(OutputImage("umap_spleen_manual.png"))
@@ -348,6 +362,7 @@ knitr::include_graphics(OutputImage("umap_spleen_manual.png"))
 
 ```{r}
 #| label: umap-clusters
+#| column: page
 #| fig-cap: "The same embedding, coloured by metacluster."
 
 knitr::include_graphics(OutputImage("umap_spleen_clusters.png"))

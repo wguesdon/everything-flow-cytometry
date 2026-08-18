@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -196,6 +205,7 @@ kable(
 
 ```{r}
 #| label: comparison-figure
+#| column: page
 #| fig-cap: "Each point is one file. The dashed line is equality."
 
 knitr::include_graphics(OutputImage("arm_comparison.svg"))
@@ -223,6 +233,7 @@ kable(
 
 ```{r}
 #| label: group-figure
+#| column: page
 #| fig-cap: "The lineage measures by group, with both arms side by side."
 
 knitr::include_graphics(OutputImage("measures_by_group.svg"))
@@ -264,6 +275,7 @@ kable(
 
 ```{r}
 #| label: pd1-figure
+#| column: page
 #| fig-cap: "PD-1 by subset. The effector subsets sit at the top and the naive subsets at the bottom."
 
 knitr::include_graphics(OutputImage("pd1_by_subset.svg"))

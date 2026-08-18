@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -245,6 +254,7 @@ kable(
 
 ```{r}
 #| label: interoperator-cv-figure
+#| column: page
 #| fig-cap: "Interoperator coefficient of variation, per parameter. The dashed line is the paper's acceptability threshold of 0.20."
 
 knitr::include_graphics(OutputImage("interoperator_cv.svg"))
@@ -252,6 +262,7 @@ knitr::include_graphics(OutputImage("interoperator_cv.svg"))
 
 ```{r}
 #| label: interoperator-icc-figure
+#| column: page
 #| fig-cap: "Agreement between operators, as the intraclass correlation of a two way random effects model. The dashed line is 0.75."
 
 knitr::include_graphics(OutputImage("interoperator_icc.svg"))
@@ -285,6 +296,7 @@ kable(
 
 ```{r}
 #| label: z-figure
+#| column: page
 #| fig-cap: "Every operator and every parameter. Red is an overestimate against the reference value and blue is an underestimate."
 
 knitr::include_graphics(OutputImage("z_score_heatmap.svg"))
@@ -368,6 +380,7 @@ kable(
 
 ```{r}
 #| label: distribution-figure
+#| column: page
 #| fig-cap: "The fifteen frequencies by arm. Every box holds the operator and donor means of one arm."
 
 knitr::include_graphics(OutputImage("distribution_by_arm.svg"))
@@ -375,6 +388,7 @@ knitr::include_graphics(OutputImage("distribution_by_arm.svg"))
 
 ```{r}
 #| label: intraoperator-figure
+#| column: page
 #| fig-cap: "Repeatability within an operator, by arm. The dashed line is the acceptability threshold of 0.20."
 
 knitr::include_graphics(OutputImage("intraoperator_cv.svg"))

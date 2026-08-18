@@ -13,12 +13,21 @@ format:
     theme: cosmo
     fig-width: 9
     fig-height: 6
-    fig-dpi: 300
+    fig-dpi: 600
+    grid:
+      # Quarto's article layout gives the body 800px and puts 250px of margin on
+      # each side. A report whose point is its figures needs that space, so the
+      # body is wider and every figure chunk carries column: page, which spans
+      # the body and both margins.
+      sidebar-width: 250px
+      body-width: 900px
+      margin-width: 300px
+      gutter-width: 1.5rem
 knitr:
   opts_chunk:
     # knitr writes a display width from the file's own resolution, so raising
-    # the resolution to 300 dpi made every figure smaller on the page. The
-    # figure fills the column instead, and the extra pixels go into sharpness.
+    # the resolution made every figure smaller on the page rather than sharper.
+    # The figure fills its column instead, and the extra pixels go into detail.
     out.width: "100%"
 execute:
   echo: true
@@ -227,6 +236,7 @@ kable(
 
 ```{r}
 #| label: gating-tree
+#| column: page
 #| fig-cap: "The gate hierarchy that the template produced."
 
 knitr::include_graphics(OutputImage("gating_tree.svg"))
@@ -239,6 +249,7 @@ on the data it was fitted to.
 
 ```{r}
 #| label: gate-figures
+#| column: page
 #| results: asis
 
 populations <- readLines(file.path(kOutputDir, "population_paths.txt"))
@@ -271,6 +282,7 @@ kable(
 
 ```{r}
 #| label: frequency-plot
+#| column: page
 #| fig-cap: "Population frequency by condition. One template gated all eight samples."
 
 knitr::include_graphics(OutputImage("population_frequencies.svg"))
