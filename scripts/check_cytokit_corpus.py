@@ -282,6 +282,53 @@ def first_error(output: str) -> str:
     return lines[-1] if lines else "no output"
 
 
+def check_input_shapes(work: Path) -> list[Result]:
+    """Assert the shapes of `--data` that a scientist actually types.
+
+    A scientist points at one file as often as at a folder, and a deposit
+    arrives with the files one level down. All three shapes have to work.
+
+    Args:
+        work: A scratch folder outside the repository.
+
+    Returns:
+        One result per shape checked.
+    """
+    results = []
+    folder = DEPOSIT_ROOT / "FlowRepository_FR-FCM-ZZLV_files"
+    one_file = min(folder.glob("*.fcs"))
+
+    out = work / "one_file"
+    out.mkdir(parents=True, exist_ok=True)
+    status, output, seconds = run_cli(["inspect", "--data", str(one_file), "--out", str(out)])
+    counted = "files  1" in output
+    results.append(
+        Result("input shapes", "--data names one file", status == 0 and counted,
+               "reads the one file" if counted else first_error(output), seconds)
+    )
+
+    # A file name with a space and a comma in it survives the mount and the
+    # label. FR-FCM-ZZCA carries several.
+    awkward = work / "a folder, with a comma"
+    awkward.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(one_file, awkward / "PBMC Stim_5 hr PMA,2f,Ionomycin.fcs")
+    out = work / "awkward_out"
+    out.mkdir(parents=True, exist_ok=True)
+    status, output, seconds = run_cli(["inspect", "--data", str(awkward), "--out", str(out)])
+    results.append(
+        Result("input shapes", "a path with a space and a comma", status == 0,
+               "reads it" if status == 0 else first_error(output), seconds)
+    )
+
+    # The bundle has to land where it was asked for, and not inside the image.
+    wrote = list(out.iterdir()) if out.exists() else []
+    results.append(
+        Result("input shapes", "--out outside the repository", bool(wrote),
+               f"wrote {wrote[0].name}" if wrote else "wrote nothing to the folder given", 0.0)
+    )
+    return results
+
+
 def check_refusals(work: Path) -> list[Result]:
     """Assert that the CLI refuses what it has to refuse.
 
@@ -376,7 +423,9 @@ def report(results: list[Result]) -> int:
     if failed:
         print(f"{len(failed)} of {len(results)} checks failed.")
         return 1
-    print(f"All {len(results)} checks passed over {len({item.what for item in results}) - 1} deposits.")
+    deposits = {item.what for item in results} - {"refusals", "input shapes"}
+    noun = "deposit" if len(deposits) == 1 else "deposits"
+    print(f"All {len(results)} checks passed over {len(deposits)} {noun}.")
     return 0
 
 
@@ -412,6 +461,7 @@ def main() -> int:
             results += check_inspect(deposit, data, work)
             results += check_scaffold(deposit, data, work, "template")
             results += check_scaffold(deposit, data, work, "definitions")
+        results += check_input_shapes(work_root / "shapes")
         if not options.skip_refusals:
             results += check_refusals(work_root / "refusals")
     finally:
