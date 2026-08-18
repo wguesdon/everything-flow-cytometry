@@ -262,10 +262,17 @@ def main() -> int:
     ordered = medians.loc[labels.sort_values("cell_type")["cluster"]]
     ordered.index = labels.sort_values("cell_type")["cell_type"].to_numpy()
     figure, axis = plt.subplots(figsize=(11, 6))
-    image = axis.imshow(ordered.to_numpy(), aspect="auto", cmap="viridis")
-    axis.set_xticks(range(ordered.shape[1]))
+
+    # pcolormesh draws one rectangle per cell, where imshow embeds a raster
+    # image into the SVG. The cell count here is small, so the whole figure
+    # stays vector and stays sharp at any zoom.
+    values = ordered.to_numpy()
+    image = axis.pcolormesh(values, cmap="viridis", edgecolors="white",
+                            linewidth=0.3)
+    axis.invert_yaxis()
+    axis.set_xticks(np.arange(ordered.shape[1]) + 0.5)
     axis.set_xticklabels(ordered.columns, rotation=90)
-    axis.set_yticks(range(ordered.shape[0]))
+    axis.set_yticks(np.arange(ordered.shape[0]) + 0.5)
     axis.set_yticklabels(ordered.index)
     axis.set_title("Median expression per cluster, arcsinh scale, cofactor 150")
     axis.tick_params(length=2)

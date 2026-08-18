@@ -225,8 +225,11 @@ kable(
 #| column: page
 #| fig-cap: "The median absolute correlation over all 153 marker pairs, for each donor and each matrix. A compensated 28 colour file has no reason for two markers to move together."
 
+# read.csv reads the donor identifier as a number, and a discrete scale needs a
+# factor.
 ggplot(correlations,
-       aes(x = compensation, y = median_absolute_r, fill = donor)) +
+       aes(x = compensation, y = median_absolute_r,
+           fill = factor(donor))) +
   geom_col(position = position_dodge(width = 0.8), width = 0.7) +
   ScaleFillPublication(name = "Donor") +
   labs(x = NULL, y = "Median absolute correlation over 153 marker pairs") +
