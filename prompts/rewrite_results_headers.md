@@ -138,6 +138,14 @@ Before you report that you are done, confirm all of these and say how you checke
 5. No sentence you wrote names a rule, a marker or a cause that the sentence it
    replaced did not name.
 
+## After a rewrite, read the causal sentences
+
+`check_prose_rewrite.py` cannot fail on a sentence that states the wrong cause,
+because a swapped mechanism changes no number and no chunk. Run
+`scripts/list_causal_claims.py --numbered-only` on the file and read each
+sentence against the table beside it. Sixty sentences across the nine reports
+assert a cause, and an audit of them found six that no output supports.
+
 ## Do not
 
 Do not run the analysis scripts. Do not render a report. Do not touch any file
