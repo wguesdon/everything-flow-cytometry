@@ -165,9 +165,14 @@ The recipe writes `cluster_labels.csv`, `cell_type_summary.csv`,
 8. Run `cytokit template` first to get a valid empty template. Fill in the
    template with the scientist. Run `cytokit gate`. Read the gates that the
    recipe names before you report a population.
-9. Run `cytokit cluster` inside the gate that holds the events of interest. Read every cluster with fewer than 20 events as noise. Do not name a cluster before the scientist supplies a cell type definition.
-10. A cell type definitions table is per panel, and the scientist will not have one. Run `cytokit definitions` to get a valid empty file. Fill it in with the scientist. The recipe reads the file back and reports whether it parses.
-11. Run `cytokit annotate` with the cluster bundle and the definitions table. Report every close call as a candidate and not as a cell type.
+9. Run `cytokit cluster` inside the gate that holds the events of interest.
+   Read every cluster with fewer than 20 events as noise. Do not name a cluster
+   before the scientist supplies a cell type definition.
+10. A cell type definitions table is per panel, and the scientist will not have
+    one. Run `cytokit definitions` to get a valid empty file. Fill it in with
+    the scientist. The recipe reads the file back and reports whether it parses.
+11. Run `cytokit annotate` with the cluster bundle and the definitions table.
+    Report every close call as a candidate and not as a cell type.
 12. Run `cytokit proportions` with the gate bundle and the metadata table. The
     metadata table comes from the scientist, because an FCS file carries no
     treatment. Use `--sample-column` when its file name column is not
@@ -183,6 +188,14 @@ The recipe writes `cluster_labels.csv`, `cell_type_summary.csv`,
     the figure still shows each sample. Report that figure as a picture of the
     samples and not as a difference. Read `p_value_adjusted` and not
     `p_value` when more than one test runs.
+14. Run `cytokit claims` when the scientist has a claims table, which is
+    one row per statement with the measure that decides it. A verdict
+    reads supported, contradicted or unresolved. Unresolved means nobody
+    measured it, and it is not the same as contradicted.
+15. Run `cytokit reproduce` to list the analyses in this repository, or to
+    rebuild one of them. That is the secondary use. The scientist's own
+    data is the first.
+
 ## The rule this repository runs on
 
 Measure before you decide, and record what you measured.
@@ -198,7 +211,7 @@ reporting only the one it chose.
 
 ## Read more
 
-- `docs/cytokit.md` — the plan, the recipe table and the build order.
+- `docs/cytokit.md` — one section per recipe, with its flags and what it writes.
 - `README.md` — the ten worked analyses in this repository and what each asks.
 - `docs/literature.md` — the paper behind each package.
 
