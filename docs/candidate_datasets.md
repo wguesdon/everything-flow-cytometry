@@ -1,7 +1,7 @@
 # Candidate datasets for the next report
 
 This page lists every dataset in `data/datasets/flowrepository/` that carries a published paper. It
-says what each deposit can test and what it cannot. Nine reports are complete. The first five
+says what each deposit can test and what it cannot. Ten reports are complete. The first six
 entries of the shortlist below are now written, and the page keeps them so that a reader can see why
 each one was chosen.
 
@@ -12,6 +12,7 @@ each one was chosen.
 | FR-FCM-Z2KP | `reports/vanderbeke2021_covid.qmd` | The closest human against automated agreement in the repository, at rho 0.94 or better on three of five measures. |
 | FR-FCM-ZZZV and ZZZU | `reports/flowcap2_challenges.qmd` | Both halves of the benchmark reproduce. One feature classifies the HVTN samples at 0.79 accuracy on the held out half, and the same rule collapses from 0.88 to 0.54 on HEUvsUE. |
 | FR-FCM-ZYRN | `reports/omip58_pytometry.qmd` | The deposit stores an identity spillover matrix and uncompensated values. Four markers defeat both a fitted cut and the clustering, so six of ten claims are unresolved. |
+| FR-FCM-ZYN4 | `reports/omip51_bcell_dc.qmd` | Two detectors carry a marker name that lists two antibodies, and resolving them by antibody transposes two rows of the spillover matrix. Seven of eleven claims reproduce. |
 
 Every accession was read from the local folder on 2026-08-16. Every citation was retrieved from
 Europe PMC on the same date. No citation is written from memory.
@@ -194,7 +195,7 @@ are still inside a zip file.
 
 ## Every accession in the archive
 
-The `Used` column marks the five datasets that a report already covers.
+The `Used` column marks the six datasets that a report already covers.
 
 | Folder | Accession | FCS | Paper | State |
 |---|---|---|---|---|
@@ -214,7 +215,7 @@ The `Used` column marks the five datasets that a report already covers.
 | `OMIP-40` | FR-FCM-ZY6D | 9 | PMID 28834328 | Extracted. The gates are a Cytobank XML with 1877 gate elements |
 | `OMIP-44` | FR-FCM-ZYC2 | 36 | PMID 29356334 | Extracted. No workspace |
 | `OMIP-47` | FR-FCM-ZYFB | 7 | PMID 29782066 | Extracted. No workspace |
-| `OMIP-51` | FR-FCM-ZYN4 | 60 | PMID 30549419 | Extracted. No workspace |
+| `OMIP-51` | FR-FCM-ZYN4 | 60 | PMID 30549419 | Used by `omip51_bcell_dc`. No workspace |
 | `OMIP-60` | FR-FCM-ZYRX | 33 | PMID 31334913 | Extracted. No workspace |
 | `FR-FCM-ZYRN` | FR-FCM-ZYRN | 61 | PMID 31334918 | Used by `omip58_pytometry`. Bead and cell compensation controls |
 | `FR-FCM-Z6UG` | FR-FCM-Z6UG | 8 | none listed | Extracted. Mouse depletion check. A workspace is present |

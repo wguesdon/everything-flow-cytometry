@@ -60,16 +60,6 @@ kOmip58Tokens <- c(
 #' The two populations that are written to disk for the Python side
 kOmip58Handoff <- c("live_lymphocytes", "cd3_t_cells")
 
-#' Split a marker name into lower case tokens
-#'
-#' @param x A character vector of marker names.
-#' @return A list of character vectors, one per input element.
-#' @examples
-#' MarkerTokens("TCR Va7_2 BV711")
-#' @export
-MarkerTokens <- function(x) {
-  strsplit(NormaliseMarkerName(x), " ", fixed = TRUE)
-}
 
 #' Resolve every marker of the OMIP-058 panel to its detector
 #'
@@ -115,74 +105,7 @@ ResolveOmip58Channels <- function(frame, tokens = kOmip58Tokens) {
   do.call(rbind, rows)
 }
 
-#' Name the scatter channels of a frame
-#'
-#' @param frame A `flowFrame`.
-#' @return A named character vector with the elements `forward_area`,
-#'   `forward_height` and `side_area`.
-#' @examples
-#' \dontrun{
-#' Omip58ScatterChannels(frame)
-#' }
-#' @export
-Omip58ScatterChannels <- function(frame) {
-  available <- flowCore::colnames(frame)
-  wanted <- c(forward_area = "FSC-A", forward_height = "FSC-H",
-              side_area = "SSC-A")
-  missing <- wanted[!wanted %in% available]
-  if (length(missing) > 0) {
-    stop("The frame is missing the scatter channel(s): ",
-         paste(missing, collapse = ", "), ".")
-  }
-  wanted
-}
 
-#' Read the compensation state that a file records
-#'
-#' A deposit can carry a real spillover matrix, an identity matrix or no matrix
-#' at all, and the three cases call for three different actions. This reports
-#' which one a file is in, so the choice is made from the file and not from a
-#' convention.
-#'
-#' @param frame A `flowFrame`.
-#' @return A one row `data.frame` with the columns `apply_keyword`,
-#'   `matrix_size`, `largest_off_diagonal` and `state`. `state` is one of
-#'   `"already compensated"`, `"matrix to apply"` or `"no matrix"`.
-#' @examples
-#' \dontrun{
-#' ReadCompensationState(frame)
-#' }
-#' @export
-ReadCompensationState <- function(frame) {
-  keywords <- flowCore::keyword(frame)
-  apply_keyword <- keywords[["APPLY COMPENSATION"]]
-  spillover <- keywords[["SPILL"]]
-  if (is.null(spillover)) {
-    spillover <- keywords[["$SPILLOVER"]]
-  }
-
-  if (is.null(spillover) || !is.matrix(spillover)) {
-    return(data.frame(
-      apply_keyword = if (is.null(apply_keyword)) NA_character_ else
-        as.character(apply_keyword),
-      matrix_size = NA_integer_, largest_off_diagonal = NA_real_,
-      state = "no matrix", stringsAsFactors = FALSE
-    ))
-  }
-
-  off_diagonal <- spillover
-  diag(off_diagonal) <- 0
-  largest <- max(abs(off_diagonal))
-
-  data.frame(
-    apply_keyword = if (is.null(apply_keyword)) NA_character_ else
-      as.character(apply_keyword),
-    matrix_size = nrow(spillover),
-    largest_off_diagonal = largest,
-    state = if (largest == 0) "already compensated" else "matrix to apply",
-    stringsAsFactors = FALSE
-  )
-}
 
 #' Match the OMIP-058 compensation controls to their detectors
 #'
@@ -289,216 +212,11 @@ ComputeOmip58Spillover <- function(control_dir,
   list(spillover = spillover, matches = matches, gateable = gateable)
 }
 
-#' Transform fluorescence values with an inverse hyperbolic sine
-#'
-#' One fixed cofactor is used for every channel and every file. A per file
-#' estimate is not used here, because the two donors are compared to each other
-#' and to a cluster assignment, and a threshold only means the same thing on
-#' both files when both sit on the same scale.
-#'
-#' @param values A numeric matrix of events by channels.
-#' @param channels The columns to transform. The rest are copied through.
-#' @param cofactor The arcsinh cofactor. 150 suits fluorescence from a BD
-#'   instrument that digitises to 262144.
-#' @return A matrix of the same shape.
-#' @examples
-#' TransformOmip58(matrix(c(0, 150, 1500), ncol = 1,
-#'                        dimnames = list(NULL, "V510-A")), "V510-A")
-#' @export
-TransformOmip58 <- function(values, channels, cofactor = 150) {
-  if (!is.matrix(values)) {
-    stop("values must be a matrix, not a ", class(values)[1], ".")
-  }
-  missing <- setdiff(channels, colnames(values))
-  if (length(missing) > 0) {
-    stop("The matrix is missing the channel(s): ",
-         paste(missing, collapse = ", "), ".")
-  }
-  if (cofactor <= 0) {
-    stop("cofactor must be positive, not ", cofactor, ".")
-  }
-  values[, channels] <- asinh(values[, channels, drop = FALSE] / cofactor)
-  values
-}
 
-#' Keep the events whose scatter lies inside the digitiser range
-#'
-#' A file read with `truncate_max_range = FALSE` keeps the events that the
-#' instrument recorded above its own range. On this deposit forward scatter runs
-#' to 115422144 against a stated range of 262144. Those events are not cells and
-#' they move every robust centre that is fitted afterwards.
-#'
-#' @param values A numeric matrix of events by channels.
-#' @param scatter The output of [Omip58ScatterChannels()].
-#' @param limit The top of the digitiser range.
-#' @return A logical vector, one element per event.
-#' @examples
-#' InScatterRange(matrix(c(1, 3e8), ncol = 1,
-#'                       dimnames = list(NULL, "FSC-A")),
-#'                c(forward_area = "FSC-A"))
-#' @export
-InScatterRange <- function(values, scatter, limit = 262144) {
-  keep <- rep(TRUE, nrow(values))
-  for (channel in scatter) {
-    if (!channel %in% colnames(values)) {
-      next
-    }
-    keep <- keep & values[, channel] > 0 & values[, channel] <= limit
-  }
-  keep
-}
 
-#' Remove the doublets on the ratio of forward scatter height to area
-#'
-#' A doublet passes the laser for longer than a singlet, so its pulse area grows
-#' while its pulse height does not. The ratio of height to area is therefore
-#' lower for a doublet, and the singlets form the upper mode. The cut is a
-#' robust one sided distance below the median, because the population above the
-#' median is the one to keep and a symmetric rule would trim the largest
-#' singlets for no reason.
-#'
-#' [SingletMask()] in R/spectral.R is the symmetric rule that the other reports
-#' use. The names differ because `tests/testthat.R` sources every file in `R/`
-#' into one environment.
-#'
-#' @param values A numeric matrix of events by channels.
-#' @param scatter The output of [Omip58ScatterChannels()].
-#' @param deviations How many median absolute deviations below the median the
-#'   cut sits.
-#' @return A logical vector, one element per event.
-#' @examples
-#' \dontrun{
-#' Omip58SingletMask(values, scatter)
-#' }
-#' @export
-Omip58SingletMask <- function(values, scatter, deviations = 3) {
-  area <- values[, scatter[["forward_area"]]]
-  height <- values[, scatter[["forward_height"]]]
-  ratio <- height / area
-  centre <- stats::median(ratio)
-  spread <- stats::mad(ratio)
-  if (!is.finite(spread) || spread == 0) {
-    return(rep(TRUE, nrow(values)))
-  }
-  ratio >= centre - deviations * spread
-}
 
-#' Gate the lymphocytes on forward and side scatter
-#'
-#' Side scatter is cut first at the density minimum above the lowest mode, which
-#' is the boundary between the lymphocytes and the monocytes. A robust bivariate
-#' centre is then fitted inside that population to remove the debris that
-#' remains.
-#'
-#' @param values A numeric matrix of events by channels.
-#' @param scatter The output of [Omip58ScatterChannels()].
-#' `robustbase::covMcd` draws random subsets, so the fit moves between runs
-#' unless the generator is set. Two runs of this hierarchy differed by 1,714
-#' live lymphocytes of 600,000 before the seed was added, which is small but it
-#' means a number in a report cannot be reproduced exactly.
-#'
-#' @param quantile_limit The chi squared quantile that bounds the Mahalanobis
-#'   distance from the robust centre.
-#' @param seed The seed for the robust fit.
-#' @return A logical vector, one element per event.
-#' @examples
-#' \dontrun{
-#' LymphocyteMask(values, scatter)
-#' }
-#' @export
-LymphocyteMask <- function(values, scatter, quantile_limit = 0.95,
-                           seed = 42) {
-  side <- values[, scatter[["side_area"]]]
-  side_cut <- DensityCut(side)
-  low_side <- if (is.na(side_cut)) rep(TRUE, nrow(values)) else side < side_cut
-  if (sum(low_side) < 100) {
-    return(low_side)
-  }
 
-  columns <- c(scatter[["forward_area"]], scatter[["side_area"]])
-  pair <- values[low_side, columns, drop = FALSE]
-  centre <- withr::with_seed(seed, {
-    try(robustbase::covMcd(pair, alpha = 0.75), silent = TRUE)
-  })
-  if (methods::is(centre, "try-error")) {
-    return(low_side)
-  }
-  distance <- try(
-    stats::mahalanobis(pair, centre$center, centre$cov), silent = TRUE
-  )
-  if (methods::is(distance, "try-error") || anyNA(distance)) {
-    return(low_side)
-  }
 
-  keep <- low_side
-  keep[low_side] <- distance <= stats::qchisq(quantile_limit, df = 2)
-  if (sum(keep) < 100) {
-    return(low_side)
-  }
-  keep
-}
-
-#' Split a channel at a fitted cut and report which rule placed it
-#'
-#' @param values A numeric matrix of events by channels.
-#' @param channel The column to cut.
-#' @param keep Either `"above"` or `"below"`.
-#' @return A list with `mask`, a logical vector, `cut`, the cut point, and
-#'   `rule`, one of `"density"`, `"mixture"` or `"none"`.
-#' @examples
-#' SplitOnChannel(matrix(c(rnorm(400), rnorm(400, 6)), ncol = 1,
-#'                       dimnames = list(NULL, "x")), "x")$rule
-#' @export
-SplitOnChannel <- function(values, channel, keep = c("above", "below")) {
-  keep <- match.arg(keep)
-  if (!channel %in% colnames(values)) {
-    stop("The matrix has no channel called '", channel, "'.")
-  }
-  column <- values[, channel]
-  resolved <- ResolveCut(column)
-  if (is.na(resolved$cut)) {
-    return(list(mask = rep(NA, length(column)), cut = NA_real_, rule = "none"))
-  }
-  mask <- if (keep == "above") column > resolved$cut else column <= resolved$cut
-  list(mask = mask, cut = resolved$cut, rule = resolved$rule)
-}
-
-#' Measure what a one dimensional cut does to each marker of a parent
-#'
-#' A density cut and a two component mixture both look for a second mode. A
-#' marker carried by a few percent of the parent has no second mode, so the rule
-#' either returns nothing or places the cut inside the negative population and
-#' calls a large fraction of the parent positive. The second failure is the
-#' dangerous one, because it returns a number.
-#'
-#' This runs the cut on every marker named and reports the fraction it would
-#' select, so the failure is a measurement in the report rather than an
-#' assertion.
-#'
-#' @param values A numeric matrix of transformed events by channels.
-#' @param channels The output of [ResolveOmip58Channels()].
-#' @param parent A logical vector selecting the parent population.
-#' @param markers The marker names to assess.
-#' @return A `data.frame` with the columns `marker`, `channel`, `cut`, `rule`
-#'   and `percent_selected`.
-#' @examples
-#' \dontrun{
-#' AssessOneDimensionalCuts(values, channels, cd3, c("Vd1", "Vd2"))
-#' }
-#' @export
-AssessOneDimensionalCuts <- function(values, channels, parent, markers) {
-  rows <- lapply(markers, function(marker) {
-    channel <- channels$channel[channels$name == marker]
-    split <- SplitOnChannel(values[parent, , drop = FALSE], channel, "above")
-    data.frame(
-      marker = marker, channel = channel, cut = split$cut, rule = split$rule,
-      percent_selected = if (split$rule == "none") NA_real_ else
-        100 * mean(split$mask),
-      stringsAsFactors = FALSE
-    )
-  })
-  do.call(rbind, rows)
-}
 
 #' Gate one OMIP-058 PBMC file to the populations a cut can defend
 #'
@@ -547,10 +265,10 @@ GateOmip58File <- function(path, spillover, cofactor = 150,
 
   state <- ReadCompensationState(frame)
   channels <- ResolveOmip58Channels(frame)
-  scatter <- Omip58ScatterChannels(frame)
+  scatter <- PanelScatterChannels(frame)
   frame <- flowCore::compensate(frame, spillover)
 
-  values <- TransformOmip58(flowCore::exprs(frame), channels$channel, cofactor)
+  values <- ArcsinhTransform(flowCore::exprs(frame), channels$channel, cofactor)
   total <- nrow(values)
 
   cuts <- list()
@@ -582,7 +300,7 @@ GateOmip58File <- function(path, spillover, cofactor = 150,
 
   in_range <- InScatterRange(values, scatter)
   singlets <- in_range
-  singlets[in_range] <- Omip58SingletMask(values[in_range, , drop = FALSE],
+  singlets[in_range] <- RatioSingletMask(values[in_range, , drop = FALSE],
                                           scatter)
   lymphocytes <- singlets
   lymphocytes[singlets] <- LymphocyteMask(values[singlets, , drop = FALSE],
@@ -636,31 +354,3 @@ GateOmip58File <- function(path, spillover, cofactor = 150,
   )
 }
 
-#' Write one gated population to an FCS file for the Python side
-#'
-#' The values written are the ones the instrument recorded, which on this
-#' deposit are already compensated. No transform is applied, so the Python side
-#' chooses its own and the file stays readable by any cytometry tool.
-#'
-#' @param frame The `flowFrame` that was gated.
-#' @param mask A logical vector, one element per event of `frame`.
-#' @param path Where to write the file.
-#' @return The number of events written, invisibly.
-#' @examples
-#' \dontrun{
-#' WriteGatedPopulation(frame, mask, "output/omip58/handoff/donor1_cd3.fcs")
-#' }
-#' @export
-WriteGatedPopulation <- function(frame, mask, path) {
-  if (length(mask) != nrow(flowCore::exprs(frame))) {
-    stop("The mask holds ", length(mask), " elements and the frame holds ",
-         nrow(flowCore::exprs(frame)), " events. They must agree.")
-  }
-  if (sum(mask) == 0) {
-    stop("The mask selects no event, so there is nothing to write to ", path,
-         ".")
-  }
-  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-  flowCore::write.FCS(frame[mask, ], path)
-  invisible(sum(mask))
-}

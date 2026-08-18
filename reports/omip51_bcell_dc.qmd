@@ -1,0 +1,471 @@
+---
+title: "B cell and myeloid subsets from a 28 colour panel in OMIP-051"
+subtitle: "The OMIP-051 deposit, FR-FCM-ZYN4, one PBMC file on a 30 parameter panel"
+author: "William Guesdon"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: show
+    code-tools: true
+    embed-resources: true
+    theme: cosmo
+    fig-width: 9
+    fig-height: 6
+execute:
+  echo: true
+  warning: false
+  message: false
+  freeze: auto
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+suppressPackageStartupMessages({
+  library(ggplot2)
+  library(knitr)
+})
+
+kOutputDir <- file.path("..", "output", "omip51")
+
+ReadOutput <- function(name) {
+  path <- file.path(kOutputDir, name)
+  if (!file.exists(path)) {
+    stop(
+      "The analysis output is missing: ", path, "\n",
+      "Run scripts/15_omip51_bcell_dc.R first. ",
+      "See the section 'Data and code availability'."
+    )
+  }
+  read.csv(path, check.names = FALSE)
+}
+
+OutputImage <- function(name) {
+  file.path(kOutputDir, name)
+}
+
+counts <- ReadOutput("gate_counts.csv")
+verdicts <- ReadOutput("claim_verdicts.csv")
+```
+
+## Introduction
+
+Liechti and Roederer published OMIP-051, a 28 colour panel for B cells,
+dendritic cells and monocytes in cryopreserved peripheral blood mononuclear
+cells [1]. Twelve of its markers define B cell subsets and seven define monocyte
+and dendritic cell subsets. The panel resolves transitional, naive, marginal
+zone and memory B cells, plasmablasts, plasmacytoid and myeloid dendritic cells,
+and three subsets of myeloid dendritic cells.
+
+The deposit FR-FCM-ZYN4 holds one PBMC file of 2,126,989 events and 59
+compensation controls, 27 single stains on beads, 27 on cells, two unstained
+bead controls, one unstained cell control and a stained and unstained pair for
+the viability dye. It carries no analysis workspace and no fluorescence minus
+one control.
+
+This report resolves the panel to its detectors, computes the spillover matrix
+from the single stains, gates the hierarchy of Figure 1, and reports each claim
+the paper makes that one file can be asked to test.
+
+## Methods
+
+### The dataset
+
+FR-FCM-ZYN4 was acquired on an X50-E LSRFortessa on 8 May 2018. The sample file
+carries 32 parameters, of which 28 are fluorescence detectors. The compensation
+controls carry between 20,000 and 300,000 events each.
+
+Two detectors carry a marker name that lists two antibodies. `B780-A` is written
+`CD27 or IgD BB790` and `R730-A` is written `IgD Ax700 or CD27 APC-R700`, so a
+match on the antibody resolves CD27 to two channels and IgD to two channels.
+Every marker is therefore resolved by its fluorochrome, with the antibody token
+as the fallback, and the longest fluorochrome name wins so that `PE-Cy5` does
+not resolve a `PE-Cy5.5` detector.
+
+### Preprocessing
+
+The spillover matrix is computed from the deposited single stains with
+`flowStats::spillover_ng`, summarising each stained population by its median
+rather than its mode. Each control is gated on its own detector first, and a
+control whose gate leaves fewer than 500 events is left out and named. The
+controls are matched to their detectors by the same fluorochrome rule as the
+panel.
+
+Fluorescence is transformed with an inverse hyperbolic sine at a cofactor of
+150.
+
+### Gating
+
+The hierarchy follows Figure 1A, 1B and 1G of the paper. Events outside the
+digitiser range are removed, doublets are removed on the line of forward scatter
+height against area, and a robust bivariate centre on forward and side scatter
+selects the cell cloud. That gate keeps the monocytes, unlike the lymphocyte
+gate used elsewhere in this repository, because the next step separates them.
+
+Every threshold below that point is placed at the 99.9th percentile of the
+deposit's unstained cell control. A fitted density minimum and a two component
+mixture are computed at each gate and recorded beside the threshold without
+being used.
+
+The paper places its lymphocyte gate after the B cell gate rather than before
+it, to remove a high scatter population that falls inside the B cell gate. That
+order is kept here so the size of that population can be counted.
+
+### Statistics
+
+Spillover is measured by the correlation between marker pairs, on 100,000
+sampled events inside the singlet gate. Two detectors that carry spillover move
+together whatever the biology says, so the median absolute correlation over
+every pair measures how much spillover remains without needing a gate or a
+threshold.
+
+### Software
+
+The analysis uses flowCore, flowStats, robustbase and ggplot2. Every version is
+pinned in the container.
+
+## Results
+
+### Channel resolution
+
+```{r}
+#| label: channels
+
+kable(
+  ReadOutput("channel_resolution.csv"),
+  caption = "Every marker of the gate hierarchy, and the detector it resolves to.",
+  col.names = c("Marker", "Detector", "Panel entry", "Matched by")
+)
+```
+
+```{r}
+#| label: ambiguous
+
+kable(
+  ReadOutput("ambiguous_markers.csv"),
+  caption = "The two detectors whose marker name lists two antibodies.",
+  col.names = c("Detector", "Panel entry")
+)
+```
+
+All 18 markers of the hierarchy resolve by fluorochrome. The two ambiguous
+detectors resolve to CD27 on `R730-A` and IgD on `B780-A`, which matches Table 2
+of the paper, the names of the control files, and the name of the sample file
+itself, `PBMC 22718_IgD BB790`.
+
+### The compensation state of the deposited file
+
+```{r}
+#| label: compensation-state
+
+kable(
+  ReadOutput("compensation_state.csv"),
+  digits = 4,
+  caption = "The compensation keywords of the PBMC file.",
+  col.names = c("File", "APPLY COMPENSATION", "Matrix size",
+                "Largest off diagonal", "State")
+)
+```
+
+```{r}
+#| label: correlations
+
+kable(
+  ReadOutput("marker_correlation.csv"),
+  digits = 3,
+  caption = "Correlation between markers inside the singlet gate, on 100,000 sampled events.",
+  col.names = c("Compensation", "Median absolute r", "Pairs above 0.5", "Pairs",
+                "CD19 with CD14", "CD20 with CD19", "IgD with CD27")
+)
+```
+
+The file carries `APPLY COMPENSATION` set to TRUE beside a 28 by 28 matrix whose
+largest off diagonal value is zero. The events show that the values still carry
+their spillover. As deposited the median absolute correlation over the 153
+marker pairs is 0.752. Applying the matrix computed from the cell controls takes
+it to 0.287.
+
+CD19 and CD20 mark the same cells. Before compensation they correlate at 0.608
+and after it at 0.764, which is the direction a co-expressed pair should move.
+CD19 and CD14 mark different cells, and that pair moves from 0.262 to -0.526.
+
+### The spillover matrix from the single stains
+
+```{r}
+#| label: gateability
+
+gateable <- ReadOutput("control_gateability.csv")
+usable <- aggregate(gateable ~ control_set, data = gateable,
+                    FUN = function(x) c(usable = sum(x), total = length(x)))
+kable(
+  data.frame(control_set = usable$control_set,
+             usable = usable$gateable[, "usable"],
+             total = usable$gateable[, "total"]),
+  caption = "How many controls of each set could be gated on their own detector.",
+  col.names = c("Control set", "Usable", "Total")
+)
+```
+
+```{r}
+#| label: dropped
+
+kable(
+  gateable[!gateable$gateable,
+           c("control_set", "stain", "channel", "gated_events")],
+  caption = "Every control that could not be gated, with the events its gate returned.",
+  col.names = c("Control set", "Stain", "Detector", "Events after the gate")
+)
+```
+
+```{r}
+#| label: spillover-heatmap
+#| fig-cap: "The spillover matrix computed from the cell single stains. The diagonal is dropped, because it is 1 everywhere and would set the colour scale."
+
+knitr::include_graphics(OutputImage("spillover_heatmap.png"))
+```
+
+```{r}
+#| label: agreement
+
+kable(
+  ReadOutput("spillover_agreement.csv"),
+  digits = 3,
+  caption = "The two matrices compared on the detectors they share.",
+  col.names = c("Shared detectors", "Correlation", "Cells only", "Beads only")
+)
+```
+
+The bead controls yield 27 usable stains of 27 and the cell controls 25 of 28.
+The three that fail are CD141, CD16 and IgM, whose gates return 86, 13 and 145
+events. The two matrices agree at a correlation of 0.870 on the 24 detectors
+they share. The cell matrix is applied here, because it covers the viability
+detector and the beads carry no control for it.
+
+### The gate hierarchy
+
+```{r}
+#| label: gate-counts
+
+kable(
+  counts[, c("population", "parent", "events", "percent_of_parent")],
+  digits = 2,
+  caption = "The gate hierarchy of Figure 1.",
+  col.names = c("Population", "Parent", "Events", "Percent of parent")
+)
+```
+
+```{r}
+#| label: gate-counts-figure
+#| fig-cap: "Every population of the hierarchy, on a log scale."
+
+knitr::include_graphics(OutputImage("gate_counts.png"))
+```
+
+```{r}
+#| label: gate-cuts
+
+kable(
+  ReadOutput("gate_cuts.csv")[, c("label", "marker", "cut", "density_cut",
+                                  "mixture_cut", "parent_events")],
+  digits = 3,
+  caption = "Every threshold, on the arcsinh scale, beside the two fitted rules that were computed and not used.",
+  col.names = c("Gate", "Marker", "Threshold used", "Density cut",
+                "Mixture cut", "Parent events")
+)
+```
+
+Monocytes are 8.17 percent of the viable events. Inside the CD14 negative cells,
+29.04 percent carry HLA-DR or CD20, and 57.55 percent of those are B cells.
+Within the dendritic cell parent, 13.42 percent are plasmacytoid and 23.80
+percent are myeloid.
+
+The threshold column and the density column disagree on two gates. On the
+viability channel the fitted minimum lands at -1.296 and keeps 13.4 percent of
+the cell cloud, where the unstained control keeps 97.35 percent. On CD14 the
+fitted minimum lands at -1.956 and calls 83.4 percent of the viable events
+positive, where the mixture fit gives 8.4 percent and the unstained control
+gives 8.2 percent. Two independent references agreeing to within 0.2 points is
+what puts the threshold where it is.
+
+### The population inside the B cell gate that is not a B cell
+
+The paper places its lymphocyte gate after the B cell gate rather than before
+it, and states why.
+
+> In some cases, an unusual population of SSC-AhighFSC-Ahigh cells can be
+> identified within CD19+CD20+/- B cells. These cells show similar FSC-A/SSC-A
+> characteristics to monocytes and were, therefore, excluded from the down-stream
+> analysis of B cells by applying a lymphocyte gate after gating B cells.
+
+Keeping that order makes the population countable. It holds 12.77 percent of the
+events inside the B cell gate of this file.
+
+### B cell subsets
+
+```{r}
+#| label: b-subsets
+
+subsets <- counts[counts$parent %in% c("b_lymphocytes", "mature_b"), ]
+kable(
+  subsets[, c("population", "parent", "events", "percent_of_parent")],
+  digits = 2,
+  caption = "The subsets of Figure 1C, cut on the thresholds from the unstained control.",
+  col.names = c("Population", "Parent", "Events", "Percent of parent")
+)
+```
+
+Marginal zone B cells are 18.59 percent of B cells. Naive cells are 43.46
+percent of mature B cells, IgD positive CD27 positive cells 48.59 percent and
+IgD negative cells 7.95 percent. The plasmablast gate holds no events.
+
+Transitional B cells come to 20.51 percent of B cells. That is far above the few
+percent the literature reports, and it is the clearest sign of what an unstained
+control cannot do. It carries none of the spillover that the other 27 dyes put
+into a channel, so every threshold it sets is lower than a fluorescence minus
+one control would set, and every positive fraction is therefore an upper bound.
+
+### One dimensional cuts inside the B cell and dendritic cell gates
+
+```{r}
+#| label: one-dimensional
+
+kable(
+  ReadOutput("one_dimensional_cuts.csv"),
+  digits = 3,
+  caption = "A fitted cut on each marker of the lower hierarchy, and the share of the parent it selects.",
+  col.names = c("Marker", "Detector", "Cut", "Rule", "Percent selected",
+                "Parent")
+)
+```
+
+A fitted cut selects 99.87 percent of B cells on IgM, 96.92 percent on CD85j and
+87.40 percent on IgD. Inside the myeloid dendritic cells it selects 84.40
+percent on CD141 and 62.66 percent on CD1c, for three subsets that the paper
+separates on those two markers. These are the same markers whose thresholds the
+unstained control has to supply, and neither reference resolves the three
+myeloid dendritic cell subsets on this file.
+
+### Claim verdicts
+
+```{r}
+#| label: verdicts
+
+kable(
+  verdicts[, c("claim_id", "short_name", "expected", "observed", "verdict")],
+  caption = "Every claim the paper makes that one file could be asked to test.",
+  col.names = c("Claim", "What the paper says", "Expected", "Measured",
+                "Verdict")
+)
+```
+
+```{r}
+#| label: verdict-counts
+
+kable(
+  ReadOutput("verdict_counts.csv"),
+  caption = "How the eleven claims came out.",
+  col.names = c("Verdict", "Claims")
+)
+```
+
+## Discussion
+
+### Principal findings
+
+Two deposits from this laboratory carry an identity spillover matrix beside
+`APPLY COMPENSATION` set to TRUE, and in both the events still carry their
+spillover. On this file the median absolute correlation over 153 marker pairs is
+0.752 before compensation and 0.287 after it. The keyword is not evidence about
+the data, and the correlation between marker pairs settles it without a gate or
+a threshold.
+
+A marker name that lists two antibodies breaks a name match in both directions.
+Resolving `IgD BB790` by its antibody sent that control to the APC-R700
+detector, which transposes two rows of the matrix. The result passed no check
+and looked plausible until CD19 and CD20, which mark the same cells, came out
+anticorrelated at -0.700. The fluorochrome resolves both the panel and the
+controls, and it is the part of the name that the deposit never leaves
+ambiguous.
+
+One threshold rule beats a rule that chooses per marker. The fitted density
+minimum fails on two of the seven gates here, and it fails silently by returning
+a number: 83.4 percent of viable events called CD14 positive. The deposit's
+unstained cell control gives one threshold for every channel, and on CD14 it
+lands within 0.2 percentage points of an independent mixture fit.
+
+The paper's ordering of the lymphocyte gate is worth keeping. Placed after the B
+cell gate rather than before it, it makes the contaminating population countable
+at 12.77 percent of that gate rather than removing it unseen.
+
+### Limitations of the thresholds
+
+An unstained control is not a fluorescence minus one control. It carries none of
+the spillover that the other 27 dyes put into a channel, so it sets every
+threshold too low and every positive fraction it produces is an upper bound.
+Transitional B cells at 20.51 percent of B cells, against the few percent the
+literature reports, is the size of that effect on a dim marker.
+
+Three claims are unresolved for that reason, and they are recorded as unresolved
+rather than as measurements. The deposit carries no fluorescence minus one
+control, and no method applied to this file alone supplies one.
+
+### Limitations of the deposit
+
+The deposit holds one PBMC file from one donor. Nothing here separates a
+difference between donors from a difference between experiments, and the paper
+draws every panel of its Figure 1 from the same single individual.
+
+Three cell controls could not be gated, so the matrix applied here is built from
+25 of the 28 stains. Two of the three, CD141 and CD16, are markers the myeloid
+dendritic cell subsets depend on.
+
+The plasmablast gate holds no events. Plasmablasts are a fraction of a percent
+of B cells at steady state, and the gate that should find them here rests on a
+CD20 threshold from the same unstained control, inside a parent of 12,649
+events.
+
+## Data and code availability
+
+```bash
+# Pull the accession, about 2.0 GB of the 103 GB archive
+./sync.sh pull datasets/flowrepository/OMIP-51
+
+# Build the container. Every package version is pinned and asserted at build time.
+./containers/build.sh
+
+# The analysis
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  Rscript scripts/15_omip51_bcell_dc.R
+
+# This report
+podman run --rm -v "$PWD:/work:z" -w /work everything-flow-cytometry:latest \
+  quarto render reports/omip51_bcell_dc.qmd
+```
+
+The claims live in `gating/omip51_paper_claims.csv`, each with the sentence it
+came from. The panel and its fluorochromes are in `R/omip51.R`, and the helpers
+that any deposit in this repository can use are in `R/panels.R`.
+
+```{r}
+#| label: session-info
+
+sessionInfo()
+```
+
+## References
+
+[1] Liechti T, Roederer M. OMIP-051 - 28-color flow cytometry panel to
+characterize B cells and myeloid cells. Cytometry A 2019;95(2):150-155. PMID
+30549419. PMC6546165. doi:10.1002/cyto.a.23689.
+
+[2] Hahne F, LeMeur N, Brinkman RR, Ellis B, Haaland P, Sarkar D, Spidlen J,
+Strain E, Gentleman R. flowCore: a Bioconductor package for high throughput flow
+cytometry. BMC Bioinformatics 2009;10:106. PMID 19358741.
+doi:10.1186/1471-2105-10-106.
+
+[3] Rousseeuw PJ, Van Driessen K. A fast algorithm for the minimum covariance
+determinant estimator. Technometrics 1999;41(3):212-223.
+doi:10.1080/00401706.1999.10485670.

@@ -24,6 +24,7 @@ source(file.path("R", "io.R"))
 source(file.path("R", "compensation.R"))
 source(file.path("R", "spillover_compute.R"))
 source(file.path("R", "naive_memory.R"))
+source(file.path("R", "panels.R"))
 source(file.path("R", "omip58.R"))
 
 # Several steps below draw random subsets. robustbase::covMcd does, and so does
@@ -139,11 +140,11 @@ CorrelationSummary <- function(frame, spillover_matrix, label, donor) {
     frame <- compensate(frame, spillover_matrix)
   }
   channels <- ResolveOmip58Channels(frame)
-  scatter <- Omip58ScatterChannels(frame)
-  values <- TransformOmip58(exprs(frame), channels$channel)
+  scatter <- PanelScatterChannels(frame)
+  values <- ArcsinhTransform(exprs(frame), channels$channel)
   in_range <- InScatterRange(values, scatter)
   singlets <- in_range
-  singlets[in_range] <- Omip58SingletMask(values[in_range, , drop = FALSE],
+  singlets[in_range] <- RatioSingletMask(values[in_range, , drop = FALSE],
                                           scatter)
   lymphocytes <- singlets
   lymphocytes[singlets] <- LymphocyteMask(values[singlets, , drop = FALSE],
