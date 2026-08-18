@@ -139,6 +139,19 @@ def main() -> int:
             if name not in headings:
                 problems.append(f"{document} has no section for the ready recipe {name}")
 
+    # A flag the help names and the recipe rejects strands an agent on an
+    # error that reads like its own fault.
+    for name, flags in sorted(flags_in_usage().items()):
+        recipe = Path("scripts/cytokit") / f"{name}.R"
+        if not recipe.exists():
+            problems.append(f"the help names {name} and scripts/cytokit/{name}.R is missing")
+            continue
+        unknown = flags - accepted_flags(recipe)
+        if unknown:
+            problems.append(
+                f"the help gives {name} the flag(s) {sorted(unknown)} which it does not accept"
+            )
+
     # README.md tells a stranger what is built. A sentence that lags the CLI is
     # the first thing they read and the last thing anybody edits.
     readme = Path("README.md")
@@ -162,6 +175,40 @@ def main() -> int:
         return 1
     print("\nThe CLI and all three adapters agree.")
     return 0
+
+
+def flags_in_usage() -> dict[str, set[str]]:
+    """Read the flags the CLI help gives to each recipe.
+
+    Returns:
+        A mapping from recipe name to the flags its usage block names.
+    """
+    text = CLI.read_text()
+    usage = text[text.index("Usage:"):text.index("  cytokit list")]
+    claimed: dict[str, set[str]] = {}
+    recipe = None
+    for line in usage.splitlines():
+        match = re.match(r"^  cytokit (\w+)\s", line)
+        if match:
+            recipe = match.group(1)
+            claimed.setdefault(recipe, set())
+        if recipe:
+            claimed[recipe].update(re.findall(r"--([a-z-]+)", line))
+    return claimed
+
+
+def accepted_flags(path: Path) -> set[str]:
+    """Read the arguments and flags a recipe accepts.
+
+    Args:
+        path: The recipe under scripts/cytokit/.
+
+    Returns:
+        Every name its ParseCytokitArguments call allows.
+    """
+    source = path.read_text()
+    block = source[source.index("ParseCytokitArguments"):]
+    return set(re.findall(r'"([a-z-]+)"', block[:block.index(")\n")]))
 
 
 def document_states(path: Path) -> dict[str, str]:
