@@ -321,6 +321,21 @@ ComputeSpilloverFromControls <- function(flow_set,
     }
   }
 
+  # spillover_ng renames every sample of the set to the channel its match file
+  # names, and it does not drop a sample that the match file leaves out. A set
+  # that holds a second unstained control therefore reaches the naming step one
+  # sample longer than the channel list, and the call fails with a length
+  # mismatch. Subsetting to the match file first is what keeps the two in step.
+  listed <- utils::read.csv(match_file, stringsAsFactors = FALSE)
+  present <- flowCore::sampleNames(flow_set)
+  missing <- setdiff(listed$filename, present)
+  if (length(missing) > 0) {
+    stop("The match file names ", length(missing),
+         " file(s) that the set does not hold: ",
+         paste(missing, collapse = ", "), ".")
+  }
+  flow_set <- flow_set[listed$filename]
+
   flowStats::spillover_ng(
     flow_set,
     fsc = fsc,
@@ -525,4 +540,80 @@ CheckControlQuality <- function(flow_set,
 
   result <- do.call(rbind, rows)
   result[order(result$positive_percent), ]
+}
+
+#' Find the controls that the spillover gate cannot resolve
+#'
+#' [flowStats::spillover_ng()] gates each stained control on its own detector
+#' with [flowStats::rangeGate()], asking for two peaks. A marker that only a
+#' minority of the control cells carry does not present two peaks, the gate
+#' fails, and the whole matrix fails with it. One failure out of 28 is enough to
+#' return nothing at all.
+#'
+#' This runs the same two attempts that `spillover_ng` runs, so a control that
+#' passes here passes there. Testing first turns a fatal error into a named list
+#' of controls to leave out.
+#'
+#' @param flow_set A `flowSet` of compensation controls.
+#' @param match_table The output of [MatchControlsToChannels()], or of a deposit
+#'   specific wrapper around it.
+#' A gate that succeeds can still leave a population too small to summarise.
+#' `spillover()` fits a robust bivariate centre on whatever the gate returned,
+#' and that fit needs more than three events. `min_events` rejects those cases
+#' as well, because they fail later and with a message that names no control.
+#'
+#' @param scale_factor The width of the scatter pregate.
+#' @param min_events The smallest gated population that is accepted.
+#' @return A `data.frame` with the columns `filename`, `stain`, `channel`,
+#'   `gated_events` and `gateable`.
+#' @examples
+#' \dontrun{
+#' GateableControls(controls, matches)
+#' }
+#' @export
+GateableControls <- function(flow_set, match_table, scale_factor = 2,
+                             min_events = 500) {
+  usable <- match_table[match_table$matched_by != "none" &
+                          match_table$channel != "unstained", ]
+  if (nrow(usable) == 0) {
+    stop("No stained control was matched to a channel, so none can be tested.")
+  }
+
+  # The order below is the order `spillover_ng` uses. It gates on the stained
+  # detector first and applies the scatter filter afterwards, so a test that
+  # filters first passes controls that the real call then rejects.
+  gated_events <- vapply(seq_len(nrow(usable)), function(index) {
+    frame <- flow_set[[usable$filename[index]]]
+    channel <- usable$channel[index]
+    gate <- try(flowStats::rangeGate(frame, stain = channel, inBetween = TRUE,
+                                     borderQuant = 0, absolute = FALSE,
+                                     peakNr = 2), silent = TRUE)
+    if (methods::is(gate, "try-error")) {
+      gate <- try(flowStats::rangeGate(frame, stain = channel,
+                                       inBetween = TRUE, borderQuant = 1,
+                                       absolute = FALSE, peakNr = 2),
+                  silent = TRUE)
+    }
+    if (methods::is(gate, "try-error")) {
+      return(0L)
+    }
+    gated <- try(flowCore::Subset(frame, gate), silent = TRUE)
+    if (methods::is(gated, "try-error")) {
+      return(0L)
+    }
+    filtered <- try(flowCore::Subset(
+      gated, flowStats::norm2Filter("FSC-A", "SSC-A",
+                                    scale.factor = scale_factor)
+    ), silent = TRUE)
+    if (methods::is(filtered, "try-error")) {
+      return(0L)
+    }
+    nrow(flowCore::exprs(filtered))
+  }, integer(1))
+
+  data.frame(
+    filename = usable$filename, stain = usable$stain, channel = usable$channel,
+    gated_events = gated_events, gateable = gated_events >= min_events,
+    stringsAsFactors = FALSE
+  )
 }
