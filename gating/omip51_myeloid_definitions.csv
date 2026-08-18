@@ -1,0 +1,6 @@
+cell_type,CD19,CD20,HLADR,CD123,CD11c,CD1c,CD141,CD16,note
+Plasmacytoid dendritic cells,neg,neg,pos,pos,neg,neg,neg,neg,"CD123 positive CD11c negative."
+CD1c positive myeloid dendritic cells,neg,neg,pos,neg,pos,pos,neg,,"The classical subset presenting through MHC class II."
+CD141 positive myeloid dendritic cells,neg,neg,pos,neg,pos,neg,pos,,"Cross presenting on MHC class I."
+Double negative myeloid dendritic cells,neg,neg,pos,neg,pos,neg,neg,pos,"CD1c and CD141 negative with CD16. The paper defines these as a CD14 low CD16 positive population."
+B cells,pos,pos,pos,neg,neg,neg,neg,neg,"Carried into the dendritic cell parent by the CD19 and CD20 thresholds."

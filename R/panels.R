@@ -443,3 +443,129 @@ UnstainedThresholds <- function(path, channels, spillover = NULL,
     channels$name
   )
 }
+
+#' Draw a gate hierarchy from a table of counts
+#'
+#' A `GatingSet` draws its own tree, but a hierarchy built from event masks has
+#' no object to ask. This lays the tree out from the `population` and `parent`
+#' columns, so any analysis that records those two can show its flow.
+#'
+#' @param counts A `data.frame` with the columns `population`, `parent`,
+#'   `events` and `percent_of_parent`. The root carries `NA` as its parent.
+#' @param title The plot title.
+#' @return A `ggplot` object.
+#' @examples
+#' \dontrun{
+#' PlotGateTree(counts)
+#' }
+#' @export
+PlotGateTree <- function(counts, title = "Gate hierarchy") {
+  required <- c("population", "parent", "events", "percent_of_parent")
+  missing <- setdiff(required, colnames(counts))
+  if (length(missing) > 0) {
+    stop("counts is missing the column(s): ", paste(missing, collapse = ", "),
+         ".")
+  }
+
+  depth <- rep(NA_integer_, nrow(counts))
+  depth[is.na(counts$parent)] <- 0L
+  for (pass in seq_len(nrow(counts))) {
+    for (index in which(is.na(depth))) {
+      parent_at <- match(counts$parent[index], counts$population)
+      if (!is.na(parent_at) && !is.na(depth[parent_at])) {
+        depth[index] <- depth[parent_at] + 1L
+      }
+    }
+    if (!anyNA(depth)) {
+      break
+    }
+  }
+  if (anyNA(depth)) {
+    stop("These populations name a parent that is not in the table: ",
+         paste(counts$population[is.na(depth)], collapse = ", "), ".")
+  }
+
+  order_by_depth <- order(depth, seq_len(nrow(counts)))
+  position <- stats::setNames(seq_len(nrow(counts)), counts$population[order_by_depth])
+  nodes <- data.frame(
+    population = counts$population,
+    depth = depth,
+    y = -unname(position[counts$population]),
+    label = sprintf("%s\n%s (%.1f%%)", counts$population,
+                    format(counts$events, big.mark = ","),
+                    counts$percent_of_parent),
+    stringsAsFactors = FALSE
+  )
+
+  edges <- counts[!is.na(counts$parent), c("population", "parent")]
+  edges$x <- nodes$depth[match(edges$parent, nodes$population)]
+  edges$y <- nodes$y[match(edges$parent, nodes$population)]
+  edges$xend <- nodes$depth[match(edges$population, nodes$population)]
+  edges$yend <- nodes$y[match(edges$population, nodes$population)]
+
+  ggplot2::ggplot() +
+    ggplot2::geom_segment(
+      data = edges,
+      ggplot2::aes(x = .data$x, y = .data$y, xend = .data$xend,
+                   yend = .data$yend),
+      colour = "grey65"
+    ) +
+    ggplot2::geom_label(
+      data = nodes,
+      ggplot2::aes(x = .data$depth, y = .data$y, label = .data$label),
+      hjust = 0, size = 2.6, label.size = 0.2, fill = "white"
+    ) +
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(c(0.02, 0.25))) +
+    ggplot2::labs(title = title, x = NULL, y = NULL) +
+    ggplot2::theme_void(base_size = 11) +
+    ggplot2::theme(plot.title = ggplot2::element_text(size = 12))
+}
+
+#' Draw one gate as a two dimensional plot with its thresholds
+#'
+#' @param values A numeric matrix of transformed events by channels.
+#' @param parent A logical vector selecting the parent population.
+#' @param x The channel on the horizontal axis.
+#' @param y The channel on the vertical axis.
+#' @param x_label The label for the horizontal axis.
+#' @param y_label The label for the vertical axis.
+#' @param x_threshold A vertical line to draw, or `NA`.
+#' @param y_threshold A horizontal line to draw, or `NA`.
+#' @param title The panel title.
+#' @param max_points How many events to draw. The rest are dropped, because a
+#'   panel of a million points is a black rectangle and a slow render.
+#' @param seed The seed for the subsample.
+#' @return A `ggplot` object.
+#' @examples
+#' \dontrun{
+#' PlotGatePair(values, parent, "FSC-A", "SSC-A")
+#' }
+#' @export
+PlotGatePair <- function(values, parent, x, y, x_label = x, y_label = y,
+                         x_threshold = NA_real_, y_threshold = NA_real_,
+                         title = NULL, max_points = 40000, seed = 42) {
+  for (channel in c(x, y)) {
+    if (!channel %in% colnames(values)) {
+      stop("The matrix has no channel called '", channel, "'.")
+    }
+  }
+  rows <- which(parent)
+  if (length(rows) > max_points) {
+    rows <- withr::with_seed(seed, sample(rows, max_points))
+  }
+  frame <- data.frame(x = values[rows, x], y = values[rows, y])
+
+  plot <- ggplot2::ggplot(frame, ggplot2::aes(x = .data$x, y = .data$y)) +
+    ggplot2::geom_point(size = 0.1, alpha = 0.25, colour = "grey25") +
+    ggplot2::labs(title = title, x = x_label, y = y_label) +
+    ggplot2::theme_minimal(base_size = 10)
+  if (!is.na(x_threshold)) {
+    plot <- plot + ggplot2::geom_vline(xintercept = x_threshold,
+                                       colour = "firebrick", linewidth = 0.4)
+  }
+  if (!is.na(y_threshold)) {
+    plot <- plot + ggplot2::geom_hline(yintercept = y_threshold,
+                                       colour = "firebrick", linewidth = 0.4)
+  }
+  plot
+}

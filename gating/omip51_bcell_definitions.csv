@@ -1,0 +1,10 @@
+cell_type,CD10,CD20,CD27,IgD,IgM,IgG,IgA,CD21,CD85j,note
+Transitional B cells,pos,pos,neg,pos,pos,,,,,"CD10 positive. The immature subset that arrives from the bone marrow."
+Naive B cells,neg,pos,neg,pos,pos,neg,neg,,,"IgD positive CD27 negative. The largest B cell subset in blood."
+Marginal zone B cells,neg,pos,pos,pos,pos,neg,neg,,,"IgD positive CD27 positive IgM positive. The paper places this subset at up to 20 percent of B cells."
+IgD only memory B cells,neg,pos,pos,pos,neg,neg,neg,,,"IgD positive CD27 positive IgM negative."
+IgG memory B cells,neg,pos,pos,neg,neg,pos,neg,,,"Class switched memory carrying IgG."
+IgA memory B cells,neg,pos,pos,neg,neg,neg,pos,,,"Class switched memory carrying IgA."
+Double negative B cells,neg,pos,neg,neg,,,,,,"IgD negative CD27 negative."
+Plasmablasts,neg,neg,high,neg,neg,,,,,"CD20 low with the highest CD27. Rare at steady state."
+Exhausted B cells,neg,pos,,,,,,neg,high,"CD21 low CD85j high. The paper reports this phenotype under chronic stimulation."

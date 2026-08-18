@@ -114,6 +114,20 @@ The paper places its lymphocyte gate after the B cell gate rather than before
 it, to remove a high scatter population that falls inside the B cell gate. That
 order is kept here so the size of that population can be counted.
 
+### Clustering
+
+Clustering is run as a second route to the same subsets, because it reads every
+marker at once and needs no threshold. The B cells are clustered on CD10, CD20,
+CD27, IgD, IgM, IgG, IgA, CD21 and CD85j, and the dendritic cell parent on CD19,
+CD20, HLA-DR, CD123, CD11c, CD1c, CD141 and CD16.
+
+Each population is sampled to 50,000 events, clustered with FlowSOM on a 10 by
+10 grid into 12 metaclusters for the B cells and 10 for the myeloid cells, and
+embedded with UMAP on the same channels. Every cluster is labelled by scoring
+its median expression against a table of population definitions, and the margin
+over the runner up is reported, because a small margin means the label is a
+close call. Every step takes a fixed seed.
+
 ### Statistics
 
 Spillover is measured by the correlation between marker pairs, on 100,000
@@ -258,10 +272,17 @@ kable(
 ```
 
 ```{r}
-#| label: gate-counts-figure
-#| fig-cap: "Every population of the hierarchy, on a log scale."
+#| label: gate-tree
+#| fig-cap: "The hierarchy, with the events and the percentage of the parent at each node."
 
-knitr::include_graphics(OutputImage("gate_counts.png"))
+knitr::include_graphics(OutputImage("gate_tree.png"))
+```
+
+```{r}
+#| label: gating-flow
+#| fig-cap: "The gating flow, one panel per boundary, drawn as Figure 1A of the paper draws it. The red line is the threshold that was applied. Each panel shows at most 40,000 events."
+
+knitr::include_graphics(OutputImage("gating_flow.png"))
 ```
 
 ```{r}
@@ -348,6 +369,83 @@ separates on those two markers. These are the same markers whose thresholds the
 unstained control has to supply, and neither reference resolves the three
 myeloid dendritic cell subsets on this file.
 
+### Clustering, a second route
+
+```{r}
+#| label: umap-b
+
+knitr::include_graphics(OutputImage("umap_b_cells.png"))
+```
+
+```{r}
+#| label: b-annotation
+
+kable(
+  ReadOutput("bcell_cluster_annotation.csv")[, c("cluster", "events",
+                                                 "percent_of_total",
+                                                 "cell_type", "runner_up",
+                                                 "margin")],
+  digits = 3,
+  caption = "Every B cell metacluster, the definition it best matched, and the margin over the runner up.",
+  col.names = c("Cluster", "Events", "Percent", "Population", "Runner up",
+                "Margin")
+)
+```
+
+```{r}
+#| label: umap-myeloid
+
+knitr::include_graphics(OutputImage("umap_myeloid.png"))
+```
+
+```{r}
+#| label: myeloid-annotation
+
+kable(
+  ReadOutput("myeloid_cluster_annotation.csv")[, c("cluster", "events",
+                                                   "percent_of_total",
+                                                   "cell_type", "runner_up",
+                                                   "margin")],
+  digits = 3,
+  caption = "Every myeloid metacluster, the definition it best matched, and the margin over the runner up.",
+  col.names = c("Cluster", "Events", "Percent", "Population", "Runner up",
+                "Margin")
+)
+```
+
+```{r}
+#| label: route-comparison
+
+kable(
+  ReadOutput("route_comparison.csv"),
+  digits = 2,
+  caption = "The two routes on the populations that carry a name in both, each as a percentage of its own parent.",
+  col.names = c("Population", "Gate population", "Clustering percent",
+                "Gate percent")
+)
+```
+
+The two routes disagree, and the clustering sits closer to the published
+expectation on every population where the two can be compared. Transitional B
+cells are 4.04 percent by clustering against 20.51 percent by threshold, and the
+literature places them at a few percent. Naive B cells are 67.58 percent against
+43.46 percent, and they are the largest B cell subset in blood.
+
+The plasmablast gate holds no events. The clustering labels one metacluster of
+137 events as plasmablasts, on the combination of low CD20 with the highest CD27
+that defines them. A threshold on CD20 inside the IgD negative cells could not
+find that population, and reading nine markers at once did.
+
+The myeloid clustering labels all three of the subsets that CD1c and CD141
+define, where a fitted cut on either marker selects most of the parent. It also
+labels one metacluster of 20,759 events as B cells, which is 41.52 percent of
+the dendritic cell parent. Those are B cells that the CD19 and CD20 thresholds
+left behind, and they are the same upper bound showing up from the other side.
+
+Six of the ten myeloid metaclusters take the CD141 positive label, which totals
+more than that subset holds in blood. The margins there run from 0.02 to 0.12,
+which is what a close call looks like in this table.
+
 ### Claim verdicts
 
 ```{r}
@@ -400,6 +498,13 @@ The paper's ordering of the lymphocyte gate is worth keeping. Placed after the B
 cell gate rather than before it, it makes the contaminating population countable
 at 12.77 percent of that gate rather than removing it unseen.
 
+Clustering recovers what the thresholds miss. It finds a plasmablast cluster of
+137 events where the gate finds none, it labels all three myeloid dendritic cell
+subsets where a fitted cut on CD1c or CD141 selects most of the parent, and it
+puts transitional B cells at 4.04 percent against the threshold's 20.51 percent.
+Nine markers read together carry information that nine markers read one at a
+time do not.
+
 ### Limitations of the thresholds
 
 An unstained control is not a fluorescence minus one control. It carries none of
@@ -408,9 +513,16 @@ threshold too low and every positive fraction it produces is an upper bound.
 Transitional B cells at 20.51 percent of B cells, against the few percent the
 literature reports, is the size of that effect on a dim marker.
 
-Three claims are unresolved for that reason, and they are recorded as unresolved
-rather than as measurements. The deposit carries no fluorescence minus one
-control, and no method applied to this file alone supplies one.
+The clustering shows the size of that effect from a second direction. It labels
+41.52 percent of the dendritic cell parent as B cells, which are B cells the
+CD19 and CD20 thresholds let through, and it cuts transitional B cells by a
+factor of five. Where the two routes disagree, the threshold is the one reading
+high.
+
+Clustering is not free of the same problem. Six of its ten myeloid metaclusters
+take the CD141 positive label, which is more than that subset holds in blood,
+and the margins there run from 0.02 to 0.12. A label with a margin that small is
+a close call rather than an answer, and the table says which ones they are.
 
 ### Limitations of the deposit
 
@@ -422,10 +534,12 @@ Three cell controls could not be gated, so the matrix applied here is built from
 25 of the 28 stains. Two of the three, CD141 and CD16, are markers the myeloid
 dendritic cell subsets depend on.
 
-The plasmablast gate holds no events. Plasmablasts are a fraction of a percent
-of B cells at steady state, and the gate that should find them here rests on a
-CD20 threshold from the same unstained control, inside a parent of 12,649
-events.
+The plasmablast gate holds no events, and the clustering finds 137. Plasmablasts
+are a fraction of a percent of B cells at steady state, and the gate that should
+find them rests on a CD20 threshold from the same unstained control, inside a
+parent of 12,649 events. One cluster of 137 events out of 50,000 sampled is a
+small number to build a conclusion on, and this report does not build one on it
+beyond saying the population is there.
 
 ## Data and code availability
 

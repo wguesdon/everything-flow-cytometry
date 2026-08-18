@@ -20,10 +20,13 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(robustbase)
   library(withr)
+  library(patchwork)
+  library(FlowSOM)
+  library(uwot)
 })
 
 for (module in c("io", "compensation", "spillover_compute", "naive_memory",
-                 "panels", "omip51")) {
+                 "panels", "clustering", "omip51")) {
   source(file.path("R", paste0(module, ".R")))
 }
 
@@ -225,23 +228,156 @@ scatter_removed <- 100 * (Events("b_cells") - Events("b_lymphocytes")) /
 Say("\n  high scatter events inside the B cell gate: ",
     round(scatter_removed, 2), " percent")
 
-figure <- ggplot(
-  counts[counts$population != "all_events", ],
-  aes(x = stats::reorder(population, events), y = events)
-) +
-  geom_col(fill = "grey35") +
-  scale_y_log10() +
-  coord_flip() +
-  labs(x = NULL, y = "Events, log scale") +
-  theme_minimal(base_size = 12)
-ggsave(file.path(kOutputDir, "gate_counts.png"), figure, width = 8, height = 5,
+ggsave(
+  file.path(kOutputDir, "gate_tree.png"),
+  PlotGateTree(counts, title = "OMIP-051 gate hierarchy, one PBMC file"),
+  width = 11, height = 8, dpi = 150
+)
+
+# The gating flow as Figure 1A draws it, one panel per boundary, with the
+# threshold that was applied.
+transformed <- ArcsinhTransform(exprs(gated$frame), channels$channel,
+                                gated$cofactor)
+scatter <- PanelScatterChannels(gated$frame)
+Ch <- function(name) channels$channel[channels$name == name]
+Threshold <- function(name) {
+  row <- gated$cuts[gated$cuts$marker == name, ]
+  if (nrow(row) == 0) NA_real_ else row$cut[1]
+}
+masks <- gated$masks
+
+panels <- list(
+  PlotGatePair(transformed, masks[["in_scatter_range"]],
+               scatter[["forward_area"]], scatter[["forward_height"]],
+               "FSC-A", "FSC-H", title = "Singlets"),
+  PlotGatePair(transformed, masks[["singlets"]], scatter[["forward_area"]],
+               scatter[["side_area"]], "FSC-A", "SSC-A", title = "Cells"),
+  PlotGatePair(transformed, masks[["cells"]], scatter[["forward_area"]],
+               Ch("viability"), "FSC-A", "Live Dead UV Blue",
+               y_threshold = Threshold("viability"), title = "Viable"),
+  PlotGatePair(transformed, masks[["viable"]], Ch("CD14"),
+               scatter[["side_area"]], "CD14", "SSC-A",
+               x_threshold = Threshold("CD14"), title = "Monocytes"),
+  PlotGatePair(transformed, masks[["cd14_negative"]], Ch("HLADR"), Ch("CD20"),
+               "HLA-DR", "CD20", x_threshold = Threshold("HLADR"),
+               y_threshold = Threshold("CD20"),
+               title = "B and myeloid cells"),
+  PlotGatePair(transformed, masks[["b_and_myeloid"]], Ch("CD19"), Ch("CD20"),
+               "CD19", "CD20", x_threshold = Threshold("CD19"),
+               y_threshold = Threshold("CD20"), title = "B cells"),
+  PlotGatePair(transformed, masks[["b_cells"]], scatter[["side_area"]],
+               scatter[["forward_area"]], "SSC-A", "FSC-A",
+               title = "Lymphocyte gate, after the B cell gate"),
+  PlotGatePair(transformed, masks[["dendritic_parent"]], Ch("CD11c"),
+               Ch("CD123"), "CD11c", "CD123",
+               x_threshold = Threshold("CD11c"),
+               y_threshold = Threshold("CD123"), title = "Dendritic cells")
+)
+ggsave(file.path(kOutputDir, "gating_flow.png"),
+       patchwork::wrap_plots(panels, ncol = 2), width = 9, height = 16,
        dpi = 150)
+Say("  wrote gate_tree.png and gating_flow.png")
 
 # ---------------------------------------------------------------------------
-# Part 5. The claims.
+# Part 5. Clustering, a second route to the same subsets.
 # ---------------------------------------------------------------------------
 
-Say("\nPart 5: the claims")
+Say("\nPart 5: clustering")
+
+# The gate reads one marker at a time and needs a threshold for each. Clustering
+# reads every marker at once and needs none, so it is a second route to the
+# subsets whose thresholds the unstained control had to supply.
+ClusterRoute <- function(mask, markers, definitions_path, label,
+                         n_metaclusters = 12, subsample = 50000) {
+  detectors <- channels$channel[channels$name %in% markers]
+  events <- transformed[mask, detectors, drop = FALSE]
+  colnames(events) <- channels$name[match(detectors, channels$channel)]
+  sampled <- SubsampleEvents(events, n = subsample, seed = kSeed)
+
+  clustering <- RunFlowSomClustering(sampled, colnames(sampled),
+                                     n_metaclusters = n_metaclusters,
+                                     scale_channels = TRUE, seed = kSeed)
+  medians <- ClusterMedianExpression(sampled, clustering$metacluster,
+                                     colnames(sampled))
+  definitions <- ReadCellTypeDefinitions(definitions_path)
+  annotation <- AnnotateClusters(medians, definitions)
+
+  embedding <- RunUmapEmbedding(sampled, colnames(sampled), seed = kSeed)
+  embedding$cell_type <- annotation$cell_type[
+    match(clustering$metacluster, annotation$cluster)
+  ]
+
+  figure <- ggplot(embedding, aes(x = umap_1, y = umap_2, colour = cell_type)) +
+    geom_point(size = 0.2, alpha = 0.5) +
+    guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+    labs(title = paste0(label, ", ", nrow(sampled), " events"),
+         x = "UMAP 1", y = "UMAP 2", colour = NULL) +
+    theme_minimal(base_size = 11)
+  ggsave(file.path(kOutputDir, paste0("umap_", label, ".png")), figure,
+         width = 9, height = 6.5, dpi = 150)
+
+  list(medians = medians, annotation = annotation,
+       summary = SummariseCellTypes(annotation))
+}
+
+b_markers <- c("CD10", "CD20", "CD27", "IgD", "IgM", "IgG", "IgA", "CD21",
+               "CD85j")
+b_route <- ClusterRoute(gated$masks[["b_lymphocytes"]], b_markers,
+                        file.path(kGatingDir, "omip51_bcell_definitions.csv"),
+                        "b_cells")
+Write(cbind(cluster = rownames(b_route$medians),
+            as.data.frame(b_route$medians)), "bcell_cluster_medians.csv")
+Write(b_route$annotation, "bcell_cluster_annotation.csv")
+Write(b_route$summary, "bcell_cluster_summary.csv")
+Say("  B cell clusters:")
+print(b_route$annotation[, c("cluster", "events", "percent_of_total",
+                             "cell_type", "margin")],
+      row.names = FALSE, digits = 3)
+
+myeloid_markers <- c("CD19", "CD20", "HLADR", "CD123", "CD11c", "CD1c",
+                     "CD141", "CD16")
+myeloid_route <- ClusterRoute(
+  gated$masks[["dendritic_parent"]], myeloid_markers,
+  file.path(kGatingDir, "omip51_myeloid_definitions.csv"), "myeloid",
+  n_metaclusters = 10
+)
+Write(cbind(cluster = rownames(myeloid_route$medians),
+            as.data.frame(myeloid_route$medians)), "myeloid_cluster_medians.csv")
+Write(myeloid_route$annotation, "myeloid_cluster_annotation.csv")
+Write(myeloid_route$summary, "myeloid_cluster_summary.csv")
+Say("\n  myeloid clusters:")
+print(myeloid_route$annotation[, c("cluster", "events", "percent_of_total",
+                                   "cell_type", "margin")],
+      row.names = FALSE, digits = 3)
+
+# The two routes side by side, where a population carries a name in both.
+gate_percent <- function(name) {
+  value <- counts$percent_of_parent[counts$population == name]
+  if (length(value) == 0) NA_real_ else value
+}
+route_map <- data.frame(
+  cell_type = c("Transitional B cells", "Naive B cells",
+                "Marginal zone B cells", "IgD only memory B cells",
+                "Plasmablasts"),
+  gate_population = c("transitional_b", "naive_b", "marginal_zone_b",
+                      "igd_only_memory_b", "plasmablasts"),
+  stringsAsFactors = FALSE
+)
+route_map$clustering_percent <- b_route$summary$percent_of_total[
+  match(route_map$cell_type, b_route$summary$cell_type)
+]
+route_map$gate_percent <- vapply(route_map$gate_population, gate_percent,
+                                 numeric(1))
+route_map$clustering_percent[is.na(route_map$clustering_percent)] <- 0
+Write(route_map, "route_comparison.csv")
+Say("\n  the two routes, as a percentage of their own parent:")
+print(route_map, row.names = FALSE, digits = 3)
+
+# ---------------------------------------------------------------------------
+# Part 6. The claims.
+# ---------------------------------------------------------------------------
+
+Say("\nPart 6: the claims")
 
 Percent <- function(name) counts$percent_of_parent[counts$population == name]
 Events <- function(name) counts$events[counts$population == name]
@@ -266,16 +402,27 @@ Add(1, paste0("marginal zone B cells are ", round(mz, 2),
               " percent of B cells"), mz <= 20)
 
 plasmablasts <- Events("plasmablasts")
-Add(2, paste0("the plasmablast gate holds ", plasmablasts, " events"),
-    plasmablasts > 0)
+clustered_plasmablasts <- b_route$summary$events[
+  b_route$summary$cell_type == "Plasmablasts"
+]
+if (length(clustered_plasmablasts) == 0) clustered_plasmablasts <- 0
+Add(2, paste0("the threshold gate holds ", plasmablasts,
+              " events and the clustering labels one cluster of ",
+              clustered_plasmablasts), clustered_plasmablasts > 0)
 
 # The threshold comes from an unstained control and not from a fluorescence
 # minus one control, so it carries none of the spillover the other 27 dyes put
 # into a channel. Where the frequency it produces is far from what the paper
 # describes, the claim is unresolved rather than refuted.
 transitional <- Percent("transitional_b")
+clustered_transitional <- b_route$summary$percent_of_total[
+  b_route$summary$cell_type == "Transitional B cells"
+]
+if (length(clustered_transitional) == 0) clustered_transitional <- 0
 Add(3, paste0("the CD10 threshold selects ", round(transitional, 2),
-              " percent of B cells as transitional"), NA)
+              " percent of B cells and the clustering labels ",
+              round(clustered_transitional, 2), " percent"),
+    clustered_transitional > 0)
 
 Add(4, paste0("naive cells are ", round(Percent("naive_b"),
               2), " percent, IgD positive CD27 positive cells ",
@@ -309,11 +456,17 @@ Add(9, paste0("plasmacytoid cells are ",
 # CD1c and CD141 are two of the markers whose fitted cut selects most of the
 # parent, so the three subsets cannot be separated on this file.
 mdc_rows <- gated$rare[gated$rare$parent == "myeloid_dendritic_cells", ]
+myeloid_found <- myeloid_route$summary$cell_type
+subsets_found <- sum(c("CD1c positive myeloid dendritic cells",
+                       "CD141 positive myeloid dendritic cells",
+                       "Double negative myeloid dendritic cells") %in%
+                       myeloid_found)
 Add(10, paste0("a fitted cut selects ",
                round(mdc_rows$percent_selected[mdc_rows$marker == "CD1c"], 1),
                " percent of myeloid dendritic cells on CD1c and ",
                round(mdc_rows$percent_selected[mdc_rows$marker == "CD141"], 1),
-               " percent on CD141"), NA)
+               " percent on CD141, and the clustering labels ", subsets_found,
+               " of the three subsets"), subsets_found == 3)
 
 Add(11, paste0(nrow(channels), " of the 28 markers were resolved to a detector"),
     NA)
