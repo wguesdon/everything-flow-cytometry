@@ -40,6 +40,7 @@ Render one with `quarto render reports/<name>.qmd` after you run the script it n
 | `reports/oetjen2018_bone_marrow.qmd` | FR-FCM-ZYQ9 and FR-FCM-ZYQB | Human bone marrow by flow cytometry and by mass cytometry, and a viability channel that runs backwards |
 | `reports/vanderbeke2021_covid.qmd` | FR-FCM-Z2KP, 49 COVID-19 samples | How close an automated rule gets to a deposited workspace that gates every sample |
 | `reports/flowcap2_challenges.qmd` | FR-FCM-ZZZV and FR-FCM-ZZZU | The two FlowCAP II classification challenges, entered with one gated feature |
+| `reports/omip58_pytometry.qmd` | FR-FCM-ZYRN, OMIP-058 | A workflow split across R and Python, and which markers defeat both halves of it |
 
 The spectral report covers the only Cytek Aurora dataset in the archive. It holds 83 files, 35 markers
 and 23 million events, and eight of the paper's ten flow claims reproduce from it.
@@ -58,7 +59,7 @@ The repository is at an early stage. The table below states what is ready and wh
 | `docs/datasets.md` | Ready. Every repository count was checked on 2026-08-13. |
 | `data/` and `sync.sh` | Ready. About 103 GB of FCS files and reference code, held in S3. |
 | `examples/` | Empty. It needs the analysis scripts and a container. |
-| `reports/` | Eight reports render and their scripts run in the container. The prose was written by kimi-k3 through opencode, against the brief in `prompts/rewrite_report_as_prose.md`. |
+| `reports/` | Nine reports render and their scripts run in the container. The prose of the first eight was written by kimi-k3 through opencode, against the brief in `prompts/rewrite_report_as_prose.md`. |
 | Agent skills | Not started. They come after the example code runs. |
 
 ## Contents

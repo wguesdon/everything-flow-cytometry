@@ -74,7 +74,7 @@ The paper column is complete. Every reference in it was retrieved from Europe PM
 | FlowKit | PyPI | Read FCS files. Apply compensation and transformation. Import a FlowJo workspace. | White 2021 | |
 | readfcs | PyPI | Read an FCS file into an AnnData object. | None | |
 | flowsom | PyPI | Run the FlowSOM algorithm in Python. The PyPI summary calls it the complete FlowSOM package known from R. | Couckuyt 2024 | Checked 2026-08-16. PyPI version 0.2.2. |
-| Pytometry | PyPI | Analyse flow and mass cytometry data in the scanpy ecosystem. | Büttner 2022, a preprint | Checked 2026-08-13. The last PyPI release is from September 2024. |
+| Pytometry | PyPI | Analyse flow and mass cytometry data in the scanpy ecosystem. | Büttner 2022, a preprint | Installed at 0.1.6. Used by `reports/omip58_pytometry.qmd`. Checked 2026-08-18. |
 | cytoflow | PyPI and GitHub | Build a reproducible analysis workflow with a graphical interface. | Teague 2026 | Checked 2026-08-13. The PyPI record is four years behind the GitHub release. Install from GitHub. |
 | scanpy | PyPI | Downstream analysis on an AnnData object. | Wolf 2018 | |
 
