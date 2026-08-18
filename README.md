@@ -25,6 +25,24 @@ Start with these two documents. They are the reference part of the repository.
 The two documents point at each other. Read `docs/packages.md` to choose a tool. Read
 [the last section of `docs/literature.md`](docs/literature.md#papers-behind-the-packages) to cite it.
 
+## Analyse your own data
+
+The ten analyses below are hard wired to one FlowRepository accession each. To run
+the same methods on your own FCS files, use `cytokit`, which is the command
+surface an agent can drive.
+
+```bash
+./cli/cytokit list                              # the recipes and their state
+./cli/cytokit inspect --data path/to/your/fcs   # panel, markers, compensation state
+```
+
+`inspect`, `template` and `definitions` are built. The rest are planned, and
+`docs/cytokit_prd.md` holds the plan. `skills/` carries an adapter for Claude
+Code, Codex and opencode, so the same guidance reaches whichever agent you use.
+
+Your data path is mounted read only. An FCS file is a measurement that cannot be
+taken again.
+
 ## Reports
 
 Each report runs an analysis on a public dataset and writes down what worked and what did not.
@@ -86,6 +104,9 @@ The repository is at an early stage. The table below states what is ready and wh
 | `scripts/z282_derive_metadata.py` | Turn the FR-FCM-Z282 spreadsheet and file names into the committed CSV files in `gating/` |
 | `scripts/check_prose_rewrite.py` | Compare a rewritten report with its git revision and refuse a changed chunk, an em dash or an invented number |
 | `scripts/check_report_numbers.py` | Look for every number in a report's prose in the CSV files that the same analysis wrote, so a re-run cannot leave a sentence stale |
+| `scripts/check_skill_adapters.py` | Compare the three skill adapters with the `cytokit` CLI, so an adapter cannot send an agent to a command that does not exist |
+| `cli/cytokit` | The command surface for analysing your own FCS files |
+| `skills/` | One thin adapter per host tool, all pointing at that CLI |
 | `R/figures.R` and `scripts/figure_style.py` | The figure style, shared by both languages. Every figure is 300 dpi and every discrete scale is colour vision safe |
 | `gating/` | The gating templates, the cut points and the paper claims, each one a CSV a reviewer can read |
 | `reports/` | The Quarto source of each analysis, listed above. Render one to read it |

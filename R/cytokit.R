@@ -1,0 +1,371 @@
+# The shared parts of every cytokit recipe.
+#
+# cytokit is the command surface that an agent calls. It exists because every
+# analysis in this repository is hard wired to one FlowRepository accession, and
+# a scientist arriving with their own FCS files has no way in. A recipe here
+# reads a path that the caller supplies and writes one bundle, so the same step
+# works on any panel.
+#
+# The recipes themselves live in scripts/cytokit/. This file holds what they all
+# need: the argument parser, the bundle, and the readers that describe a panel.
+#
+# tests/testthat.R sources every file in this folder into one environment, and
+# the second definition of a name silently replaces the first. Check that a name
+# is free before you add it.
+
+# A recipe writes here unless the caller says otherwise. The path is relative to
+# the working directory, which the CLI sets to the repository root.
+kCytokitOutputRoot <- "output"
+
+#' Read the `--key value` arguments of a recipe
+#'
+#' Every recipe takes its arguments in one form, so the parser is shared. An
+#' argument the recipe does not name is an error rather than a value that is
+#' dropped in silence, because a misspelled flag would otherwise change nothing
+#' and report success.
+#'
+#' @param arguments A character vector, normally from `commandArgs(TRUE)`.
+#' @param allowed The argument names the recipe accepts, without the `--`.
+#' @param required The names that must be present.
+#' @param flags The names that take no value and become `TRUE` when present.
+#' @return A named list of character values, plus `TRUE` for each flag given.
+#' @examples
+#' ParseCytokitArguments(c("--data", "a.fcs"), allowed = "data")
+#' @export
+ParseCytokitArguments <- function(arguments, allowed, required = character(0),
+                                  flags = character(0)) {
+  parsed <- list()
+  index <- 1
+  while (index <= length(arguments)) {
+    token <- arguments[index]
+    if (!startsWith(token, "--")) {
+      stop("Expected an argument beginning with '--', found '", token, "'.")
+    }
+    name <- substring(token, 3)
+    if (!name %in% c(allowed, flags)) {
+      stop("Unknown argument '--", name, "'. This recipe accepts: ",
+           paste(sort(c(allowed, flags)), collapse = ", "), ".")
+    }
+    if (name %in% flags) {
+      parsed[[name]] <- TRUE
+      index <- index + 1
+      next
+    }
+    if (index + 1 > length(arguments) ||
+        startsWith(arguments[index + 1], "--")) {
+      stop("The argument '--", name, "' needs a value.")
+    }
+    parsed[[name]] <- arguments[index + 1]
+    index <- index + 2
+  }
+  missing <- setdiff(required, names(parsed))
+  if (length(missing) > 0) {
+    stop("These arguments are required: ",
+         paste(paste0("--", missing), collapse = ", "), ".")
+  }
+  parsed
+}
+
+#' The timestamp that names a bundle
+#'
+#' @param at A `POSIXct` time. Defaults to now.
+#' @return A string in `YYYY_MM_DD_HHMMSS` form.
+#' @examples
+#' CytokitTimestamp(as.POSIXct("2026-08-18 16:30:45", tz = "UTC"))
+#' @export
+CytokitTimestamp <- function(at = Sys.time()) {
+  format(at, "%Y_%m_%d_%H%M%S")
+}
+
+#' Create the folder that one recipe writes into
+#'
+#' A recipe writes one folder and nothing outside it, so a run can be read,
+#' copied or deleted whole.
+#'
+#' @param recipe The recipe name, for example `"inspect"`.
+#' @param label A short name for the input, used in the folder name.
+#' @param out_root The folder to create the bundle inside.
+#' @param timestamp The timestamp to use. Defaults to now.
+#' @return The bundle path.
+#' @examples
+#' \dontrun{
+#' OpenCytokitBundle("inspect", "study")
+#' }
+#' @export
+OpenCytokitBundle <- function(recipe, label, out_root = kCytokitOutputRoot,
+                              timestamp = CytokitTimestamp()) {
+  safe <- gsub("[^A-Za-z0-9]+", "_", label)
+  safe <- gsub("^_+|_+$", "", safe)
+  if (!nzchar(safe)) {
+    safe <- "input"
+  }
+  bundle <- file.path(out_root, paste0(recipe, "_", safe, "_", timestamp))
+  dir.create(bundle, recursive = TRUE, showWarnings = FALSE)
+  bundle
+}
+
+#' Write a table into a bundle
+#'
+#' @param bundle The bundle path.
+#' @param frame The `data.frame` to write.
+#' @param name The file name, with the `.csv` extension.
+#' @return The path, invisibly.
+#' @examples
+#' \dontrun{
+#' WriteBundleTable(bundle, panel, "panel.csv")
+#' }
+#' @export
+WriteBundleTable <- function(bundle, frame, name) {
+  path <- file.path(bundle, name)
+  utils::write.csv(frame, path, row.names = FALSE)
+  invisible(path)
+}
+
+#' Record what produced a bundle
+#'
+#' The manifest is what makes a result answerable later. It carries the recipe,
+#' every argument, the checksum of every input and the digest of the image, so a
+#' number in a report can be traced to the run that produced it and to the files
+#' that run read.
+#'
+#' @param bundle The bundle path.
+#' @param recipe The recipe name.
+#' @param arguments The parsed argument list.
+#' @param inputs The input files that were read.
+#' @param command The command line to repeat the run.
+#' @return The bundle path, invisibly.
+#' @examples
+#' \dontrun{
+#' CloseCytokitBundle(bundle, "inspect", arguments, files, command)
+#' }
+#' @export
+CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
+                               command = NA_character_) {
+  checksums <- if (length(inputs) > 0) {
+    present <- inputs[file.exists(inputs)]
+    stats::setNames(as.character(tools::md5sum(present)), basename(present))
+  } else {
+    list()
+  }
+
+  record <- list(
+    recipe = recipe,
+    written_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
+    arguments = arguments,
+    inputs = as.list(checksums),
+    image = Sys.getenv("CYTOKIT_IMAGE", unset = NA_character_),
+    image_digest = Sys.getenv("CYTOKIT_IMAGE_DIGEST", unset = NA_character_),
+    r_version = paste(R.version$major, R.version$minor, sep = ".")
+  )
+
+  path <- file.path(bundle, "manifest.json")
+  if (requireNamespace("jsonlite", quietly = TRUE)) {
+    writeLines(jsonlite::toJSON(record, auto_unbox = TRUE, pretty = TRUE,
+                                null = "null"), path)
+  } else {
+    # A manifest a person can still read is better than none.
+    writeLines(paste0(names(unlist(record)), ": ", unlist(record)), path)
+  }
+
+  writeLines(utils::capture.output(utils::sessionInfo()),
+             file.path(bundle, "session_info.txt"))
+
+  writeLines(c(
+    paste("#", recipe),
+    "",
+    "This folder was written by one cytokit run. To produce it again:",
+    "",
+    "```bash",
+    if (is.na(command)) paste("cytokit", recipe, "...") else command,
+    "```",
+    "",
+    "`manifest.json` records every argument and the checksum of every input.",
+    "`session_info.txt` records every package version."
+  ), file.path(bundle, "REPRODUCE.md"))
+
+  invisible(bundle)
+}
+
+#' Show a path as the caller typed it
+#'
+#' A recipe runs inside the container and sees `/indata` and `/outdata`. A person
+#' reading the output typed a host path, and a command printed with the container
+#' path in it cannot be run. The CLI records the host paths in the environment so
+#' that anything printed can be mapped back.
+#'
+#' @param path A path as the recipe sees it.
+#' @return The path as the caller typed it, when the mapping is known.
+#' @examples
+#' DisplayPath("/indata")
+#' @export
+DisplayPath <- function(path) {
+  if (is.null(path) || is.na(path)) {
+    return(path)
+  }
+  data_host <- Sys.getenv("CYTOKIT_DATA_HOST", unset = "")
+  out_host <- Sys.getenv("CYTOKIT_OUT_HOST", unset = "")
+  if (nzchar(data_host)) {
+    path <- sub("^/indata/?", paste0(data_host, "/"), path)
+    path <- sub("/$", "", path)
+  }
+  if (nzchar(out_host)) {
+    path <- sub("^/outdata/?", paste0(dirname(out_host), "/"), path)
+  }
+  path
+}
+
+#' List the FCS files at a path
+#'
+#' A recipe takes one file or a folder of them, because a scientist has either.
+#'
+#' @param path A file or a folder.
+#' @param recursive Whether to descend into sub folders.
+#' @return A character vector of file paths, sorted.
+#' @examples
+#' \dontrun{
+#' FcsFilesIn("study/")
+#' }
+#' @export
+FcsFilesIn <- function(path, recursive = FALSE) {
+  if (!file.exists(path)) {
+    stop("The path does not exist: ", path)
+  }
+  if (!dir.exists(path)) {
+    return(path)
+  }
+  files <- list.files(path, pattern = "\\.fcs$", ignore.case = TRUE,
+                      full.names = TRUE, recursive = recursive)
+  if (length(files) == 0) {
+    stop("No FCS file was found in ", path,
+         if (recursive) "." else ". Add --recursive to look in sub folders.")
+  }
+  sort(files)
+}
+
+#' Describe one FCS file without reading its events
+#'
+#' The header carries the event count, the parameter count, the instrument and
+#' the compensation keywords. Reading only the header keeps this fast on a file
+#' of millions of events.
+#'
+#' @param path The FCS file.
+#' @return A one row `data.frame`.
+#' @examples
+#' \dontrun{
+#' DescribeFcsFile("study/sample.fcs")
+#' }
+#' @export
+DescribeFcsFile <- function(path) {
+  frame <- flowCore::read.FCS(path, which.lines = 1, truncate_max_range = FALSE,
+                              transformation = FALSE)
+  keywords <- flowCore::keyword(frame)
+  Keyword <- function(name) {
+    value <- keywords[[name]]
+    if (is.null(value) || length(value) != 1) NA_character_ else
+      as.character(value)
+  }
+  state <- ReadCompensationState(frame)
+
+  data.frame(
+    file = basename(path),
+    events = suppressWarnings(as.integer(Keyword("$TOT"))),
+    parameters = suppressWarnings(as.integer(Keyword("$PAR"))),
+    cytometer = Keyword("$CYT"),
+    acquired = Keyword("$DATE"),
+    compensation_state = state$state,
+    apply_compensation = state$apply_keyword,
+    matrix_size = state$matrix_size,
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Describe the panel of one FCS file, one row per detector
+#'
+#' The marker names are what an agent needs to draft a gating template or a cell
+#' type definitions table, so this reports them beside the detector and says
+#' which detectors are scatter and which carry a stain.
+#'
+#' @param path The FCS file.
+#' @return A `data.frame` with one row per parameter.
+#' @examples
+#' \dontrun{
+#' DescribeFcsPanel("study/sample.fcs")
+#' }
+#' @export
+DescribeFcsPanel <- function(path) {
+  frame <- flowCore::read.FCS(path, which.lines = 1, truncate_max_range = FALSE,
+                              transformation = FALSE)
+  channels <- DescribeChannels(frame)
+  parameters <- flowCore::pData(flowCore::parameters(frame))
+
+  is_scatter <- grepl("^(FSC|SSC)", channels$channel, ignore.case = TRUE)
+  is_time <- grepl("^time$", channels$channel, ignore.case = TRUE)
+
+  data.frame(
+    channel = channels$channel,
+    marker = channels$marker,
+    kind = ifelse(is_scatter, "scatter",
+                  ifelse(is_time, "time",
+                         ifelse(channels$is_marker, "stain", "unnamed"))),
+    range = suppressWarnings(as.numeric(parameters$range)),
+    minimum = suppressWarnings(as.numeric(parameters$minRange)),
+    maximum = suppressWarnings(as.numeric(parameters$maxRange)),
+    stringsAsFactors = FALSE
+  )
+}
+
+#' The marker names of a panel, in the form a table column needs
+#'
+#' A definitions table has one column per marker, and a gating template names a
+#' marker in its `dims` column. Both need a name for each fluorescence detector.
+#'
+#' Many deposits leave the `$PnS` keyword empty, so the file names no markers at
+#' all. The detector name then stands in for the marker, because a table has to
+#' have a column name and `APC-A` is at least true. It is not the antibody, so a
+#' scientist has to supply that mapping before a label means anything.
+#'
+#' @param panel The output of [DescribeFcsPanel()].
+#' @param fallback Whether to use the detector name when a detector carries no
+#'   marker. `FALSE` returns only the detectors the file actually named.
+#' @return A character vector of names, without the scatter and time detectors.
+#' @examples
+#' \dontrun{
+#' PanelMarkers(DescribeFcsPanel("study/sample.fcs"))
+#' }
+#' @export
+PanelMarkers <- function(panel, fallback = TRUE) {
+  named <- panel[panel$kind == "stain", , drop = FALSE]
+  names <- named$marker[nzchar(named$marker)]
+  if (!fallback) {
+    return(unique(names))
+  }
+  unnamed <- panel$channel[panel$kind == "unnamed"]
+  unique(c(names, unnamed))
+}
+
+#' Report whether a panel names its markers
+#'
+#' A file with no `$PnS` keyword forces every later step to work from detector
+#' names. That has to be said once, plainly, rather than discovered when a cell
+#' type label turns out to mean nothing.
+#'
+#' @param panel The output of [DescribeFcsPanel()].
+#' @return A one row `data.frame` with the counts and a `state`.
+#' @examples
+#' \dontrun{
+#' PanelNamingState(DescribeFcsPanel("study/sample.fcs"))
+#' }
+#' @export
+PanelNamingState <- function(panel) {
+  named <- sum(panel$kind == "stain")
+  unnamed <- sum(panel$kind == "unnamed")
+  state <- if (named == 0 && unnamed > 0) {
+    "no marker names"
+  } else if (unnamed > 0) {
+    "some detectors unnamed"
+  } else {
+    "every detector named"
+  }
+  data.frame(named = named, unnamed = unnamed, state = state,
+             stringsAsFactors = FALSE)
+}

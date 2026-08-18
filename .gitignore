@@ -41,9 +41,11 @@ reports/*.html
 # Transfer logs
 logs/*.log
 
-# Agent instruction files, kept local for now
-CLAUDE.md
-AGENTS.md
+# The root agent instruction files, kept local for now. The leading slash
+# matters: without it the rule also hides skills/codex/AGENTS.md, which is an
+# adapter that has to ship.
+/CLAUDE.md
+/AGENTS.md
 
 # Session working notes, kept local
 SESSION_SUMMARY.md

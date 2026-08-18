@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# cytokit: the command surface for analysing your own flow cytometry data.
+#
+# An agent calls this and never calls R directly. Every recipe runs inside the
+# pinned Podman image, reads the data path read only, and writes one bundle under
+# the output path.
+#
+# The data path is mounted read only on purpose. An FCS file is a measurement that
+# cannot be taken again, and no analysis needs to write to its input.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+IMAGE="${CYTOKIT_IMAGE:-everything-flow-cytometry:latest}"
+
+# A recipe here writes a timestamped bundle. The others write one file that the
+# caller names, so they take no label and no output root.
+BUNDLE_RECIPES="inspect compensate gate cluster annotate proportions compare claims"
+
+usage() {
+    cat <<'EOF'
+cytokit — flow cytometry analysis you can drive from a conversation
+
+Usage:
+  cytokit inspect     --data PATH [--recursive] [--out DIR] [--label NAME]
+  cytokit template    --data PATH --out FILE [--force]
+  cytokit definitions --data PATH --out FILE [--markers "CD3,CD4"]
+                                             [--populations "T cells,B cells"]
+                                             [--force]
+
+  cytokit list        show the recipes and their state
+  cytokit build       build the analysis image
+  cytokit shell       open a shell in the image
+  cytokit version     print the image and the R version
+
+Start with inspect. It reports the panel, the markers and the compensation
+state, and every later recipe reads what it prints.
+
+A gating template and a cell type definitions table are per panel, so nobody
+arrives with one. template and definitions write a valid empty file with the
+panel's markers in it, for you to fill in with the scientist.
+
+Paths are read on the host. The data path is mounted read only.
+EOF
+}
+
+require_podman() {
+    if ! command -v podman >/dev/null 2>&1; then
+        echo "Error: podman is not installed or is not on PATH." >&2
+        exit 1
+    fi
+}
+
+require_image() {
+    require_podman
+    if ! podman image exists "$IMAGE"; then
+        echo "Error: the image $IMAGE does not exist." >&2
+        echo "Build it with:  cytokit build" >&2
+        exit 1
+    fi
+}
+
+# The recipe needs the data on a path inside the container. The host path is
+# resolved here so that a relative path, a symlink and ~ all work.
+absolute() {
+    local path="$1"
+    if [[ -d "$path" ]]; then
+        (cd "$path" && pwd)
+    else
+        local dir
+        dir="$(cd "$(dirname "$path")" && pwd)"
+        echo "$dir/$(basename "$path")"
+    fi
+}
+
+run_recipe() {
+    local recipe="$1"; shift
+    require_image
+
+    local data_host="" out_host="" args=() index=1
+    local -a passthrough=()
+
+    # --data is mounted read only. --out is mounted read and write when it points
+    # outside the repository, because the bundle has to land where it was asked
+    # for and not inside the image.
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --data) data_host="$(absolute "${2:?--data needs a path}")"
+                    # A folder becomes /indata. A single file keeps its name
+                    # inside /indata, because its parent is what gets mounted.
+                    if [[ -d "$data_host" ]]; then
+                        passthrough+=(--data "/indata")
+                    else
+                        passthrough+=(--data "/indata/$(basename "$data_host")")
+                    fi
+                    shift 2 ;;
+            --out)  out_host="${2:?--out needs a path}"; shift 2 ;;
+            *)      passthrough+=("$1"); shift ;;
+        esac
+    done
+
+    local mounts=(--volume "$REPO_ROOT:/work:z")
+    if [[ -n "$data_host" ]]; then
+        if [[ -d "$data_host" ]]; then
+            mounts+=(--volume "$data_host:/indata:ro,z")
+        else
+            mounts+=(--volume "$(dirname "$data_host"):/indata:ro,z")
+        fi
+    fi
+
+    # An --out inside the repository already has a mount. One outside needs its
+    # own, and its parent has to exist so that podman does not create a folder
+    # owned by root.
+    if [[ -n "$out_host" ]]; then
+        local out_abs
+        out_abs="$(absolute "$out_host")"
+        if [[ "$out_abs" == "$REPO_ROOT"/* ]]; then
+            passthrough+=(--out "${out_abs#$REPO_ROOT/}")
+        else
+            local out_dir
+            if [[ "$recipe" == "template" || "$recipe" == "definitions" ]]; then
+                out_dir="$(dirname "$out_abs")"
+                mkdir -p "$out_dir"
+                mounts+=(--volume "$out_dir:/outdata:z")
+                passthrough+=(--out "/outdata/$(basename "$out_abs")")
+            else
+                mkdir -p "$out_abs"
+                mounts+=(--volume "$out_abs:/outdata:z")
+                passthrough+=(--out "/outdata")
+            fi
+        fi
+    fi
+
+    # A recipe that writes a bundle names it after the input. The recipe sees
+    # /indata, so the host basename is passed in as the label. A recipe that
+    # writes a single file takes no label.
+    case " $BUNDLE_RECIPES " in
+        *" $recipe "*)
+            if [[ -n "$data_host" ]] &&
+               [[ ! " ${passthrough[*]} " == *" --label "* ]]; then
+                passthrough+=(--label "$(basename "$data_host")")
+            fi
+            ;;
+    esac
+
+    podman run --rm \
+        --userns keep-id \
+        --env "CYTOKIT_IMAGE=$IMAGE" \
+        --env "CYTOKIT_DATA_HOST=${data_host:-}" \
+        --env "CYTOKIT_OUT_HOST=${out_host:-}" \
+        --env "CYTOKIT_IMAGE_DIGEST=$(podman image inspect --format '{{.Digest}}' "$IMAGE" 2>/dev/null || echo unknown)" \
+        "${mounts[@]}" \
+        --workdir /work \
+        "$IMAGE" Rscript "scripts/cytokit/${recipe}.R" "${passthrough[@]}"
+}
+
+case "${1:-help}" in
+    inspect|template|definitions)
+        recipe="$1"; shift
+        run_recipe "$recipe" "$@"
+        ;;
+    list)
+        cat <<'EOF'
+Recipe        State    What it does
+inspect       ready    Panel, markers, event counts, compensation state
+template      ready    An empty openCyto gating template for this panel
+definitions   ready    An empty cell type definitions table for this panel
+compensate    planned  Spillover from single stains, and the correlation check
+gate          planned  Run a template, write counts, a gate tree and the flow
+cluster       planned  FlowSOM and UMAP, inside a gate when asked
+annotate      planned  Label each cluster from a definitions table
+proportions   planned  Per sample frequencies joined to a metadata table
+compare       planned  Box plot of proportion by treatment, with the test
+claims        planned  A verdict for every claim in a claims table
+reproduce     planned  Rebuild one of the analyses in this repository
+
+The plan is in docs/cytokit_prd.md.
+EOF
+        ;;
+    build)
+        require_podman
+        exec "$REPO_ROOT/containers/build.sh" "${@:2}"
+        ;;
+    shell)
+        require_image
+        exec podman run --rm -it --userns keep-id \
+            --volume "$REPO_ROOT:/work:z" --workdir /work "$IMAGE" /bin/bash
+        ;;
+    version)
+        require_image
+        echo "image  $IMAGE"
+        podman image inspect --format 'digest {{.Digest}}' "$IMAGE"
+        podman run --rm "$IMAGE" Rscript -e 'cat("R     ", R.version.string, "\n")'
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    *)
+        echo "Unknown command: $1" >&2
+        echo >&2
+        usage >&2
+        exit 1
+        ;;
+esac
