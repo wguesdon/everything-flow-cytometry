@@ -42,19 +42,22 @@ available <- PanelMarkers(panel)
 Say <- function(...) cat(..., "\n", sep = "")
 
 # A definitions table with 28 columns is unreadable, and a population is defined
-# by a handful of markers. --markers narrows it.
-markers <- if (is.null(arguments$markers)) {
-  available
-} else {
-  asked <- trimws(strsplit(arguments$markers, ",")[[1]])
-  unknown <- setdiff(asked, available)
-  if (length(unknown) > 0) {
-    stop("These markers are not in the panel: ",
-         paste(unknown, collapse = ", "),
-         "\nThe panel carries: ", paste(available, collapse = ", "))
-  }
-  asked
+# by a handful of markers. --markers narrows it, and on a panel that names no
+# antibody the same argument carries the mapping instead.
+source_of <- PanelMarkerSource(panel)
+chosen <- ParseMarkerArgument(arguments$markers, available, panel$channel)
+if (is.null(chosen)) {
+  chosen <- data.frame(column = available, from = available,
+                       stringsAsFactors = FALSE)
 }
+markers <- chosen$column
+
+# A column that still carries a detector name is the fault this recipe has to
+# state. A cell type is a claim about an antibody, and APC-A is not one.
+chosen$source <- source_of$source[match(chosen$from, source_of$marker)]
+chosen$source[chosen$from != chosen$column] <- "antibody"
+chosen$source[is.na(chosen$source)] <- "antibody"
+guessed <- chosen[chosen$source == "detector", , drop = FALSE]
 
 populations <- if (is.null(arguments$populations)) {
   character(0)
@@ -93,6 +96,51 @@ writeLines(c(
   "markers is not scored higher for it, because the score is a weighted mean",
   "and not a sum.",
   "",
+  if (nrow(guessed) > 0) "## Read this before you fill a cell" else NULL,
+  if (nrow(guessed) > 0) "" else NULL,
+  if (nrow(guessed) > 0) {
+    paste0(nrow(guessed), " of the ", length(markers), " marker columns below ",
+           "are detector names and not antibodies. The file leaves `$PnS`")
+  } else NULL,
+  if (nrow(guessed) > 0) {
+    "empty for them, so nothing in the data says what was stained."
+  } else NULL,
+  if (nrow(guessed) > 0) "" else NULL,
+  if (nrow(guessed) > 0) paste0("- ", guessed$column) else NULL,
+  if (nrow(guessed) > 0) "" else NULL,
+  if (nrow(guessed) > 0) {
+    "A cell type is a claim about an antibody. Ask the scientist which antibody"
+  } else NULL,
+  if (nrow(guessed) > 0) {
+    "sits on each detector, then write the file again with the mapping:"
+  } else NULL,
+  if (nrow(guessed) > 0) "" else NULL,
+  if (nrow(guessed) > 0) "```" else NULL,
+  if (nrow(guessed) > 0) {
+    paste0("cytokit definitions --data <path> --out <file> --force \\\n",
+           "  --markers \"", paste(paste0(guessed$column, "=<antibody>"),
+                                  collapse = ","), "\"")
+  } else NULL,
+  if (nrow(guessed) > 0) "```" else NULL,
+  if (nrow(guessed) > 0) "" else NULL,
+  # A mapping the scientist supplied is provenance. Losing it leaves a column
+  # called CD3 with nothing to say which detector it came from.
+  if (any(chosen$from != chosen$column)) "## The mapping you supplied" else NULL,
+  if (any(chosen$from != chosen$column)) "" else NULL,
+  if (any(chosen$from != chosen$column)) {
+    "The file names no antibody for these detectors. The names below came from"
+  } else NULL,
+  if (any(chosen$from != chosen$column)) {
+    "the command line and not from the data."
+  } else NULL,
+  if (any(chosen$from != chosen$column)) "" else NULL,
+  if (any(chosen$from != chosen$column)) "| Detector | Antibody |" else NULL,
+  if (any(chosen$from != chosen$column)) "|---|---|" else NULL,
+  if (any(chosen$from != chosen$column)) {
+    mapped_rows <- chosen[chosen$from != chosen$column, , drop = FALSE]
+    paste0("| ", mapped_rows$from, " | ", mapped_rows$column, " |")
+  } else NULL,
+  if (any(chosen$from != chosen$column)) "" else NULL,
   "## The markers in this file",
   "",
   paste0(length(markers), " of the ", length(available), " in the panel."),
@@ -117,6 +165,17 @@ Say("  panel from  ", basename(files[1]))
 Say("  markers     ", length(markers), " of ", length(available),
     " in the panel")
 Say("  populations ", length(populations))
+if (nrow(guessed) > 0) {
+  Say("")
+  Say("  WARNING: ", nrow(guessed), " of the ", length(markers),
+      " marker columns are detector names, not antibodies.")
+  Say("  ", paste(guessed$column, collapse = ", "))
+  Say("  A cell type is a claim about an antibody. Ask the scientist which")
+  Say("  antibody sits on each detector, then write the file again with")
+  Say("  --force and --markers \"", paste(paste0(guessed$column, "=<antibody>"),
+                                          collapse = ","), "\".")
+  Say("")
+}
 Say("  wrote       ", DisplayPath(arguments$out))
 Say("  notes       ", DisplayPath(notes_path))
 

@@ -281,3 +281,124 @@ test_that("CollectNotes orders the notes by how often each was reported", {
   expect_equal(result$notes$note, c("twice", "once"))
   expect_equal(result$notes$times, c(2L, 1L))
 })
+
+test_that("IdentitySplits calls a keyword with two values a grouping", {
+  identity <- data.frame(
+    file = c("a.fcs", "b.fcs", "c.fcs", "d.fcs"),
+    specimen = c("PBMC", "PBMC", "PBMC_001", "PBMC_001"),
+    stringsAsFactors = FALSE)
+  result <- IdentitySplits(identity)
+  expect_equal(result$role, "grouping")
+  expect_equal(result$distinct_values, 2L)
+  expect_equal(result$values, "PBMC, PBMC_001")
+})
+
+test_that("IdentitySplits calls a value per file an identifier", {
+  identity <- data.frame(file = c("a.fcs", "b.fcs", "c.fcs"),
+                         tube = c("1", "2", "13"), stringsAsFactors = FALSE)
+  expect_equal(IdentitySplits(identity)$role, "identifier")
+})
+
+test_that("IdentitySplits calls one value across every file a constant", {
+  identity <- data.frame(file = c("a.fcs", "b.fcs"),
+                         experiment = c("Expt 4", "Expt 4"),
+                         stringsAsFactors = FALSE)
+  expect_equal(IdentitySplits(identity)$role, "constant")
+})
+
+test_that("IdentitySplits never calls a timestamp a grouping", {
+  # Two files acquired one second apart are not two treatment arms.
+  identity <- data.frame(file = c("a.fcs", "b.fcs", "c.fcs"),
+                         started = c("06:52:13", "06:52:13", "06:52:14"),
+                         stringsAsFactors = FALSE)
+  expect_equal(IdentitySplits(identity)$role, "timing")
+})
+
+test_that("IdentitySplits drops a keyword that no file carries", {
+  identity <- data.frame(file = c("a.fcs", "b.fcs"),
+                         project = c(NA_character_, NA_character_),
+                         specimen = c("PBMC", "PBMC"),
+                         stringsAsFactors = FALSE)
+  result <- IdentitySplits(identity)
+  expect_equal(result$keyword, "specimen")
+})
+
+test_that("IdentitySplits puts a grouping before an identifier", {
+  identity <- data.frame(
+    file = c("a.fcs", "b.fcs", "c.fcs"),
+    tube = c("1", "2", "3"),
+    specimen = c("PBMC", "PBMC", "PBMC_001"),
+    stringsAsFactors = FALSE)
+  expect_equal(IdentitySplits(identity)$keyword, c("specimen", "tube"))
+})
+
+test_that("IdentitySplits returns an empty table when nothing is recorded", {
+  identity <- data.frame(file = "a.fcs", specimen = NA_character_,
+                         stringsAsFactors = FALSE)
+  expect_equal(nrow(IdentitySplits(identity)), 0)
+})
+
+test_that("PanelMarkerSource says which name came from the file", {
+  panel <- data.frame(channel = c("B515-A", "APC-A", "FSC-A"),
+                      marker = c("CD3", "", ""),
+                      kind = c("stain", "unnamed", "scatter"),
+                      stringsAsFactors = FALSE)
+  result <- PanelMarkerSource(panel)
+  expect_equal(result$marker, c("CD3", "APC-A"))
+  expect_equal(result$source, c("antibody", "detector"))
+})
+
+test_that("ParseMarkerArgument selects from a panel that names its markers", {
+  result <- ParseMarkerArgument("CD3,CD4", c("CD3", "CD4", "CD8"),
+                                c("B515-A", "R780-A", "V800-A"))
+  expect_equal(result$column, c("CD3", "CD4"))
+  expect_equal(result$from, c("CD3", "CD4"))
+})
+
+test_that("ParseMarkerArgument reads a detector to antibody mapping", {
+  result <- ParseMarkerArgument("APC-A=CD3,PE-A=CD4", c("APC-A", "PE-A"),
+                                c("FSC-A", "APC-A", "PE-A"))
+  expect_equal(result$column, c("CD3", "CD4"))
+  expect_equal(result$from, c("APC-A", "PE-A"))
+})
+
+test_that("ParseMarkerArgument takes a selection and a mapping together", {
+  result <- ParseMarkerArgument("CD3,APC-A=CD8", c("CD3", "APC-A"),
+                                c("B515-A", "APC-A"))
+  expect_equal(sort(result$column), c("CD3", "CD8"))
+})
+
+test_that("ParseMarkerArgument rejects a detector the panel does not carry", {
+  expect_error(
+    ParseMarkerArgument("XYZ-A=CD3", c("APC-A"), c("FSC-A", "APC-A")),
+    "This detector is not in the panel: XYZ-A")
+})
+
+test_that("ParseMarkerArgument points at the mapping when a name is unknown", {
+  # This is the message a scientist meets on a panel with no marker names, so
+  # it has to say what to do and not only what went wrong.
+  expect_error(
+    ParseMarkerArgument("CD3", c("APC-A", "PE-A"), c("APC-A", "PE-A")),
+    "give the mapping instead")
+})
+
+test_that("ParseMarkerArgument rejects a mapping with no antibody", {
+  expect_error(ParseMarkerArgument("APC-A=", c("APC-A"), c("APC-A")),
+               "A mapping reads detector=antibody")
+})
+
+test_that("ParseMarkerArgument rejects the same column twice", {
+  expect_error(
+    ParseMarkerArgument("APC-A=CD3,PE-A=CD3", c("APC-A", "PE-A"),
+                        c("APC-A", "PE-A")),
+    "A column is named twice: CD3")
+})
+
+test_that("ParseMarkerArgument returns NULL when no argument was given", {
+  expect_null(ParseMarkerArgument(NULL, c("CD3"), c("B515-A")))
+})
+
+test_that("ParseMarkerArgument rejects an empty argument", {
+  expect_error(ParseMarkerArgument(" ", c("CD3"), c("B515-A")),
+               "--markers is empty")
+})

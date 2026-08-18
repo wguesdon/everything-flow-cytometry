@@ -42,20 +42,28 @@ taken again.
 2. Read what it says about marker names. Many deposits leave `$PnS` empty, and
    the tool then falls back to the detector name. A detector name is not an
    antibody, so ask the scientist for the mapping before any cell type label
-   means anything.
-3. Read the acquisition line. A mass cytometry file carries no scatter and no
+   means anything. Pass what they give you to `cytokit definitions` as
+   `--markers "APC-A=CD3,PE-A=CD4"`, which writes the antibody names and
+   records in the notes that they came from the command line and not from the
+   data.
+3. Read what it says about the files themselves. `inspect` reads the keywords
+   that identify the specimen and the run, and reports which ones split the
+   folder. A keyword that splits it is the only candidate grouping that ships
+   with the data. A file name is a guess, so confirm any grouping you read from
+   one.
+4. Read the acquisition line. A mass cytometry file carries no scatter and no
    spillover, so a scatter gate and a compensation step are both wrong on it.
    Gate it on the DNA channel and on event length instead.
-4. Read what it says about the compensation state. An identity matrix with
+5. Read what it says about the compensation state. An identity matrix with
    `APPLY COMPENSATION = TRUE` means no matrix was supplied. It does not mean
    the values are compensated. Three deposits in this repository carry that
    trap.
-5. A gating template and a cell type definitions table are per panel, and the
+6. A gating template and a cell type definitions table are per panel, and the
    scientist will not have one. Run `cytokit template` and `cytokit
    definitions` to get a valid empty file, then fill it in with them. Both
    recipes read the file back with the function that will consume it and report
    whether it parses.
-6. Confirm the design with the scientist before you draw a gate. How many
+7. Confirm the design with the scientist before you draw a gate. How many
    populations, which marker separates each one, and what the negative control
    is.
 
@@ -65,7 +73,7 @@ taken again.
 `compensate`, `gate`, `cluster`, `annotate`, `proportions`, `compare`, `claims`
 and `reproduce`. Do not invent a command that `cytokit list` does not show. If
 the scientist asks for one, say it is not built and point at
-`docs/cytokit_prd.md`, which holds the plan and the build order.
+`docs/cytokit.md`, which holds the plan and the build order.
 
 ## The rule this repository runs on
 
@@ -82,7 +90,7 @@ reporting only the one it chose.
 
 ## Read more
 
-- `docs/cytokit_prd.md` — the plan, the recipe table and the build order.
+- `docs/cytokit.md` — the plan, the recipe table and the build order.
 - `README.md` — the ten worked analyses in this repository and what each asks.
 - `docs/literature.md` — the paper behind each package.
 

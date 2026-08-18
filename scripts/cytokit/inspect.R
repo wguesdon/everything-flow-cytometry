@@ -49,6 +49,37 @@ WriteBundleTable(bundle, summary_table, "files.csv")
 Say("Files")
 print(summary_table, row.names = FALSE)
 
+# An FCS file carries no metadata table, so the treatment of each file has to
+# come from somewhere. A file name is a guess. These keywords are what the
+# instrument recorded, and a keyword that splits the folder is the design.
+read_identity <- CollectNotes(
+  do.call(rbind, lapply(files, DescribeFcsIdentity)))
+identity <- read_identity$value
+WriteBundleTable(bundle, identity, "samples.csv")
+splits <- IdentitySplits(identity)
+
+Say("\nWhat the files say about themselves")
+if (nrow(splits) == 0) {
+  Say("  Nothing. Every identity keyword is absent, so the design has to come")
+  Say("  from the scientist. Do not read a treatment out of a file name.")
+} else {
+  for (index in seq_len(nrow(splits))) {
+    Say(sprintf("  %-10s %-13s %d value(s): %s",
+                splits$role[index], splits$keyword[index],
+                splits$distinct_values[index], splits$values[index]))
+  }
+  grouping <- splits[splits$role == "grouping", , drop = FALSE]
+  if (nrow(grouping) > 0) {
+    Say("")
+    Say("  ", nrow(grouping), " keyword(s) split this folder into groups: ",
+        paste(grouping$keyword, collapse = ", "), ".")
+    Say("  A split is the only candidate for a grouping that ships with the")
+    Say("  data. Confirm each one with the scientist, because a keyword can")
+    Say("  also record a typing mistake.")
+  }
+  Say("  The full table is in samples.csv.")
+}
+
 # The panel is read from the first file, and every other file is checked against
 # it. A panel that differs between files cannot be gated by one template.
 read_panel <- CollectNotes(DescribeFcsPanel(files[1]))
@@ -116,7 +147,8 @@ if (any(states == "identity, no matrix supplied")) {
 
 # One malformed header raises the same warning once per file. The count is the
 # fact a reader needs, so it is stated once rather than repeated.
-notes <- unique(rbind(read_files$notes, read_panel$notes))
+notes <- unique(rbind(read_files$notes, read_identity$notes,
+                      read_panel$notes))
 if (exists("read_others")) {
   notes <- unique(rbind(notes, read_others$notes))
 }
@@ -134,4 +166,5 @@ CloseCytokitBundle(
   command = paste("cytokit inspect --data", DisplayPath(arguments$data))
 )
 
-Say("\nWrote files.csv, panel.csv and markers.txt to ", DisplayPath(bundle))
+Say("\nWrote files.csv, samples.csv, panel.csv and markers.txt to ",
+    DisplayPath(bundle))

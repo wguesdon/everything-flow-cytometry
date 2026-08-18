@@ -469,3 +469,207 @@ CollectNotes <- function(expression) {
   }
   list(value = value, notes = notes[order(-notes$times), , drop = FALSE])
 }
+
+# The keywords that say which specimen a file holds, and which run it came
+# from. An FCS file carries no metadata table, so this is the only machine
+# readable record of the design that ships with the data.
+kIdentityKeywords <- c(
+  original_file = "$FIL",
+  specimen = "$SRC",
+  tube = "TUBE NAME",
+  experiment = "EXPERIMENT NAME",
+  specimen_number = "$SMNO",
+  project = "$PROJ",
+  well = "$WELLID",
+  started = "$BTIM",
+  ended = "$ETIM"
+)
+
+#' Read the keywords that identify the specimen and the run
+#'
+#' A scientist arrives with a folder of FCS files and no metadata table, and the
+#' treatment of each file has to come from somewhere. The file name is a guess.
+#' These keywords are what the instrument recorded, so they are evidence.
+#'
+#' `$SRC` splits a folder by donor, and `TUBE NAME` gives the position in the
+#' run. On FR-FCM-ZZCA the tube numbers read 1, 2, 13, 15 and 16, which says
+#' that eleven tubes of that run are absent from the deposit, and `$SRC` splits
+#' the five files into two groups. Neither fact is in a file name.
+#'
+#' @param path The FCS file.
+#' @return A one row `data.frame` with one column per keyword that the file
+#'   carries. A keyword the file leaves out is `NA`.
+#' @examples
+#' \dontrun{
+#' DescribeFcsIdentity("study/sample.fcs")
+#' }
+#' @export
+DescribeFcsIdentity <- function(path) {
+  frame <- flowCore::read.FCS(path, which.lines = 1, truncate_max_range = FALSE,
+                              transformation = FALSE)
+  keywords <- flowCore::keyword(frame)
+  values <- vapply(kIdentityKeywords, function(name) {
+    value <- keywords[[name]]
+    if (is.null(value) || length(value) != 1) NA_character_ else
+      trimws(as.character(value))
+  }, character(1))
+  values[!nzchar(values) & !is.na(values)] <- NA_character_
+
+  identity <- as.data.frame(as.list(values), stringsAsFactors = FALSE)
+  identity <- cbind(file = basename(path), identity, stringsAsFactors = FALSE)
+  rownames(identity) <- NULL
+  identity
+}
+
+#' Report what a set of identity keywords says about the design
+#'
+#' One value across every file tells a scientist about the run. A value per file
+#' is an identifier. A keyword with two values and five files splits the folder,
+#' and that split is the only candidate for a grouping that ships with the data.
+#' The three cases need different reading, so each row carries its role.
+#'
+#' A timestamp never groups anything, so it is called out rather than counted as
+#' a split.
+#'
+#' @param identity The table from `DescribeFcsIdentity`, one row per file.
+#' @return A `data.frame` with one row per keyword that carries a value, its
+#'   role, its number of distinct values, and those values.
+#' @examples
+#' identity <- data.frame(file = c("a.fcs", "b.fcs", "c.fcs"),
+#'                        specimen = c("PBMC", "PBMC", "PBMC_001"),
+#'                        tube = c("1", "2", "3"))
+#' IdentitySplits(identity)
+#' @export
+IdentitySplits <- function(identity) {
+  timing <- c("started", "ended")
+  columns <- setdiff(names(identity), "file")
+  files <- nrow(identity)
+  rows <- lapply(columns, function(column) {
+    values <- identity[[column]]
+    present <- values[!is.na(values)]
+    if (length(present) == 0) {
+      return(NULL)
+    }
+    distinct <- unique(present)
+    role <- if (column %in% timing) {
+      "timing"
+    } else if (length(distinct) == 1) {
+      "constant"
+    } else if (length(distinct) == files && files > 1) {
+      "identifier"
+    } else {
+      "grouping"
+    }
+    data.frame(
+      keyword = column,
+      role = role,
+      # A grouping is what a scientist confirms, so every value is listed. An
+      # identifier has one value per file, and eight of them are unreadable.
+      files_with_it = length(present),
+      distinct_values = length(distinct),
+      values = paste(utils::head(distinct, if (role == "grouping") 8 else 3),
+                     collapse = ", "),
+      stringsAsFactors = FALSE
+    )
+  })
+  rows <- Filter(Negate(is.null), rows)
+  if (length(rows) == 0) {
+    return(data.frame(keyword = character(0), role = character(0),
+                      files_with_it = integer(0), distinct_values = integer(0),
+                      values = character(0), stringsAsFactors = FALSE))
+  }
+  result <- do.call(rbind, rows)
+  # A grouping is what a scientist has to confirm, so it reads first.
+  order_of_role <- match(result$role,
+                         c("grouping", "identifier", "constant", "timing"))
+  result[order(order_of_role, result$keyword), , drop = FALSE]
+}
+
+#' Say where each marker name came from
+#'
+#' `PanelMarkers` falls back to the detector name when a file leaves `$PnS`
+#' empty. The two kinds of name read the same in a table and mean different
+#' things, because a detector name is not an antibody. A recipe that writes a
+#' marker into a file has to be able to say which is which.
+#'
+#' @param panel The output of [DescribeFcsPanel()].
+#' @return A `data.frame` with `marker`, `channel` and `source`, where `source`
+#'   is `"antibody"` when the file named it and `"detector"` when it did not.
+#' @examples
+#' panel <- data.frame(channel = c("B515-A", "APC-A"), marker = c("CD3", ""),
+#'                     kind = c("stain", "unnamed"), stringsAsFactors = FALSE)
+#' PanelMarkerSource(panel)
+#' @export
+PanelMarkerSource <- function(panel) {
+  named <- panel[panel$kind == "stain" & nzchar(panel$marker), , drop = FALSE]
+  unnamed <- panel[panel$kind == "unnamed", , drop = FALSE]
+  result <- rbind(
+    data.frame(marker = named$marker, channel = named$channel,
+               source = rep("antibody", nrow(named)), stringsAsFactors = FALSE),
+    data.frame(marker = unnamed$channel, channel = unnamed$channel,
+               source = rep("detector", nrow(unnamed)), stringsAsFactors = FALSE)
+  )
+  result[!duplicated(result$marker), , drop = FALSE]
+}
+
+#' Read a `--markers` argument, which either selects or maps
+#'
+#' A scientist whose file names its markers picks a few of them. A scientist
+#' whose file leaves `$PnS` empty has nothing to pick from, and the only useful
+#' thing they can give is the mapping from the detector to the antibody. The
+#' same argument covers both, because a pair carries an equals sign.
+#'
+#' @param argument The raw `--markers` string, or `NULL`.
+#' @param available The marker names the panel offers, from `PanelMarkers`.
+#' @param channels Every detector name in the panel.
+#' @return A `data.frame` with `column`, the name to write, and `from`, the
+#'   panel name it came from. `NULL` when `argument` is `NULL`.
+#' @examples
+#' ParseMarkerArgument("APC-A=CD3,FITC-A=CD4", c("APC-A", "FITC-A"),
+#'                     c("FSC-A", "APC-A", "FITC-A"))
+#' @export
+ParseMarkerArgument <- function(argument, available, channels) {
+  if (is.null(argument)) {
+    return(NULL)
+  }
+  asked <- trimws(strsplit(argument, ",")[[1]])
+  asked <- asked[nzchar(asked)]
+  if (length(asked) == 0) {
+    stop("--markers is empty. Give a marker name, or a detector=antibody pair.")
+  }
+  pairs <- grepl("=", asked, fixed = TRUE)
+
+  mapped <- lapply(asked[pairs], function(item) {
+    parts <- trimws(strsplit(item, "=", fixed = TRUE)[[1]])
+    if (length(parts) != 2 || !all(nzchar(parts))) {
+      stop("A mapping reads detector=antibody. This one does not: ", item)
+    }
+    if (!parts[1] %in% c(channels, available)) {
+      stop("This detector is not in the panel: ", parts[1],
+           "\nThe panel carries: ", paste(channels, collapse = ", "))
+    }
+    data.frame(column = parts[2], from = parts[1], stringsAsFactors = FALSE)
+  })
+
+  plain <- asked[!pairs]
+  unknown <- setdiff(plain, available)
+  if (length(unknown) > 0) {
+    stop("These markers are not in the panel: ",
+         paste(unknown, collapse = ", "),
+         "\nThe panel carries: ", paste(available, collapse = ", "),
+         "\nWhen the panel names no antibody, give the mapping instead, ",
+         "for example --markers \"", channels[1], "=CD3\".")
+  }
+  selected <- if (length(plain) > 0) {
+    data.frame(column = plain, from = plain, stringsAsFactors = FALSE)
+  } else {
+    NULL
+  }
+  result <- do.call(rbind, c(mapped, list(selected)))
+  if (anyDuplicated(result$column) > 0) {
+    stop("A column is named twice: ",
+         paste(unique(result$column[duplicated(result$column)]),
+               collapse = ", "))
+  }
+  result
+}

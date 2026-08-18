@@ -12,7 +12,7 @@ reference documents live. The reasoning and the code stay in `R/` and
 
 Each adapter carries the same operating guide: the command surface, the
 workflow, what is not built yet, and the rule the repository runs on. The detail
-lives in `docs/cytokit_prd.md` and `README.md`.
+lives in `docs/cytokit.md` and `README.md`.
 
 Update the three together when the `cytokit` surface changes. An adapter that has
 drifted from the CLI is worse than no adapter, because it sends an agent to a

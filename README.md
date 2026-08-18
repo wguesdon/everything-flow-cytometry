@@ -37,7 +37,7 @@ surface an agent can drive.
 ```
 
 `inspect`, `template` and `definitions` are built. The rest are planned, and
-`docs/cytokit_prd.md` holds the plan. `skills/` carries an adapter for Claude
+`docs/cytokit.md` holds the plan. `skills/` carries an adapter for Claude
 Code, Codex and opencode, so the same guidance reaches whichever agent you use.
 
 Your data path is mounted read only. An FCS file is a measurement that cannot be

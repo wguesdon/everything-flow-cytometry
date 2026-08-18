@@ -178,6 +178,27 @@ def check_inspect(deposit: Deposit, data: Path, work: Path) -> list[Result]:
             )
         )
 
+    # An FCS file carries no metadata table, so the identity keywords are the
+    # only record of the design that ships with the data.
+    lines = output.splitlines()
+    heading = next((index for index, line in enumerate(lines)
+                    if "What the files say about themselves" in line), None)
+    roles = []
+    if heading is not None:
+        for line in lines[heading + 1:]:
+            first = line.strip().split(" ", 1)[0]
+            if first in {"grouping", "identifier", "constant", "timing"}:
+                roles.append(first)
+            elif not line.strip():
+                break
+    said_nothing = "Nothing. Every identity" in output
+    results.append(
+        Result(deposit.name, "identity", heading is not None and (bool(roles) or said_nothing),
+               ", ".join(sorted(set(roles))) if roles else
+               ("no keyword recorded, and it says so" if said_nothing else "said nothing about the files"),
+               0.0)
+    )
+
     # Every panel is either mass or fluorescence, and the answer changes what
     # the next step is allowed to be. Silence here lets an agent reach for a
     # scatter gate on a CyTOF file.
@@ -320,11 +341,80 @@ def check_input_shapes(work: Path) -> list[Result]:
                "reads it" if status == 0 else first_error(output), seconds)
     )
 
+    # A scientist names an output folder that does not exist yet. Podman would
+    # otherwise create it owned by root, or the recipe would fail on a mount.
+    deep = work / "not" / "here" / "yet" / "template.csv"
+    status, output, seconds = run_cli(
+        ["template", "--data", str(folder), "--out", str(deep)])
+    results.append(
+        Result("input shapes", "--out in a folder that is not there", status == 0 and deep.exists(),
+               "creates the folder" if deep.exists() else first_error(output), seconds)
+    )
+
     # The bundle has to land where it was asked for, and not inside the image.
     wrote = list(out.iterdir()) if out.exists() else []
     results.append(
         Result("input shapes", "--out outside the repository", bool(wrote),
                f"wrote {wrote[0].name}" if wrote else "wrote nothing to the folder given", 0.0)
+    )
+    return results
+
+
+def check_marker_mapping(work: Path) -> list[Result]:
+    """Assert what definitions does on a panel that names no antibody.
+
+    FR-FCM-ZZCA leaves `$PnS` empty for every detector. A definitions table
+    keyed on `APC-A` invites a cell type label that no antibody supports, so the
+    recipe has to say so, and it has to accept the mapping when it is given.
+
+    Args:
+        work: A scratch folder outside the repository.
+
+    Returns:
+        One result per rule checked.
+    """
+    data = DEPOSIT_ROOT / "FR-FCM-ZZCA"
+    results = []
+
+    plain = work / "unnamed.csv"
+    plain.parent.mkdir(parents=True, exist_ok=True)
+    status, output, seconds = run_cli(
+        ["definitions", "--data", str(data), "--recursive", "--out", str(plain),
+         "--populations", "T cells"])
+    warned = "detector names, not antibodies" in output
+    results.append(
+        Result("marker mapping", "a panel that names no antibody", status == 0 and warned,
+               "says the columns are detectors" if warned else "wrote the file with no warning",
+               seconds)
+    )
+
+    mapped = work / "mapped.csv"
+    status, output, seconds = run_cli(
+        ["definitions", "--data", str(data), "--recursive", "--out", str(mapped),
+         "--markers", "APC-A=CD3,FITC-A=CD4", "--populations", "T cells"])
+    header = mapped.read_text().splitlines()[0] if mapped.exists() else ""
+    correct = header.startswith("cell_type,CD3,CD4")
+    results.append(
+        Result("marker mapping", "a detector=antibody mapping", status == 0 and correct,
+               f"writes {header}" if correct else first_error(output), seconds)
+    )
+
+    # Losing the mapping leaves a column called CD3 with nothing to say where
+    # the name came from.
+    notes = mapped.with_name("mapped_notes.md")
+    recorded = notes.exists() and "| APC-A | CD3 |" in notes.read_text()
+    results.append(
+        Result("marker mapping", "the mapping is recorded", recorded,
+               "the notes name each detector" if recorded else "the mapping was not written down", 0.0)
+    )
+
+    status, output, seconds = run_cli(
+        ["definitions", "--data", str(data), "--recursive", "--out", str(work / "bad.csv"),
+         "--markers", "CD3"])
+    guides = "give the mapping instead" in output
+    results.append(
+        Result("marker mapping", "a marker name the panel lacks", status != 0 and guides,
+               "the error says what to do instead" if guides else first_error(output), seconds)
     )
     return results
 
@@ -423,7 +513,7 @@ def report(results: list[Result]) -> int:
     if failed:
         print(f"{len(failed)} of {len(results)} checks failed.")
         return 1
-    deposits = {item.what for item in results} - {"refusals", "input shapes"}
+    deposits = {item.what for item in results} - {"refusals", "input shapes", "marker mapping"}
     noun = "deposit" if len(deposits) == 1 else "deposits"
     print(f"All {len(results)} checks passed over {len(deposits)} {noun}.")
     return 0
@@ -462,6 +552,7 @@ def main() -> int:
             results += check_scaffold(deposit, data, work, "template")
             results += check_scaffold(deposit, data, work, "definitions")
         results += check_input_shapes(work_root / "shapes")
+        results += check_marker_mapping(work_root / "mapping")
         if not options.skip_refusals:
             results += check_refusals(work_root / "refusals")
     finally:

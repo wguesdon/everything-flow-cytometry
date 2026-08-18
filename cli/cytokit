@@ -26,6 +26,7 @@ Usage:
   cytokit template    --data PATH --out FILE [--recursive] [--force]
   cytokit definitions --data PATH --out FILE [--recursive] [--force]
                                              [--markers "CD3,CD4"]
+                                             [--markers "APC-A=CD3,PE-A=CD4"]
                                              [--populations "T cells,B cells"]
 
   cytokit list        show the recipes and their state
@@ -39,6 +40,11 @@ state, and every later recipe reads what it prints.
 A gating template and a cell type definitions table are per panel, so nobody
 arrives with one. template and definitions write a valid empty file with the
 panel's markers in it, for you to fill in with the scientist.
+
+When a file leaves $PnS empty, the panel reads as detector names and a cell
+type built on one means nothing. Give definitions the mapping instead, in the
+detector=antibody form, and it writes the antibody names and records where they
+came from.
 
 Add --recursive when the FCS files sit below the folder you name. That is how a
 deposit arrives when you unzip it.
@@ -69,11 +75,22 @@ absolute() {
     local path="$1"
     if [[ -d "$path" ]]; then
         (cd "$path" && pwd)
-    else
-        local dir
-        dir="$(cd "$(dirname "$path")" && pwd)"
-        echo "$dir/$(basename "$path")"
+        return
     fi
+    local dir
+    dir="$(dirname "$path")"
+    if [[ -d "$dir" ]]; then
+        dir="$(cd "$dir" && pwd)"
+    else
+        # The folder is not there. Resolve it against the current directory
+        # rather than fail, so that an error names the path that was typed.
+        case "$dir" in
+            /*) ;;
+            .)  dir="$PWD" ;;
+            *)  dir="$PWD/$dir" ;;
+        esac
+    fi
+    echo "$dir/$(basename "$path")"
 }
 
 run_recipe() {
@@ -121,7 +138,14 @@ run_recipe() {
     # own, and its parent has to exist so that podman does not create a folder
     # owned by root.
     if [[ -n "$out_host" ]]; then
+        # The folder that --out names has to exist before it is resolved and
+        # before podman mounts it, or podman creates one owned by root.
         local out_abs
+        if [[ "$recipe" == "template" || "$recipe" == "definitions" ]]; then
+            mkdir -p "$(dirname "$out_host")"
+        else
+            mkdir -p "$out_host"
+        fi
         out_abs="$(absolute "$out_host")"
         if [[ "$out_abs" == "$REPO_ROOT"/* ]]; then
             passthrough+=(--out "${out_abs#$REPO_ROOT/}")
@@ -182,7 +206,7 @@ compare       planned  Box plot of proportion by treatment, with the test
 claims        planned  A verdict for every claim in a claims table
 reproduce     planned  Rebuild one of the analyses in this repository
 
-The plan is in docs/cytokit_prd.md.
+The plan is in docs/cytokit.md.
 EOF
         ;;
     build)
