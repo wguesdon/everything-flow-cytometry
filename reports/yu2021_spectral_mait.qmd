@@ -149,13 +149,15 @@ positive events and with 10 metaclusters inside the CD8 gate.
 The analysis used flowCore, openCyto, FlowSOM and ggplot2. Every package version
 is pinned in the container and asserted at build time.
 
-## Part 1: the spectral panel and the pipeline
+## Results
+
+### The spectral panel and the pipeline
 
 Compensation is not required and the viability channel requires a different
 selection function. The cohort requires a single set of cut points across all
 samples.
 
-## Part 2: the cohort and its grouping
+### The cohort and its grouping
 
 ```{r}
 #| label: cohort
@@ -174,7 +176,7 @@ included in the flow analysis, so the join is complete in both directions. The
 samples. Every test treats a sample as independent. That treatment inflates the
 apparent precision, and the discussion returns to it.
 
-## Part 3: cut points across the cohort
+### Cut points across the cohort
 
 Cut points were fitted once on a pooled subsample and applied to every sample.
 
@@ -230,7 +232,7 @@ positive cells, which is about half of the CD3 negative parent, and B cells,
 monocytes and dendritic cells also live there. The CD56 cut at 2.12 is too
 permissive.
 
-### What CD161hi is, and is not
+#### The definition of CD161hi
 
 The panel carries no Va7.2, so it cannot identify a MAIT cell by the invariant T
 cell receptor. The paper reads MAIT cells as CD8 positive CD161hi T cells, and
@@ -238,7 +240,7 @@ it validates that surrogate with single cell RNA sequencing, where the CD161hi
 cluster co-expresses `KLRB1`, `CD3D`, `CD8A` and `TRAV1-2`. This report tests
 the flow claims only. It inherits the surrogate and does not check it.
 
-## Part 4: the paper's claims against its own data
+### The paper's claims against its own data
 
 ```{r}
 #| label: group-medians
@@ -287,7 +289,7 @@ found against the direction stated. Claims 5 and 6 are not directional, and the
 first version of this analysis treated them as directional before the criterion
 was corrected.
 
-### The headline claim
+#### The headline claim
 
 ```{r}
 #| label: severity-figure
@@ -313,7 +315,7 @@ The female slope is about four times the male slope. The paper writes that
 females had a more dramatic loss of peripheral CD161hi cells compared with
 males, and the deposited data says the same thing.
 
-### The two claims about time points, and a mistake this report made
+#### The two claims about time points, and a mistake this report made
 
 Claim 5 states that the greater abundance of CD161hi cells in females was lost
 at early and middle time points but not in late disease. The first version of
@@ -356,7 +358,7 @@ females in every window. The difference is significant at early, with a p of
 a p of 0.198. Both time point claims therefore land two windows out of three,
 and each one misses a different window. Neither miss is a reversal.
 
-### Whether the miss is ours
+#### The source of the miss
 
 Three explanations were tested before the claims were reported as partial. The
 first is the inclusion rule. The paper's Figure 2E is about time after symptom
@@ -380,11 +382,12 @@ authors' own.
 None of the three changes the answer, so the remaining gap is between a p of
 0.065 in 24 samples and a p below 0.05 in the authors' own analysis.
 
-## Part 5: the CD45RA sensitivity sweep
+### The CD45RA sensitivity sweep
 
 Three of the ten claims are about the memory compartment, and the memory
-compartment rests on the CD45RA cut, which Part 3 established is a choice rather
-than a fit. The analysis therefore runs again at every cut from 2.4 to 4.2.
+compartment rests on the CD45RA cut, which the cut points section established is
+a choice rather than a fit. The analysis therefore runs again at every cut from
+2.4 to 4.2.
 
 ```{r}
 #| label: sweep
@@ -410,7 +413,7 @@ verdict changes. The cut point is not measurable from the data, and it does not
 matter, because all three claims are comparisons between two groups gated at the
 same place. A cut that is wrong by the same amount in both groups cancels.
 
-## Part 6: clustering as a second route
+### Clustering as a second route
 
 Sequential gating asks how many cells fall inside a boundary. Clustering asks
 how many groups are in the data. The second question needs no hierarchy, so it
@@ -430,7 +433,7 @@ knitr::include_graphics(OutputImage("umap_metaclusters.png"))
 knitr::include_graphics(OutputImage("umap_markers.png"))
 ```
 
-### Fifteen metaclusters on all leucocytes cannot find MAIT cells
+#### Fifteen metaclusters on all leucocytes
 
 The first attempt clustered every live CD45 positive event into 15 metaclusters
 and looked for the CD161 high cluster among the CD8 T cell clusters. It selected
@@ -443,7 +446,7 @@ cells, which is under 2 percent of the CD45 positive parent, and a rare
 population is absorbed by a neighbouring metacluster when the number of
 metaclusters is fixed in advance.
 
-### Clustering inside the CD8 gate does find them
+#### Clustering inside the CD8 gate
 
 ```{r}
 #| label: cd8-clusters
@@ -495,7 +498,7 @@ not of the gate.
 
 ## Discussion
 
-### What this shows
+### Principal findings
 
 A published finding from a 35 marker spectral panel reproduces from the
 deposited files, with an analysis that shares no code and no software with the
@@ -508,7 +511,7 @@ The two partial claims are the two about time points, and each lands two windows
 out of three. Neither miss is a reversal. Claim 5 needs a significant difference
 at late and finds p 0.065, and claim 6 needs one at middle and finds p 0.198.
 
-### The failure that was ours
+### An error in an earlier version of this report
 
 The first version of this report said that claim 5 did not reproduce, because
 females were numerically higher in all three windows. That was a mistake in the
@@ -524,21 +527,21 @@ somewhere. The claims file now records the criterion for each claim next to the
 sentence it came from, so the encoding is reviewable rather than buried in the
 test.
 
-### Where the fragility sits
+### Sources of fragility
 
 A gate on a bimodal marker is a fit and a gate on a continuum is a decision.
 This dataset separates the two cases inside one panel. CD3, CD8, CCR7 and CD161
 are bimodal, their cuts were fitted from the pooled density, and the analysis
 inherits nothing from the analyst at those four gates. CD45RA is a continuum,
 its cut cannot be fitted, and the analysis inherits a number that a person
-chose. The sweep in Part 5 then shows that the chosen number changes the
-frequency by ten percentage points and changes no conclusion.
+chose. The CD45RA sensitivity sweep then shows that the chosen number changes
+the frequency by ten percentage points and changes no conclusion.
 
 A cut point matters when the reported quantity is a frequency. It cancels when
 the reported quantity is a comparison between two groups gated at the same
 place.
 
-### What this does not show
+### Limitations
 
 It does not show that the paper is right. It shows that the numbers in the paper
 follow from the files the authors deposited, and a shared error in the panel, in
@@ -549,16 +552,16 @@ on the sequencing in the paper.
 
 The 83 samples come from 45 subjects, and every test treats a sample as
 independent. A subject who contributes five samples counts five times. That
-treatment inflates the precision of every p value in Part 4, and it affects the
-claims about time points most, because those windows are built from repeated
-sampling of the same people. A mixed model with a subject random effect is the
-correct test, and it is not run here.
+treatment inflates the precision of every p value in the paper's claims against
+its own data, and it affects the claims about time points most, because those
+windows are built from repeated sampling of the same people. A mixed model with
+a subject random effect is the correct test, and it is not run here.
 
 The normal group holds five females and five males. The largest effect in the
 report, a median of 30.1 percent against 6.3 percent, rests on those ten
 samples. The direction is clear and ten people do not settle the magnitude.
 
-### What is left to do
+### Further work
 
 The dataset carries 12 acquisition dates between 29 May 2020 and 16 September
 2020, and no batch correction was applied. CytoNorm is the tool for that, and it
@@ -566,7 +569,7 @@ is not in the container, because it is on GitHub only and not on Bioconductor.
 CytoNorm would test whether the severity correlation survives batch correction,
 and that is the next check this analysis needs.
 
-## Reproducing this
+## Data and code availability
 
 ```bash
 # Pull this dataset only, not the 103 GB archive

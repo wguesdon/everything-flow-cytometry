@@ -139,7 +139,9 @@ between the two COVID-19 groups.
 The analysis uses CytoML, flowCore, ggplot2 and knitr. Every version is pinned
 in the container.
 
-## Part 1: six patients who changed group after the workspace was written
+## Results
+
+### Patients relabelled after the workspace was written
 
 ```{r}
 #| label: relabelled
@@ -159,7 +161,7 @@ workspace does not. A join on the file name therefore drops six of the 49
 samples, and it drops them silently. The join key removes the marker, so both
 arms meet on all of them.
 
-## Part 2: the two arms
+### The two arms
 
 Both arms count the same five populations on the files that both measured.
 
@@ -194,10 +196,10 @@ knitr::include_graphics(OutputImage("arm_comparison.png"))
 
 CD3, CD8 and CD14 all correlate above rho 0.94 across the files, and the median
 difference between the two arms stays inside four percentage points on every
-measure. CD4 and CD19 correlate less well, at about rho 0.77, and both are the measures
-where the two arms also disagree most in the median.
+measure. CD4 and CD19 correlate less well, at about rho 0.77, and both are the
+measures where the two arms also disagree most in the median.
 
-## Part 3: the claims
+### The claims
 
 ```{r}
 #| label: by-group
@@ -239,7 +241,8 @@ kable(
 ```
 
 The Th1 subset falls in COVID-19 relative to the healthy controls, in the
-direction the paper reports. The difference does not reach significance in this analysis.
+direction the paper reports. The difference does not reach significance in this
+analysis.
 
 ```{r}
 #| label: pd1
@@ -290,7 +293,7 @@ kable(
 
 ## Discussion
 
-### What this shows
+### Principal findings
 
 On a clean deposit with published boundaries, an automated rule tracks a human
 closely. Three of the five lineage measures correlate above rho 0.94 across 48
@@ -302,7 +305,7 @@ a cut on a bimodal marker, which is the case it handles well. The claims the
 paper makes from the flow data hold as well. Four reproduce, and two reproduce
 in direction without reaching significance on six healthy controls.
 
-### Where the two arms part company
+### Disagreement between the two arms
 
 CD4 and CD19 are the loose pair, both correlating at about rho 0.77 where the
 others exceed 0.94. CD4 in this panel sits on a BUV496 detector and CD19 on
@@ -313,7 +316,7 @@ marker. The disagreement is a boundary disagreement and not a population
 disagreement, and the two arms rank the samples the same way, which is what the
 correlation says.
 
-### What this does not show
+### Limitations
 
 This report does not show that the automated rule would work on the raw files.
 The deposit is exported after a live cell gate, so the scatter, viability and
@@ -324,7 +327,7 @@ six samples, so every comparison against it in this report is underpowered, and
 the report says so rather than reading a p value above 0.05 as an absence of an
 effect.
 
-### What is left to do
+### Further work
 
 The workspace gates five populations, and the panel carries twenty more markers,
 including the cytokines that the paper's argument rests on, none of them gated
@@ -332,7 +335,7 @@ in the deposited workspace. An automated route is the only way to reach them.
 The six relabelled patients should also be checked against the paper's own group
 assignment before their clinical group is used in anything further.
 
-## Reproducing this
+## Data and code availability
 
 ```bash
 # Pull this dataset only, 872 MB of the 103 GB archive

@@ -141,13 +141,14 @@ negative across the clusters by the split that maximises the variance between
 the two groups, and a definition scores the fraction of the markers it names
 that a cluster matches.
 
-Five markers are excluded by name rather than by a rule, because Part 4 shows
-they carry no usable threshold. `gating/omip58_unusable_markers.csv` holds the
-list with the measurement behind each entry. A computed filter was tried first
-and rejected: which markers it dropped changed from one clustering run to the
-next, and the labels changed with it. A definition left with fewer than two
-markers is not scored, and the populations it describes are reported as
-unmeasured rather than as a frequency of zero.
+Five markers are excluded by name rather than by a rule, because the one
+dimensional cuts below CD3 show they carry no usable threshold.
+`gating/omip58_unusable_markers.csv` holds the list with the measurement behind
+each entry. A computed filter was tried first and rejected: which markers it
+dropped changed from one clustering run to the next, and the labels changed with
+it. A definition left with fewer than two markers is not scored, and the
+populations it describes are reported as unmeasured rather than as a frequency
+of zero.
 
 ### Statistics
 
@@ -165,7 +166,9 @@ The R half uses flowCore, flowStats, robustbase and ggplot2. The Python half
 uses pytometry, scanpy, anndata, readfcs, igraph, leidenalg, scikit-learn, numpy
 and pandas. Every version is pinned in the container and in `uv.lock`.
 
-## Part 1: the compensation state of the deposited files
+## Results
+
+### The compensation state of the deposited files
 
 ```{r}
 #| label: compensation-state
@@ -218,7 +221,7 @@ correlate at 0.865 and 0.895.
 
 The identity matrix records that no spillover matrix was supplied.
 
-## Part 2: the matrix computed from the single stains
+### The matrix computed from the single stains
 
 ```{r}
 #| label: gateability
@@ -286,7 +289,7 @@ donor 112117 and leaves CD4 with CD8 at 0.690, because it has no row for either
 marker. The cell matrix takes the same donor to 0.167 and CD4 with CD8 to
 -0.311. CD4 and CD8 mark mutually exclusive T cell populations.
 
-## Part 3: the gate and the handoff
+### The gate and the handoff
 
 ```{r}
 #| label: gate-counts
@@ -332,7 +335,7 @@ kable(
 )
 ```
 
-## Part 4: one dimensional cuts below CD3
+### One dimensional cuts below CD3
 
 ```{r}
 #| label: one-dimensional
@@ -352,9 +355,9 @@ of lymphocytes. The Vδ1 cut selects 62.7 and 54.1 percent, and the Vγ9 cut 61.
 and 42.1 percent, for subsets that make up a few percent of blood T cells. The
 Vα7.2 cut returns nothing at all in donor 112117 and 2.0 percent in donor 43018.
 
-These five markers are the ones the labelling in Part 5 excludes by name. The
-table above is the evidence, and `gating/omip58_unusable_markers.csv` carries it
-alongside the share of T cells each subset should hold.
+These five markers are the ones the labelling in the clustering excludes by
+name. The table above is the evidence, and `gating/omip58_unusable_markers.csv`
+carries it alongside the share of T cells each subset should hold.
 
 These markers are unimodal inside CD3 positive cells. The cut rule tries a
 density minimum first and a two component mixture second. Every share above
@@ -364,7 +367,7 @@ cut, and it splits the positive population near its middle. The deposit carries
 no fluorescence minus one control against which either failure could be
 corrected.
 
-## Part 5: the clustering
+### The clustering
 
 ```{r}
 #| label: umap
@@ -397,9 +400,10 @@ percent that the gate itself returned.
 
 Separation across the clusters runs from 0.398 for CD4 and 0.388 for HLA-DR down
 to 0.078 for Vδ1 and 0.055 for CD56. The two measures agree in part. Vδ1, Vδ2
-and CD161 fall in the lower half of this ranking and are also excluded in Part
-4. Vγ9 and the tetramer are excluded in Part 4 and sit in the upper half here.
-CD8, Vα7.2 and CD56 sit in the lower half and are not excluded.
+and CD161 fall in the lower half of this ranking and are also excluded in the
+one dimensional cuts below CD3. Vγ9 and the tetramer are excluded in those cuts
+and sit in the upper half here. CD8, Vα7.2 and CD56 sit in the lower half and
+are not excluded.
 
 The separation table is not used to select markers. An earlier version of the
 analysis chose which markers could vote by putting a threshold on this column,
@@ -408,7 +412,8 @@ deposit, CD8 moved from a separation of 0.236 to 0.092 and CD3 from 0.177 to
 0.087, which changed the labels: one run put CD4 T cells at 43.8 percent of
 lymphocytes and the other put Vδ1 gamma delta T cells at 39.9 percent, a subset
 that is a few percent of blood T cells. The five markers excluded here are named
-in a file instead, with the measurement from Part 4 beside each one.
+in a file instead, with the measurement from the one dimensional cuts below CD3
+beside each one.
 
 ```{r}
 #| label: unusable
@@ -467,7 +472,7 @@ Four populations keep fewer than two markers and are not scored at all:
 invariant natural killer T cells, both γδ subsets, and terminal natural killer
 cells.
 
-## Part 6: claim verdicts
+### Claim verdicts
 
 ```{r}
 #| label: verdicts
@@ -492,7 +497,7 @@ kable(
 
 ## Discussion
 
-### What this shows
+### Principal findings
 
 A deposit can carry a compensation keyword that is wrong, and the data will say
 so. `APPLY COMPENSATION` is TRUE on every file of FR-FCM-ZYRN and the stored
@@ -525,7 +530,7 @@ cell clusters and all four quadrants are occupied, which is the split the paper
 describes for naive, central memory, effector memory and terminally
 differentiated cells.
 
-### Where the workflow falls short
+### Limitations of the workflow
 
 Six of the ten claims concern populations the analysis could not measure, and
 they are recorded as unresolved rather than as a frequency of zero. An absent
@@ -547,7 +552,7 @@ make it correct.
 The margins in the label table say which assignments are close, and several are
 close.
 
-### What this does not show
+### Limitations
 
 The deposit holds two donors. Nothing here separates a difference between donors
 from a difference between experiments, and the paper itself draws every panel of
@@ -562,7 +567,7 @@ A fluorescence minus one control would place a threshold on the five markers
 that defeat both halves of this workflow. The deposit carries none, and no
 method applied to these files alone supplies one.
 
-## Reproducing this
+## Data and code availability
 
 ```bash
 # Pull the accession, about 1.4 GB of the 103 GB archive

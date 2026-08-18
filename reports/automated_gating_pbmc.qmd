@@ -53,9 +53,9 @@ OutputImage <- function(name) {
 
 ## Introduction
 
-The FlowJo Basic Tutorial provides eight FCS files acquired on an LSRII from
-two donors under four stimulation conditions. The files carry a compensation
-matrix in the `$SPILLOVER` keyword and a viability dye channel.
+The FlowJo Basic Tutorial provides eight FCS files acquired on an LSRII from two
+donors under four stimulation conditions. The files carry a compensation matrix
+in the `$SPILLOVER` keyword and a viability dye channel.
 
 This report applied compensation, estimated one logicle transform on the first
 sample and applied it to all eight, and gated every sample with one openCyto
@@ -64,9 +64,9 @@ frequencies across the eight samples.
 
 ### The gate hierarchy as a CSV
 
-The gate hierarchy is stored in `gating/pbmc_gating_template.csv`. A template
-is a text file that a version control system can track and a reviewer can read
-in a pull request.
+The gate hierarchy is stored in `gating/pbmc_gating_template.csv`. A template is
+a text file that a version control system can track and a reviewer can read in a
+pull request.
 
 Maecker and colleagues sent pre-stained cells to 15 experienced laboratories.
 Local gating gave a mean CV of 20.5 percent, and central gating of the same raw
@@ -111,7 +111,9 @@ split CV does not, so it is closer to a measure of the assay itself.
 The analysis used flowCore, flowWorkspace, openCyto, ggcyto, ggplot2 and knitr.
 Every version is pinned in the container.
 
-## The dataset
+## Results
+
+### The files and the panel
 
 ```{r}
 #| label: sample-sheet
@@ -130,7 +132,7 @@ event_counts <- ReadOutput("event_counts.csv")
 kable(event_counts, caption = "Events acquired per sample.")
 ```
 
-### The panel
+#### The panel
 
 ```{r}
 #| label: panel
@@ -145,7 +147,7 @@ there is `FSC-H` beside `FSC-A`, so the analysis excludes doublets. A panel with
 only `FSC-A` cannot gate singlets at all, and a doublet then counts as a cell in
 every population below it.
 
-## Compensation
+### Compensation
 
 Spillover is the light from one fluorochrome that a second detector also reads.
 The relationship is linear, so the correction multiplies the measured values by
@@ -178,7 +180,7 @@ kable(
 )
 ```
 
-### Doing this without a stored matrix
+#### Doing this without a stored matrix
 
 When the file carries no matrix, compute one from single stained controls with
 `flowStats::spillover_ng()`. In Python the equivalent is a `flowkit.Matrix`
@@ -186,7 +188,7 @@ built from the controls. The common mistake is to compensate with a matrix from
 a different acquisition day, and that mistake produces a population that does
 not exist.
 
-## Transformation
+### Transformation
 
 Fluorescence data spans several orders of magnitude, and after compensation it
 holds negative values, which a log transform cannot represent. The logicle
@@ -201,7 +203,7 @@ cat("Transformed channels:\n")
 cat(paste0("  ", channels, collapse = "\n"))
 ```
 
-## The gating template
+### The gating template
 
 ```{r}
 #| label: template
@@ -223,7 +225,7 @@ kable(
 knitr::include_graphics(OutputImage("gating_tree.png"))
 ```
 
-## The gates
+### The gates
 
 Each figure shows one gate on the first sample, and the fitted boundary is drawn
 on the data it was fitted to.
@@ -246,8 +248,6 @@ for (population in populations) {
   }
 }
 ```
-
-## Results
 
 ### Frequency of every population
 
@@ -298,7 +298,7 @@ kable(
 )
 ```
 
-## Reproducing this
+## Data and code availability
 
 ```bash
 # Pull the dataset, about 207 MB of the 103 GB archive

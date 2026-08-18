@@ -129,9 +129,11 @@ kable(
 )
 ```
 
-## Part 1: compensation
+## Results
 
-### Matching controls to channels
+### Compensation
+
+#### Matching controls to channels
 
 ```{r}
 #| label: match-passes
@@ -150,7 +152,7 @@ matches on the antibody name alone and ignores the fluorochrome, which resolves
 in the panel. The matcher reports which pass it used, so a weaker match is
 visible.
 
-### Whether each control can support an estimate
+#### Control quality
 
 ```{r}
 #| label: control-quality
@@ -170,7 +172,7 @@ NKp30 positive on 3.5 percent and NKG2C on 7.0 percent. Those two values reflect
 the biology, because NKG2C marks a small adaptive NK subset and that subset is
 the point of the paper. The two controls are still poor compensation controls.
 
-### The finding: mode against median
+#### Mode against median
 
 Two spillover values above 100 percent appeared under one configuration, which
 is not physical, so the cause was investigated.
@@ -196,7 +198,7 @@ quality table flags as positive on 7.0 percent and 17.2 percent of events. Three
 configurations returned no usable estimate, and the table records that instead
 of dropping the row.
 
-### The computed matrix
+#### The computed matrix
 
 ```{r}
 #| label: spillover-heatmap
@@ -217,7 +219,7 @@ kable(
 )
 ```
 
-### Computed against stored
+#### Computed against stored
 
 ```{r}
 #| label: matrix-comparison
@@ -236,7 +238,7 @@ largest gap is BV510 into the violet 450/50 detector. Both matrices agree that
 this pair carries the largest spillover in the panel, and they disagree on its
 size. The residual is not resolved here.
 
-## Part 2: automated gating
+### Automated gating
 
 ```{r}
 #| label: template
@@ -258,7 +260,7 @@ kable(
 knitr::include_graphics(OutputImage("automated_tree.png"))
 ```
 
-## Part 3: the comparison
+### The comparison
 
 ```{r}
 #| label: population-map
@@ -294,7 +296,7 @@ kable(
 knitr::include_graphics(OutputImage("comparison_scatter.png"))
 ```
 
-### Where they agree and where they do not
+#### Agreement between the routes
 
 Four of the seven populations agree within five percentage points, a tolerance
 set before the numbers were read and not a published standard. The disagreement
@@ -308,7 +310,7 @@ lymphocyte gate then differs by 5.7 points in the same direction. By the CD56
 against CD3 split the two methods are close again on the small populations, at
 2.5 points and 1.4 points, and further apart on the largest one at 6.0 points.
 
-## Part 4: reproducing the paper
+### Reproduction of the published analysis
 
 OMIP-039 makes seven directional claims about how CD56dim NKG2C+ NK cells differ
 from CD56dim NKG2C- NK cells, and it states one composite phenotype as
@@ -328,7 +330,7 @@ kable(
 )
 ```
 
-### Route 1: the authors' own gates
+#### Route 1: the authors' own gates
 
 ```{r}
 #| label: claims-manual
@@ -347,7 +349,7 @@ kable(
 All six frequency claims hold. NKG2A falls by 41.8 percentage points and ILT2
 rises by 21.7.
 
-### Figure 1C, the prototypic adaptive phenotype
+#### Figure 1C, the prototypic adaptive phenotype
 
 ```{r}
 #| label: phenotype
@@ -373,7 +375,7 @@ cat(sprintf(
 ))
 ```
 
-### Route 2: the automated template
+#### Route 2: the automated template
 
 ```{r}
 #| label: claims-automated
@@ -404,7 +406,7 @@ is not fixed yet.
 knitr::include_graphics(OutputImage("claims_plot.png"))
 ```
 
-## Part 5: clustering, a third route
+### Clustering as a third route
 
 ```{r}
 #| label: umap-cell-types
@@ -413,7 +415,7 @@ knitr::include_graphics(OutputImage("claims_plot.png"))
 knitr::include_graphics(OutputImage("umap_cell_types.png"))
 ```
 
-### How a cluster gets a name
+#### Cluster annotation
 
 ```{r}
 #| label: cluster-annotation
@@ -447,7 +449,7 @@ knitr::include_graphics(OutputImage("cluster_heatmap.png"))
 knitr::include_graphics(OutputImage("umap_markers.png"))
 ```
 
-### Three routes, one file
+#### Three routes, one file
 
 ```{r}
 #| label: three-way
@@ -475,12 +477,12 @@ neighbouring metacluster, because the number of metaclusters is chosen in
 advance and 12 was set without a prior estimate. The three columns disagree most
 where the population is smallest.
 
-## Discussion: where the three routes disagree, and why
+## Discussion
 
 The three routes disagree on specific populations, and each disagreement has a
 different cause.
 
-### The NK compartment is not where they disagree
+### Agreement across the NK compartment
 
 ```{r}
 #| label: nk-total
@@ -516,7 +518,7 @@ consequence is that the largest population absorbs part of the smallest, which
 is the direction that matters least for the T cell number and most for the NK
 number.
 
-### Disagreement 2: the bright and dim split is unreliable in both automated routes
+### Disagreement 2: the bright and dim split
 
 The bright and dim split is the largest disagreement in the table.
 
@@ -535,18 +537,18 @@ a doubled weight for `high`, and any metacluster with above average CD56
 attracts that label, bright or not. The events are in the CD56bright label
 instead, and the compartment total is intact.
 
-### What follows for the paper's conclusions
+### Consequences for the paper's conclusions
 
 None of the above changes the answer to the question that the paper asks. The
-claims in Part 4 are about the ratio between two branches of the CD56dim
-population, and every route that produced those branches at all gave the same
-directions with comparable magnitudes. A cut point that moves the boundary
-between two populations changes both of their frequencies. It does not reverse
-the sign of a difference measured within one of them. That is why the six
-directional claims survive a gating strategy that disagrees with the authors by
-2.5 percentage points on the NK compartment.
+claims in Reproduction of the published analysis are about the ratio between two
+branches of the CD56dim population, and every route that produced those branches
+at all gave the same directions with comparable magnitudes. A cut point that
+moves the boundary between two populations changes both of their frequencies. It
+does not reverse the sign of a difference measured within one of them. That is
+why the six directional claims survive a gating strategy that disagrees with the
+authors by 2.5 percentage points on the NK compartment.
 
-### What this shows and what it does not
+### Scope and limitations
 
 It shows that an automated template reaches the same conclusions as a published
 expert analysis on a real panel, and it names the specific gates where the two
@@ -569,7 +571,7 @@ number of cells. A gate on a bimodal marker holds steady. A gate on a continuum
 is a decision. The cut sits in a CSV that a reviewer can read and a version
 control system can diff.
 
-## Reproducing this
+## Data and code availability
 
 ```bash
 # Pull this dataset only, not the 103 GB archive

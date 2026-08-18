@@ -121,7 +121,9 @@ are tested by Spearman correlation on the flow data.
 The analysis uses flowCore, ggplot2 and knitr. Every version is pinned in the
 container.
 
-## Part 1: the deposited viability gate
+## Results
+
+### The deposited viability gate
 
 The deposit carries a cytoflow workflow with two polygons. The first is named
 `lymphocytes` and it sits on forward scatter height against side scatter height.
@@ -166,7 +168,7 @@ kable(
 )
 ```
 
-## Part 2: resolving thirteen colours across five panels
+### Resolving thirteen colours across five panels
 
 A large share of the files carry no marker name. The published panel design is
 committed as `gating/oetjen2018_panels.csv`, and it supplies the fallback.
@@ -196,7 +198,7 @@ The paper reports a median of 196,000 CD45 positive events collected, with a
 25th to 75th percentile of 100,000 to 278,000. The count here is taken before
 the scatter gate.
 
-## Part 3: marker stability under the automated cut
+### Marker stability under the automated cut
 
 The upstream gates come from the depositors. The automated cut below them uses a
 density minimum with a two component mixture as the fallback.
@@ -240,7 +242,7 @@ not measurable by this method.
 The automated density cut fails here because the marker distribution has no
 reliable second mode. The tissue holds a developmental continuum.
 
-## Part 4: T cell subsets by two technologies
+### T cell subsets by two technologies
 
 The T panel and the mass cytometry panel both carry CD3, CD4, CD8, CD45RA and
 CCR7. Both produce the naive, central memory, effector memory and terminally
@@ -275,7 +277,7 @@ that survive both routes are fewer still. A correlation on that many points has
 low power. The CD45RA and CCR7 cuts are the least reliable in the panel. A
 subset built from two unreliable cuts inherits both.
 
-## Part 5: the age trend and the repeated aspiration
+### The age trend and the repeated aspiration
 
 ```{r}
 #| label: age
@@ -318,7 +320,7 @@ kable(
 
 The absolute differences between aspirations are small for all measures.
 
-## Part 6: claim verdicts
+### Claim verdicts
 
 ```{r}
 #| label: verdicts
@@ -343,7 +345,7 @@ kable(
 
 ## Discussion
 
-### What this shows
+### Principal findings
 
 The deposited cytoflow file carries two polygons. One of them reverses an
 assumption that a conventional pipeline makes. The age claim reproduces from the
@@ -351,7 +353,7 @@ deposited files with a significant correlation in both T cell lineages. The
 analysis shares no software with the original. The concordance between two
 aspirations of one donor also reproduces.
 
-### What this does not show
+### Limitations
 
 The analysis cannot test the paper claim about the correlation between mass
 cytometry and flow cytometry. The shared donors are too few and the cuts are the
@@ -361,14 +363,14 @@ The single cell RNA sequencing is not included. Those data are in GEO and not in
 this archive, so the claim about a discrepancy between sequencing and flow
 cytometry is out of reach.
 
-### What is left to do
+### Further work
 
 The authors' full gating strategy is in Supplemental Table 2 of the paper. It is
 not in the deposit in a machine readable form. The lineage frequencies would
 come from stated boundaries rather than from an automated rule. The unstained
 control of each sample is in the deposit. This analysis does not use it.
 
-## Reproducing this
+## Data and code availability
 
 ```bash
 # Pull the two accessions, about 17 GB of the 103 GB archive

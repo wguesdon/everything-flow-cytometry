@@ -147,7 +147,9 @@ deposit confirms the match.
 
 The analysis runs in R. Every package version is pinned in the container.
 
-## Part 1: channel resolution and gating
+## Results
+
+### Channel resolution and gating
 
 A single template channel name cannot cover this deposit. Three makers name the
 same detector three ways. Becton Dickinson writes `PerCP-Cy5-5-A`, one operator
@@ -198,7 +200,7 @@ kable(
 )
 ```
 
-### Two files of this deposit are one acquisition
+#### A duplicated acquisition in the deposit
 
 ```{r}
 #| label: repeats
@@ -217,10 +219,10 @@ headers name the same acquisition. The design counts them as separate
 replicates, so a repeatability measure computed over them understates the
 spread, because two of the three replicates are one measurement exported twice.
 
-## Part 2: the paper's claims, from the deposit alone
+### The paper's claims, from the deposit alone
 
-Every claim in this part is answered from the local arm and the central arm. The
-automated arms take no part in it.
+Every claim in this section is answered from the local arm and the central arm.
+The automated arms take no part in it.
 
 ```{r}
 #| label: interoperator-counts
@@ -315,7 +317,7 @@ that miss by one or two come from the acceptability tables. The paper does not
 state whether a parameter exactly at a threshold counts as acceptable, and a
 difference of one parameter in fifteen follows from that choice alone.
 
-### Where the deposit disagrees with the paper
+#### Disagreement between the deposit and the paper
 
 Claim 4 differs by three parameters. The paper reports bias acceptable for 7 of
 15 parameters in locally analysed whole blood, and this analysis finds 10. Claim
@@ -339,7 +341,7 @@ before it runs the decomposition, while this analysis scales across the whole
 set. The difference in the reported variance follows from that choice, and it is
 a difference in method rather than in the data.
 
-## Part 3: two automated arms
+### Two automated arms
 
 The second arm exists because the first one showed that per-file cuts follow day
 to day drift. A cut fitted once on the pooled cohort avoids changing a frequency
@@ -371,7 +373,7 @@ knitr::include_graphics(OutputImage("distribution_by_arm.png"))
 knitr::include_graphics(OutputImage("intraoperator_cv.png"))
 ```
 
-## Part 4: comparison of the four arms
+### Comparison of the four arms
 
 ```{r}
 #| label: dispersion
@@ -442,7 +444,7 @@ preparation and not to the panel.
 
 ## Discussion
 
-### What this shows
+### Principal findings
 
 A published harmonisation result reproduces from the deposited spreadsheet. Of
 the twenty claims encoded from the paper, most come out as stated, and the two
@@ -456,7 +458,7 @@ separate repeatability from agreement, which the paper's design cannot do on its
 own. A stable boundary fixes the first. Only a shared judgement fixes the
 second.
 
-### Where the automated arms are weak, and why
+### Weaknesses of the automated arms
 
 Both automated arms sit below the two human arms on every indicator.
 
@@ -469,7 +471,7 @@ it is. The frozen PBMC arm carries the worst numbers, and it also carries the
 hardest problem. Those replicates were stained on three separate days, so a per
 file cut has three days of drift to follow.
 
-### What this does not show
+### Limitations
 
 It does not show that the paper is right. It shows that the numbers in the paper
 follow from the spreadsheet the authors deposited.
@@ -487,14 +489,14 @@ file is not a missing measurement at random, because the files that fail are the
 ones whose densities do not resolve, which are also the ones a person finds
 hardest.
 
-### What is left to do
+### Further work
 
 The 234 files come from 7 instruments, and the design is unbalanced across them,
 so a variance components model with the operator, the instrument and the centre
 as separate random effects would say more than the indicators do. It is not run
 here.
 
-## Reproducing this
+## Data and code availability
 
 ```bash
 # Pull this dataset only, 5.8 GB of the 103 GB archive

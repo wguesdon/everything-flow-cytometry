@@ -119,9 +119,11 @@ precision, accuracy, and F-measure.
 The analysis uses flowCore, ggplot2, and knitr. Every version is pinned in the
 container.
 
-## Part 1: the rule that enters the benchmark
+## Results
 
-### The cytokine gate is the part that had to change
+### The rule that enters the benchmark
+
+#### The cytokine gate
 
 An unstimulated T cell is negative for all four cytokines, so a two component
 mixture splits the negative population down the middle. The first attempt did
@@ -131,7 +133,7 @@ applied to the stimulated file of the same subject. The HVTN deposit gives each
 subject two negative controls. One sets the threshold and the other measures the
 background at that same threshold.
 
-### One transform for every file
+#### One transform for every file
 
 A threshold taken from a subject's control is applied to that subject's
 stimulated file, so the two files have to sit on one scale. Every channel is
@@ -155,7 +157,7 @@ kable(
 The gating failures reduce the number of subjects available for the paired
 analysis.
 
-## Part 2: the population the paper names
+### The population the paper names
 
 ```{r}
 #| label: env-gag
@@ -188,7 +190,7 @@ because manual gating looked at one population. An automated sweep over all
 eight finds that population, and it also finds the three the paper does not
 mention.
 
-## Part 3: the two challenges, scored the way the benchmark scored them
+### Challenge scores
 
 ```{r}
 #| label: scores
@@ -253,7 +255,7 @@ The training half reaches an accuracy of 0.875 and the held out half reaches
 of the markers used. This analysis reproduces the pattern and cannot settle that
 question.
 
-## Part 4: claim verdicts
+### Claim verdicts
 
 ```{r}
 #| label: verdicts
@@ -278,7 +280,7 @@ kable(
 
 ## Discussion
 
-### What this shows
+### Principal findings
 
 The two opposite results of the benchmark both reproduce from the deposited
 files, using one rule that was written without reference to either. The HVTN
@@ -290,7 +292,7 @@ accuracy of 0.875 and then falls to a coin on the held out half.
 The population the paper names is discriminative. CD4 interleukin 2 is higher
 after Env stimulation in 37 of 47 subjects.
 
-### Where this rule falls short of the benchmark
+### The gap between the rule and the benchmark
 
 Six named algorithms reached an F-measure of 1.0 on the HVTN challenge, and this
 rule reaches 0.77. The gap is the rule and not the data. One feature and one
@@ -302,7 +304,7 @@ information that a method reading one of them does not.
 The benchmark was won by combining features rather than by better gating. A
 single feature rule cannot combine evidence from multiple features.
 
-### What this does not show
+### Limitations
 
 This report does not enter the benchmark properly. FlowCAP scored a submission
 against its own held out labels under a protocol, and this report scores itself.
@@ -314,9 +316,9 @@ one by alternating individuals. That split is deterministic and stated, and it
 is not the split the benchmark used. Fifteen of the 44 infants also lack a
 complete feature vector, because a lineage gate did not resolve in at least one
 of their seven files. That leaves a small test set and it widens every interval
-in Part 3.
+in the challenge scores.
 
-### What is left to do
+### Further work
 
 A rule that combines features is the next step, and the deposit supports it. The
 method should be fixed before looking at the held out half, exactly as this rule
@@ -324,7 +326,7 @@ did. The HVTN deposit also carries a positive control for every subject,
 stimulated with staphylococcal enterotoxin B. It is gated here and it is not
 used, and it is the natural check on whether a subject's cells responded at all.
 
-## Reproducing this
+## Data and code availability
 
 ```bash
 # Pull the two accessions, about 8 GB of the 103 GB archive
