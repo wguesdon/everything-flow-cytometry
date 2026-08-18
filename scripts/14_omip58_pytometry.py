@@ -43,7 +43,7 @@ from omip58_analysis import (
     annotate,
     cluster,
     cluster_medians,
-    definition_coverage,
+    cluster_parents,
     marker_separation,
     population_frequencies,
     read_handoff,
@@ -57,7 +57,6 @@ EVENTS_PER_DONOR = 100_000
 COFACTOR = 150.0
 SEED = 42
 CLUSTERED_PATH = OUTPUT_DIR / "clustered.h5ad"
-MIN_SEPARATION = 0.10
 
 
 def write(frame: pd.DataFrame, name: str) -> pd.DataFrame:
@@ -155,24 +154,38 @@ def main() -> int:
     marker_columns = [
         column
         for column in definitions.columns
-        if column not in ("cell_type", "note") and column in medians.columns
+        if column not in ("cell_type", "parent", "note")
+        and column in medians.columns
     ]
     separation = marker_separation(medians[marker_columns])
-    separation["informative"] = separation["separation"] >= MIN_SEPARATION
     write(separation, "marker_separation.csv")
     print("\n  how well each marker separates the clusters:")
     print(separation.to_string(index=False, float_format=lambda x: f"{x:.3f}"))
 
-    coverage = definition_coverage(medians, definitions,
-                                   min_separation=MIN_SEPARATION)
-    write(coverage, "definition_coverage.csv")
-    scorable = set(coverage.loc[coverage["scorable"], "cell_type"])
-    lost = coverage.loc[~coverage["scorable"], ["cell_type", "lost"]]
-    if not lost.empty:
-        print("\n  populations whose markers no longer separate the clusters:")
-        print(lost.to_string(index=False))
+    # The CD3 cut comes from the R half rather than being found again here, so
+    # both languages draw one boundary and a natural killer cell definition
+    # never scores against a T cell cluster.
+    cuts = pd.read_csv(OUTPUT_DIR / "gate_cuts.csv")
+    cd3_cuts = cuts.loc[cuts["marker"] == "CD3", "cut"]
+    cd3_cut = float(cd3_cuts.mean())
+    print(f"\n  CD3 cut from the R half: {cd3_cut:.3f} on the arcsinh scale, "
+          f"the mean over {len(cd3_cuts)} donors")
+    parents = cluster_parents(medians, cd3_cut)
+    print(parents.value_counts().to_string())
 
-    labels = annotate(medians, definitions, min_separation=MIN_SEPARATION)
+    # The markers that carry no usable threshold are named rather than found by
+    # a rule, with the measurement behind each one. Part 4 of the R half is the
+    # evidence.
+    unusable = pd.read_csv(GATING_DIR / "omip58_unusable_markers.csv")
+    omit = list(unusable["marker"])
+    print(f"\n  markers with no usable threshold: {', '.join(omit)}")
+
+    labels = annotate(medians, definitions, parents=parents, omit=omit)
+    scored = set(labels.loc[labels["markers_named"] > 0, "cell_type"])
+    dropped = sorted(set(definitions["cell_type"]) - scored)
+    if dropped:
+        print(f"  populations no cluster can be scored against: "
+              f"{', '.join(dropped)}")
     sizes = sampled.obs["leiden"].value_counts().rename("events")
     labels = labels.merge(sizes, left_on="cluster", right_index=True, how="left")
     labels["percent_of_sample"] = 100 * labels["events"] / sampled.n_obs
@@ -231,8 +244,8 @@ def main() -> int:
     found = set(labels["cell_type"])
 
     def unmeasurable(*names: str) -> str | None:
-        """Name the populations a claim needs that the markers cannot resolve."""
-        missing = [name for name in names if name not in scorable]
+        """Name the populations a claim needs that no cluster carries."""
+        missing = [name for name in names if name not in found]
         if not missing:
             return None
         return ", ".join(missing)
@@ -241,7 +254,7 @@ def main() -> int:
     if reason:
         rows.append((
             "1",
-            f"the markers that define {reason} do not separate the clusters",
+            f"no cluster carries {reason}",
             "unresolved",
         ))
     else:
@@ -255,7 +268,7 @@ def main() -> int:
     if reason:
         rows.append((
             "2",
-            f"the markers that define {reason} do not separate the clusters",
+            f"no cluster carries {reason}",
             "unresolved",
         ))
     else:
@@ -280,15 +293,8 @@ def main() -> int:
             verdict(two_wins),
         ))
 
-    if "MAIT cells" not in scorable:
-        rows.append((
-            "4",
-            "the markers that define MAIT cells do not separate the clusters",
-            "unresolved",
-        ))
-    else:
-        rows.append(("4", f"MAIT cells labelled: {'MAIT cells' in found}",
-                     verdict("MAIT cells" in found)))
+    rows.append(("4", f"MAIT cells carry a cluster: {'MAIT cells' in found}",
+                 verdict("MAIT cells" in found)))
 
     unconventional = ("iNKT cells", "MAIT cells", "Vd1 gamma delta T cells",
                       "Vd2Vg9 gamma delta T cells")
@@ -296,8 +302,8 @@ def main() -> int:
     if reason:
         rows.append((
             "5",
-            (f"the unconventional subsets are not all measurable, so the share "
-             f"cannot be computed: {reason}"),
+            (f"the unconventional subsets are not all measurable, so the "
+             f"share cannot be computed: no cluster carries {reason}"),
             "unresolved",
         ))
     else:

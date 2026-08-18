@@ -26,6 +26,15 @@ source(file.path("R", "spillover_compute.R"))
 source(file.path("R", "naive_memory.R"))
 source(file.path("R", "omip58.R"))
 
+# Several steps below draw random subsets. robustbase::covMcd does, and so does
+# flowStats::norm2Filter, which spillover_ng calls while it gates each control.
+# Without a seed the matrix moves a little between runs, the compensated values
+# move with it, and a count in this report cannot be reproduced. Two unseeded
+# runs differed by 6 live lymphocytes of 598,880 and swung the fitted Vg9 cut
+# from 60.97 to 79.76 percent of T cells.
+kSeed <- 42
+set.seed(kSeed)
+
 kDepositDir <- file.path("data", "datasets", "flowrepository", "FR-FCM-ZYRN")
 kOutputDir <- file.path("output", "omip58")
 kHandoffDir <- file.path(kOutputDir, "handoff")
@@ -134,7 +143,8 @@ CorrelationSummary <- function(frame, spillover_matrix, label, donor) {
   values <- TransformOmip58(exprs(frame), channels$channel)
   in_range <- InScatterRange(values, scatter)
   singlets <- in_range
-  singlets[in_range] <- SingletMask(values[in_range, , drop = FALSE], scatter)
+  singlets[in_range] <- Omip58SingletMask(values[in_range, , drop = FALSE],
+                                          scatter)
   lymphocytes <- singlets
   lymphocytes[singlets] <- LymphocyteMask(values[singlets, , drop = FALSE],
                                           scatter)

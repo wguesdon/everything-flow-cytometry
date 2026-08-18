@@ -140,7 +140,7 @@ test_that("InScatterRange drops the events above the digitiser range", {
   expect_equal(keep, c(TRUE, FALSE, FALSE, TRUE))
 })
 
-test_that("SingletMask keeps the high ratio events and drops the doublets", {
+test_that("Omip58SingletMask keeps the singlets and drops the doublets", {
   # Singlets sit on one ratio with a little noise. A doublet doubles the pulse
   # area while the height stays where it was, so its ratio is halved.
   values <- withr::with_seed(4, {
@@ -148,16 +148,16 @@ test_that("SingletMask keeps the high ratio events and drops the doublets", {
     height <- c(runif(200, 88, 92), runif(5, 88, 92))
     cbind("FSC-A" = area, "FSC-H" = height)
   })
-  keep <- SingletMask(values, c(forward_area = "FSC-A",
-                                forward_height = "FSC-H"))
+  keep <- Omip58SingletMask(values, c(forward_area = "FSC-A",
+                                      forward_height = "FSC-H"))
   expect_equal(sum(keep[1:200]), 200)
   expect_equal(sum(keep[201:205]), 0)
 })
 
-test_that("SingletMask keeps every event when the ratio does not vary", {
+test_that("Omip58SingletMask keeps every event when the ratio does not vary", {
   values <- cbind("FSC-A" = rep(100, 50), "FSC-H" = rep(90, 50))
-  expect_true(all(SingletMask(values, c(forward_area = "FSC-A",
-                                        forward_height = "FSC-H"))))
+  expect_true(all(Omip58SingletMask(values, c(forward_area = "FSC-A",
+                                              forward_height = "FSC-H"))))
 })
 
 test_that("SplitOnChannel finds the boundary between two separated modes", {

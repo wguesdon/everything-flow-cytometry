@@ -17,6 +17,15 @@
 # The matrix is therefore computed from the deposited single stains, which is
 # why the deposit ships 55 of them.
 #
+# The singlet gate here is one sided. [SingletMask()] in R/spectral.R fits the
+# line of forward scatter height on area and drops the events far from it on
+# either side, which is the rule the other reports use. This deposit keeps the
+# events above the line, because a doublet lowers the ratio of height to area
+# and nothing raises it, so trimming the upper tail removes the largest
+# singlets for no reason. The two functions carry different names because
+# tests/testthat.R sources every file in R/ into one environment, and the
+# second definition of a name silently replaces the first.
+#
 # The gate hierarchy follows Figure 1A to 1D of the paper. It stops at the CD3
 # split, because the populations below that split are what the Python side is
 # asked to find without being told where they are.
@@ -348,6 +357,10 @@ InScatterRange <- function(values, scatter, limit = 262144) {
 #' median is the one to keep and a symmetric rule would trim the largest
 #' singlets for no reason.
 #'
+#' [SingletMask()] in R/spectral.R is the symmetric rule that the other reports
+#' use. The names differ because `tests/testthat.R` sources every file in `R/`
+#' into one environment.
+#'
 #' @param values A numeric matrix of events by channels.
 #' @param scatter The output of [Omip58ScatterChannels()].
 #' @param deviations How many median absolute deviations below the median the
@@ -355,10 +368,10 @@ InScatterRange <- function(values, scatter, limit = 262144) {
 #' @return A logical vector, one element per event.
 #' @examples
 #' \dontrun{
-#' SingletMask(values, scatter)
+#' Omip58SingletMask(values, scatter)
 #' }
 #' @export
-SingletMask <- function(values, scatter, deviations = 3) {
+Omip58SingletMask <- function(values, scatter, deviations = 3) {
   area <- values[, scatter[["forward_area"]]]
   height <- values[, scatter[["forward_height"]]]
   ratio <- height / area
@@ -379,15 +392,22 @@ SingletMask <- function(values, scatter, deviations = 3) {
 #'
 #' @param values A numeric matrix of events by channels.
 #' @param scatter The output of [Omip58ScatterChannels()].
+#' `robustbase::covMcd` draws random subsets, so the fit moves between runs
+#' unless the generator is set. Two runs of this hierarchy differed by 1,714
+#' live lymphocytes of 600,000 before the seed was added, which is small but it
+#' means a number in a report cannot be reproduced exactly.
+#'
 #' @param quantile_limit The chi squared quantile that bounds the Mahalanobis
 #'   distance from the robust centre.
+#' @param seed The seed for the robust fit.
 #' @return A logical vector, one element per event.
 #' @examples
 #' \dontrun{
 #' LymphocyteMask(values, scatter)
 #' }
 #' @export
-LymphocyteMask <- function(values, scatter, quantile_limit = 0.95) {
+LymphocyteMask <- function(values, scatter, quantile_limit = 0.95,
+                           seed = 42) {
   side <- values[, scatter[["side_area"]]]
   side_cut <- DensityCut(side)
   low_side <- if (is.na(side_cut)) rep(TRUE, nrow(values)) else side < side_cut
@@ -397,7 +417,9 @@ LymphocyteMask <- function(values, scatter, quantile_limit = 0.95) {
 
   columns <- c(scatter[["forward_area"]], scatter[["side_area"]])
   pair <- values[low_side, columns, drop = FALSE]
-  centre <- try(robustbase::covMcd(pair, alpha = 0.75), silent = TRUE)
+  centre <- withr::with_seed(seed, {
+    try(robustbase::covMcd(pair, alpha = 0.75), silent = TRUE)
+  })
   if (methods::is(centre, "try-error")) {
     return(low_side)
   }
@@ -560,7 +582,8 @@ GateOmip58File <- function(path, spillover, cofactor = 150,
 
   in_range <- InScatterRange(values, scatter)
   singlets <- in_range
-  singlets[in_range] <- SingletMask(values[in_range, , drop = FALSE], scatter)
+  singlets[in_range] <- Omip58SingletMask(values[in_range, , drop = FALSE],
+                                          scatter)
   lymphocytes <- singlets
   lymphocytes[singlets] <- LymphocyteMask(values[singlets, , drop = FALSE],
                                           scatter)

@@ -1,11 +1,11 @@
-cell_type,CD3,CD4,CD8,CD16,CD56,CD161,HLADR,tetramer,Va72,Vd1,Vd2,Vg9,note
-iNKT cells,pos,,,,,,,high,,,,,"CD3 positive and bound by the CD1d PBS57 tetramer. Figure 1B of the paper."
-Vd1 gamma delta T cells,pos,,,,,,,neg,,pos,neg,neg,"CD3 positive Vd1 positive Vg9 negative. Figure 1C."
-Vd2Vg9 gamma delta T cells,pos,,,,,,,neg,,neg,pos,pos,"CD3 positive Vd2 positive Vg9 positive. The larger of the two peripheral gamma delta subsets in the paper."
-MAIT cells,pos,,,,,high,,neg,pos,neg,,neg,"CD3 positive Va7.2 positive with high CD161, inside the Vd1 negative Vg9 negative cells. Figure 1C."
-CD4 T cells,pos,pos,neg,,,,,neg,,neg,neg,neg,"Conventional CD4 T cells."
-CD8 T cells,pos,neg,pos,,,,,neg,,neg,neg,neg,"Conventional CD8 T cells."
-Early NK cells,neg,,,neg,high,,neg,,,,,,"CD3 negative HLA-DR negative CD56 bright CD16 negative. Figure 1D."
-Mature NK cells,neg,,,pos,pos,,neg,,,,,,"CD3 negative HLA-DR negative CD56 positive CD16 positive. Figure 1D."
-Terminal NK cells,neg,,,pos,neg,,neg,,,,,,"CD3 negative HLA-DR negative CD56 negative CD16 positive. Figure 1D."
-HLA-DR positive non T cells,neg,,,,,,pos,,,,,,"B cells, monocytes and dendritic cells. The paper removes these before the NK gate."
+cell_type,parent,CD3,CD4,CD8,CD16,CD56,CD161,HLADR,tetramer,Va72,Vd1,Vd2,Vg9,note
+iNKT cells,cd3_positive,pos,,,,,,,high,,,,,CD3 positive and bound by the CD1d PBS57 tetramer. Figure 1B of the paper.
+Vd1 gamma delta T cells,cd3_positive,pos,,,,,,,neg,,pos,neg,neg,CD3 positive Vd1 positive Vg9 negative. Figure 1C.
+Vd2Vg9 gamma delta T cells,cd3_positive,pos,,,,,,,neg,,neg,pos,pos,CD3 positive Vd2 positive Vg9 positive. The larger of the two peripheral gamma delta subsets in the paper.
+MAIT cells,cd3_positive,pos,,,,,high,,neg,pos,neg,,neg,"CD3 positive Va7.2 positive with high CD161, inside the Vd1 negative Vg9 negative cells. Figure 1C."
+CD4 T cells,cd3_positive,pos,pos,neg,,,,,neg,,neg,neg,neg,Conventional CD4 T cells.
+CD8 T cells,cd3_positive,pos,neg,pos,,,,,neg,,neg,neg,neg,Conventional CD8 T cells.
+Early NK cells,cd3_negative,neg,,,neg,high,,neg,,,,,,CD3 negative HLA-DR negative CD56 bright CD16 negative. Figure 1D.
+Mature NK cells,cd3_negative,neg,,,pos,pos,,neg,,,,,,CD3 negative HLA-DR negative CD56 positive CD16 positive. Figure 1D.
+Terminal NK cells,cd3_negative,neg,,,pos,neg,,neg,,,,,,CD3 negative HLA-DR negative CD56 negative CD16 positive. Figure 1D.
+HLA-DR positive non T cells,cd3_negative,neg,,,,,,pos,,,,,,"B cells, monocytes and dendritic cells. The paper removes these before the NK gate."

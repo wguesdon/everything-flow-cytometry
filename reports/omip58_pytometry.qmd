@@ -133,12 +133,21 @@ embedded in a neighbour graph of 30 neighbours. Communities are found with the
 Leiden algorithm at resolution 1.0 and the embedding is drawn with UMAP. Every
 step takes a fixed seed.
 
-Each cluster is labelled against a table of population definitions. Every marker
-is first called positive or negative across the clusters, and a definition
-scores the fraction of the markers it names that a cluster matches. A marker
-whose cluster medians do not split into two levels does not vote, and a
-definition that loses more than half of its markers that way is not scored at
-all.
+Each cluster is placed on one side of the CD3 gate using the cut the R half
+fitted, so both languages draw one boundary and a natural killer cell definition
+never scores against a T cell cluster. The cluster is then labelled against the
+definitions belonging to its own side. Every marker is first called positive or
+negative across the clusters by the split that maximises the variance between
+the two groups, and a definition scores the fraction of the markers it names
+that a cluster matches.
+
+Five markers are excluded by name rather than by a rule, because Part 4 shows
+they carry no usable threshold. `gating/omip58_unusable_markers.csv` holds the
+list with the measurement behind each entry. A computed filter was tried first
+and rejected: which markers it dropped changed from one clustering run to the
+next, and the labels changed with it. A definition left with fewer than two
+markers is not scored, and the populations it describes are reported as
+unmeasured rather than as a frequency of zero.
 
 ### Statistics
 
@@ -201,12 +210,12 @@ ggplot(correlations,
   theme_minimal(base_size = 12)
 ```
 
-As deposited, the median absolute correlation over the 153 marker pairs is 0.585
-in the first donor and 0.516 in the second. CD4 and CD8 correlate at 0.710 and
-0.700, where a T cell carries one or the other. CD3 and CD8, whose fluorochromes
+As deposited, the median absolute correlation over the 153 marker pairs is 0.584
+in donor 112117 and 0.520 in donor 43018. CD4 and CD8 correlate at 0.710 and
+0.705, where a T cell carries one or the other. CD3 and CD8, whose fluorochromes
 sit on adjacent violet detectors, correlate at 0.938 and 0.921. CD16 and the
 viability dye, on adjacent ultraviolet detectors and joined by no biology,
-correlate at 0.866 and 0.894.
+correlate at 0.865 and 0.895.
 
 The identity matrix therefore records that no matrix was supplied, not that none
 is needed.
@@ -275,9 +284,9 @@ no bead can stain, and a matrix that leaves that detector out cannot correct the
 spillover between it and CD16.
 
 The difference shows in the result. The bead matrix takes the median absolute
-correlation from 0.585 to 0.211 in the first donor and leaves CD4 with CD8 at
-0.687, because it has no row for either marker. The cell matrix takes the same
-donor to 0.168 and CD4 with CD8 to -0.311, which is the sign a mutually
+correlation from 0.584 to 0.210 in donor 112117 and leaves CD4 with CD8 at
+0.690, because it has no row for either marker. The cell matrix takes the same
+donor to 0.167 and CD4 with CD8 to -0.311, which is the sign a mutually
 exclusive pair should carry.
 
 ## Part 3: the gate and the handoff
@@ -305,9 +314,15 @@ kable(
 )
 ```
 
-Between 92.6 and 93.8 percent of lymphocytes are viable, and between 61.9 and
+Between 92.7 and 93.8 percent of lymphocytes are viable, and between 61.7 and
 65.8 percent of live lymphocytes are CD3 positive. Both cuts are placed at a
 density minimum between two separated modes.
+
+Several steps of the R half draw random subsets. `robustbase::covMcd` does, and
+so does the scatter filter that `flowStats::spillover_ng` applies while it gates
+each control. The script sets one seed, without which two runs differed by 6
+live lymphocytes of 598,880 and moved the fitted Vγ9 cut from 60.97 to 79.76
+percent of T cells.
 
 ```{r}
 #| label: manifest
@@ -334,12 +349,15 @@ kable(
 )
 ```
 
-The tetramer cut selects 48.7 percent of CD3 positive cells in the first donor
-and 53.2 percent in the second, for a population the paper places below 1
-percent of lymphocytes. The Vδ1 cut selects 62.7 and 54.0 percent, and the Vγ9
-cut 80.1 and 42.1 percent, for subsets that make up a few percent of blood T
-cells. The Vα7.2 cut returns nothing at all in the first donor and 2.0 percent
-in the second.
+The tetramer cut selects 48.6 percent of CD3 positive cells in donor 112117 and
+52.8 percent in donor 43018, for a population the paper places below 1 percent
+of lymphocytes. The Vδ1 cut selects 62.7 and 54.1 percent, and the Vγ9 cut 61.0
+and 42.1 percent, for subsets that make up a few percent of blood T cells. The
+Vα7.2 cut returns nothing at all in donor 112117 and 2.0 percent in donor 43018.
+
+These five markers are the ones the labelling in Part 5 excludes by name. The
+table above is the evidence, and `gating/omip58_unusable_markers.csv` carries it
+alongside the share of T cells each subset should hold.
 
 These markers are unimodal inside CD3 positive cells. A rule that looks for a
 second mode either finds nothing, which is visible, or places the cut inside the
@@ -368,29 +386,38 @@ knitr::include_graphics(OutputImage("umap_donor.png"))
 kable(
   ReadOutput("marker_separation.csv"),
   digits = 3,
-  caption = "How cleanly each marker splits the clusters into two levels. Separation is the gap between the dimmest positive cluster and the brightest negative one, divided by the full range of the marker.",
-  col.names = c("Marker", "Positive clusters", "Gap", "Separation",
-                "Informative")
+  caption = "How cleanly each marker splits the clusters into two levels. Separation is the gap between the dimmest cluster of the high group and the brightest of the low group, divided by the full range of the marker. The table is reported and not used to select markers.",
+  col.names = c("Marker", "Clusters in the high group", "Gap", "Separation")
 )
 ```
 
-The Leiden algorithm returns 24 clusters. Eight markers split those clusters
-into two levels: HLA-DR at a separation of 0.456, CD4 at 0.428, CD56 at 0.278,
-CD8 at 0.236, CD45RA at 0.216, CD3 at 0.177, Vα7.2 at 0.165, Vγ9 at 0.161 and
-CD16 at 0.122. Four do not: Vδ1 at 0.058, the tetramer at 0.058, CD161 at 0.057
-and Vδ2 at 0.057.
+The Leiden algorithm returns 24 clusters. The CD3 cut from the R half places 16
+of them on the T cell side and 8 on the other, which matches the 65.8 and 61.7
+percent that the gate itself returned.
 
-Those four are the same markers that defeat a one dimensional cut in Part 4. The
-failure follows the marker and not the method.
+Separation across the clusters runs from 0.398 for CD4 and 0.388 for HLA-DR down
+to 0.078 for Vδ1 and 0.055 for CD56. The markers at the bottom are largely the
+ones that defeat a one dimensional cut in Part 4, so the failure follows the
+marker rather than the method.
+
+This table is reported and not used. An earlier version of the analysis chose
+which markers could vote by putting a threshold on this column, and that
+threshold was not stable. Between two clustering runs of the same deposit, CD8
+moved from a separation of 0.236 to 0.092 and CD3 from 0.177 to 0.087, which
+changed the labels: one run put CD4 T cells at 43.8 percent of lymphocytes and
+the other put Vδ1 gamma delta T cells at 39.9 percent, a subset that is a few
+percent of blood T cells. The five markers excluded here are named in a file
+instead, with the measurement from Part 4 beside each one.
 
 ```{r}
-#| label: coverage
+#| label: unusable
 
 kable(
-  ReadOutput("definition_coverage.csv"),
-  caption = "How many of the markers each population definition names still separate the clusters.",
-  col.names = c("Population", "Markers named", "Markers informative",
-                "Lost", "Scorable")
+  read.csv(file.path("..", "gating", "omip58_unusable_markers.csv"),
+           check.names = FALSE),
+  caption = "The markers excluded from the labelling, with the share of CD3 positive cells that a fitted cut selects for each and the share the subset should hold.",
+  col.names = c("Marker", "Selected, donor 112117", "Selected, donor 43018",
+                "Expected percent of T cells", "Reason")
 )
 ```
 
@@ -407,9 +434,9 @@ knitr::include_graphics(OutputImage("cluster_heatmap.png"))
 kable(
   ReadOutput("cluster_labels.csv"),
   digits = 3,
-  caption = "Every cluster, the definition it best matched, and the margin over the runner up.",
-  col.names = c("Cluster", "Population", "Score", "Runner up", "Margin",
-                "Markers scored", "Events", "Percent of sample")
+  caption = "Every cluster, the side of the CD3 gate it falls on, the definition it best matched, and the margin over the runner up.",
+  col.names = c("Cluster", "Parent", "Population", "Score", "Runner up",
+                "Margin", "Markers scored", "Events", "Percent of sample")
 )
 ```
 
@@ -425,13 +452,19 @@ kable(
 )
 ```
 
-CD4 T cells account for 43.8 and 51.6 percent of the sampled live lymphocytes,
-CD8 T cells for 20.8 and 10.3 percent, and HLA-DR positive non T cells for 7.0
-and 13.6 percent. MAIT cells account for 0.83 and 0.75 percent.
+CD4 T cells account for 37.9 and 46.9 percent of the sampled live lymphocytes,
+CD8 T cells for 22.2 and 12.4 percent, and HLA-DR positive non T cells for 7.0
+and 13.7 percent. The two natural killer clusters together account for 25.8 and
+23.4 percent.
 
-Four populations keep too few informative markers to be scored: invariant
-natural killer T cells, both γδ subsets, and, through them, the comparison the
-paper draws between the two γδ subsets.
+The population labelled MAIT accounts for 7.1 and 3.7 percent. That label rests
+on CD3 and Vα7.2 alone, because CD161 is one of the excluded markers, and the
+paper defines MAIT cells as Vα7.2 positive with high CD161. The label therefore
+names Vα7.2 positive T cells and not the population the paper draws.
+
+Four populations keep fewer than two markers and are not scored at all:
+invariant natural killer T cells, both γδ subsets, and terminal natural killer
+cells.
 
 ## Part 6: every claim, with a verdict
 
@@ -469,13 +502,19 @@ neither a gate nor a threshold.
 Which single stains are used changes the answer. The cell controls and the bead
 controls agree at a correlation of 0.687 where they overlap, but the bead CD3
 and CD4 controls gate to 22 and 11 events, so the bead matrix has no row for
-either and leaves CD4 with CD8 at 0.687. The cell matrix takes that pair to
+either and leaves CD4 with CD8 at 0.690. The cell matrix takes that pair to
 -0.311.
 
-The two halves of the workflow fail on the same markers. Vδ1, Vδ2, the tetramer
-and CD161 defeat a fitted cut inside CD3 positive cells, and they also fail to
-split the 24 clusters into two levels. Compensation does not repair this, and it
-was measured after compensation.
+The two halves of the workflow fail on the same markers. The tetramer, Vδ1, Vδ2,
+Vγ9 and CD161 defeat a fitted cut inside CD3 positive cells, and they sit at the
+bottom of the cluster separation table as well. Compensation does not repair
+this, and it was measured after compensation.
+
+Where a boundary is solid, sharing it across the two languages is worth more
+than finding it twice. The CD3 cut fitted in R places 16 clusters on the T cell
+side and 8 on the other, and it removes the largest source of cross talk in the
+labelling, which is a natural killer cell definition scoring against a T cell
+cluster.
 
 CCR7 and CD45RA behave differently. Both are bimodal inside the conventional T
 cell clusters and all four quadrants are occupied, which is the split the paper
@@ -484,18 +523,25 @@ differentiated cells.
 
 ### Where the workflow falls short
 
-Four of the ten claims concern populations the analysis could not measure, and
+Six of the ten claims concern populations the analysis could not measure, and
 they are recorded as unresolved rather than as a frequency of zero. An absent
 label is not a count.
 
-Two NK subsets of the three carry a cluster. CD56 is called positive in 22 of
-the 24 clusters, so the split between a CD56 bright and a CD56 positive cluster
-is not the split the paper draws, and the terminal subset takes no cluster of
-its own. The claim that mature NK cells are the largest of the three cannot be
-judged on two.
+Two natural killer subsets of the three carry a cluster. CD56 has the lowest
+separation of any marker in the panel at 0.055, so the split between a CD56
+bright and a CD56 positive cluster is not the split the paper draws, and the
+terminal subset keeps too few markers to be scored. The claim that mature
+natural killer cells are the largest of the three cannot be judged on two.
 
-The labelling is one automated procedure and not a curated analysis. The margins
-in the label table say which assignments are close, and several are close.
+The labelling depends on choices that are not forced by the data. An earlier
+version selected markers by putting a threshold on the separation column, and
+between two clustering runs that moved CD4 T cells from 43.8 percent of
+lymphocytes to a Vδ1 gamma delta label covering 39.9 percent. Naming the
+excluded markers in a file makes the choice visible and stable, and it does not
+make it correct.
+
+The margins in the label table say which assignments are close, and several are
+close.
 
 ### What this does not show
 
@@ -503,12 +549,12 @@ The deposit holds two donors. Nothing here separates a difference between donors
 from a difference between experiments, and the paper itself draws every panel of
 its Figure 1 from one donor except the second plot of Figure 1B.
 
-The clustering reads 100,000 events per donor of the 599,922 and 633,490 that
+The clustering reads 100,000 events per donor of the 598,886 and 639,506 that
 were gated. A population below a tenth of a percent of lymphocytes is
 represented by fewer than 100 events at that depth, which is a count that no
 clustering recovers reliably.
 
-A fluorescence minus one control would place a threshold on the four markers
+A fluorescence minus one control would place a threshold on the five markers
 that defeat both halves of this workflow. The deposit carries none, and no
 method applied to these files alone supplies one.
 
@@ -539,8 +585,9 @@ so the two halves can run on different machines. Passing `--reuse-clustering`
 reads the saved embedding instead of building the neighbour graph again.
 
 The claims live in `gating/omip58_paper_claims.csv`, each with the sentence it
-came from, and the population definitions in
-`gating/omip58_cell_type_definitions.csv`.
+came from, the population definitions in
+`gating/omip58_cell_type_definitions.csv`, and the excluded markers in
+`gating/omip58_unusable_markers.csv`.
 
 ```{r}
 #| label: session-info

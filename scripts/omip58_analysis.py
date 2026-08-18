@@ -19,7 +19,6 @@ import numpy as np
 import pandas as pd
 import pytometry as pm
 import scanpy as sc
-from sklearn.mixture import GaussianMixture
 
 # The token that identifies each marker of the panel, matching kOmip58Tokens in
 # R/omip58.R. A token match beats a substring match, because "cd16" is a
@@ -226,6 +225,40 @@ def cluster_medians(
     return values.groupby(key, observed=True).median()
 
 
+def two_level_threshold(values: np.ndarray) -> float:
+    """Split one marker's cluster medians into a low and a high group.
+
+    The split maximises the variance between the two groups, which is Otsu's
+    rule. It is used rather than a two component Gaussian mixture because a
+    mixture assigns by posterior probability, and where the two components have
+    different variances the wider one claims values on the far side of the
+    narrower one. The groups then overlap, and a gap between them comes out
+    negative. Measured on this panel that put CD16 at a separation of -0.399,
+    which is not a quantity that exists.
+
+    A threshold keeps the two groups contiguous by construction, and it needs no
+    seed.
+
+    Args:
+        values: The cluster medians of one marker.
+
+    Returns:
+        The threshold. Values above it are the high group.
+    """
+    ordered = np.sort(np.asarray(values, dtype=float))
+    if ordered.size < 2 or ordered[0] == ordered[-1]:
+        return float(ordered[-1])
+    best_split, best_variance = ordered[0], -1.0
+    for index in range(1, ordered.size):
+        low, high = ordered[:index], ordered[index:]
+        variance = (
+            low.size * high.size * (low.mean() - high.mean()) ** 2
+        ) / ordered.size ** 2
+        if variance > best_variance:
+            best_variance, best_split = variance, ordered[index - 1]
+    return float(best_split)
+
+
 def marker_separation(
     medians: pd.DataFrame, seed: int = 42, min_range: float = 0.5
 ) -> pd.DataFrame:
@@ -233,9 +266,9 @@ def marker_separation(
 
     A marker that takes one level across every cluster carries no information
     about which cluster is which, and letting it vote turns a label into a coin
-    toss. The measure is the gap between the dimmest positive cluster and the
-    brightest negative one, divided by the full range of the marker, so it does
-    not depend on how bright the fluorochrome is.
+    toss. The measure is the gap between the dimmest cluster of the high group
+    and the brightest of the low group, divided by the full range of the marker,
+    so it does not depend on how bright the fluorochrome is.
 
     The ratio alone is not enough. It has no scale, so a marker whose cluster
     medians all sit within a hundredth of a unit still scores well if those
@@ -245,13 +278,14 @@ def marker_separation(
 
     Args:
         medians: The output of `cluster_medians`.
-        seed: The seed for the two group fit.
+        seed: Accepted for a stable signature. The split is deterministic.
         min_range: The smallest spread across clusters, on the transformed
             scale, that a marker must cover to score above zero.
 
     Returns:
         A table with `marker`, `positive_clusters`, `gap` and `separation`,
-        sorted from the best separated marker to the worst.
+        sorted from the best separated marker to the worst. `gap` is never
+        negative, because the two groups are separated by a threshold.
     """
     rows = []
     for column in medians.columns:
@@ -260,13 +294,9 @@ def marker_separation(
         if np.unique(values).size < 2 or spread < min_range:
             rows.append((column, 0, 0.0, 0.0))
             continue
-        model = GaussianMixture(2, random_state=seed, n_init=5).fit(
-            values.reshape(-1, 1)
-        )
-        assignment = model.predict(values.reshape(-1, 1))
-        bright = int(np.argmax(model.means_.ravel()))
-        positive = values[assignment == bright]
-        negative = values[assignment != bright]
+        threshold = two_level_threshold(values)
+        positive = values[values > threshold]
+        negative = values[values <= threshold]
         gap = float(positive.min() - negative.max())
         rows.append((column, int(positive.size), gap, gap / spread))
     return (
@@ -275,61 +305,6 @@ def marker_separation(
         .sort_values("separation", ascending=False)
         .reset_index(drop=True)
     )
-
-
-def definition_coverage(
-    medians: pd.DataFrame,
-    definitions: pd.DataFrame,
-    min_separation: float = 0.10,
-    min_markers: float = 0.5,
-    seed: int = 42,
-) -> pd.DataFrame:
-    """Say which cell type definitions still have enough markers to be scored.
-
-    A claim about a population that no definition can score is unresolved, and
-    it must not be read as a frequency of zero. This table is what tells the two
-    cases apart.
-
-    Args:
-        medians: The output of `cluster_medians`.
-        definitions: The cell type table.
-        min_separation: The threshold passed to `marker_separation`.
-        min_markers: The share of named markers that must survive.
-        seed: The seed for the fits.
-
-    Returns:
-        A table with `cell_type`, `markers_named`, `markers_informative`,
-        `lost` and `scorable`.
-    """
-    marker_columns = [
-        column
-        for column in definitions.columns
-        if column not in ("cell_type", "note") and column in medians.columns
-    ]
-    separation = marker_separation(medians[marker_columns], seed=seed)
-    informative = set(
-        separation.loc[separation["separation"] >= min_separation, "marker"]
-    )
-
-    rows = []
-    for row in definitions.itertuples():
-        named = [
-            column
-            for column in marker_columns
-            if isinstance(getattr(row, column, ""), str)
-            and getattr(row, column) in ("pos", "neg", "high")
-        ]
-        kept = [column for column in named if column in informative]
-        rows.append(
-            {
-                "cell_type": row.cell_type,
-                "markers_named": len(named),
-                "markers_informative": len(kept),
-                "lost": " ".join(sorted(set(named) - set(kept))),
-                "scorable": len(kept) >= 2 and len(kept) >= min_markers * len(named),
-            }
-        )
-    return pd.DataFrame(rows)
 
 
 def binarise_medians(medians: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
@@ -343,7 +318,7 @@ def binarise_medians(medians: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
 
     Args:
         medians: The output of `cluster_medians`.
-        seed: The seed for the two group fit.
+        seed: Accepted for a stable signature. The split is deterministic.
 
     Returns:
         A table of the same shape holding 0 for negative, 1 for positive and 2
@@ -353,26 +328,57 @@ def binarise_medians(medians: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
     called = pd.DataFrame(0, index=medians.index, columns=medians.columns,
                           dtype=int)
     for column in medians.columns:
-        values = medians[column].to_numpy(dtype=float).reshape(-1, 1)
+        values = medians[column].to_numpy(dtype=float)
         if np.unique(values).size < 2:
             continue
-        model = GaussianMixture(2, random_state=seed, n_init=3).fit(values)
-        assignment = model.predict(values)
-        bright = int(np.argmax(model.means_.ravel()))
-        positive = assignment == bright
+        positive = values > two_level_threshold(values)
         called.loc[positive, column] = 1
         if positive.sum() > 1:
             cut = np.median(values[positive])
-            called.loc[positive & (values.ravel() > cut), column] = 2
+            called.loc[positive & (values > cut), column] = 2
     return called
+
+
+def cluster_parents(
+    medians: pd.DataFrame, cd3_cut: float, cd3_marker: str = "CD3"
+) -> pd.Series:
+    """Assign each cluster to the side of the CD3 gate its median falls on.
+
+    The cut comes from the R half, which fits it at the density minimum between
+    two separated modes and reports which rule placed it. Reusing it here means
+    the two languages draw the same boundary, and it removes the largest source
+    of cross talk in the labelling: a natural killer cell definition scoring
+    against a T cell cluster.
+
+    Args:
+        medians: The output of `cluster_medians`.
+        cd3_cut: The CD3 cut from the R half, on the same transformed scale.
+        cd3_marker: The column holding CD3.
+
+    Returns:
+        A series indexed by cluster, holding `cd3_positive` or `cd3_negative`.
+
+    Raises:
+        KeyError: If the medians carry no CD3 column.
+    """
+    if cd3_marker not in medians.columns:
+        raise KeyError(
+            f"The cluster medians carry no '{cd3_marker}' column, so no cluster "
+            f"can be placed against the CD3 cut."
+        )
+    return pd.Series(
+        np.where(medians[cd3_marker] > cd3_cut, "cd3_positive", "cd3_negative"),
+        index=medians.index,
+        name="parent",
+    )
 
 
 def annotate(
     medians: pd.DataFrame,
     definitions: pd.DataFrame,
+    parents: pd.Series | None = None,
+    omit: list[str] | None = None,
     min_margin: float = 0.0,
-    min_separation: float = 0.10,
-    min_markers: float = 0.5,
     seed: int = 42,
 ) -> pd.DataFrame:
     """Label each cluster by scoring it against the cell type definitions.
@@ -384,39 +390,47 @@ def annotate(
     brighter half of the positive clusters, which is what separates a CD56
     bright cluster from a CD56 positive one.
 
-    Scoring against the scaled value rather than the call is what an earlier
-    version did, and it fails twice. Min to max scaling puts a typical cluster
-    near 0.5, so every definition scored close to every other and the margins
-    ran from 0.013 to 0.27. It also labelled a CD4 T cell cluster as a Vd1
-    gamma delta cluster, because a middling Vd1 median scored almost as well
-    against `pos` as against `neg`.
+    When `parents` is given, a cluster is scored only against the definitions of
+    its own parent. Without it the labelling is unstable: a filter that dropped
+    the markers which fail to separate the clusters changed which markers
+    survived from one clustering run to the next, and with them the labels. On
+    two runs of this deposit that moved CD8 from a separation of 0.236 to 0.092
+    and turned a set of CD4 T cell clusters into Vd1 gamma delta clusters
+    covering 40 percent of the lymphocytes.
 
     Args:
         medians: The output of `cluster_medians`.
-        definitions: The cell type table, with a `cell_type` column, one column
-            per marker holding `pos`, `neg`, `high` or nothing, and a `note`.
+        definitions: The cell type table, with `cell_type`, an optional
+            `parent`, one column per marker holding `pos`, `neg`, `high` or
+            nothing, and a `note`.
+        parents: The output of `cluster_parents`, or `None` to score every
+            definition against every cluster.
+        omit: Markers that carry no usable threshold, named rather than found by
+            a rule. `gating/omip58_unusable_markers.csv` holds the list for this
+            deposit with the measurement behind each entry. A computed filter
+            was tried first and rejected: which markers it dropped changed from
+            one clustering run to the next, and the labels changed with it.
+            A definition is scored only when at least two of the markers it
+            names survive. One surviving marker cannot separate a definition
+            from the others of its parent, and scoring it anyway lets a
+            population take clusters that belong to something else.
         min_margin: A cluster whose best score beats the runner up by less than
             this is left unlabelled.
-        min_separation: A marker whose `marker_separation` falls below this does
-            not vote. On this panel that removes the markers that also defeat a
-            one dimensional cut.
-        min_markers: The share of the markers a definition names that must
-            survive the separation filter for the definition to be scored at
-            all. A definition reduced to one generic marker would otherwise
-            match every cluster carrying it.
-        seed: The seed passed to `binarise_medians` and `marker_separation`.
+        seed: Accepted for a stable signature. The scoring is deterministic.
 
     Returns:
-        A table with `cluster`, `cell_type`, `score`, `runner_up`, `margin` and
-        `markers_named`.
+        A table with `cluster`, `parent`, `cell_type`, `score`, `runner_up`,
+        `margin` and `markers_named`.
 
     Raises:
         ValueError: If the two tables share no marker column.
     """
+    omit = set(omit or ())
     marker_columns = [
         column
         for column in definitions.columns
-        if column not in ("cell_type", "note") and column in medians.columns
+        if column not in ("cell_type", "parent", "note")
+        and column in medians.columns
     ]
     if not marker_columns:
         raise ValueError(
@@ -425,10 +439,6 @@ def annotate(
             f"{list(medians.columns)}."
         )
 
-    separation = marker_separation(medians[marker_columns], seed=seed)
-    informative = set(
-        separation.loc[separation["separation"] >= min_separation, "marker"]
-    )
     called = binarise_medians(medians[marker_columns], seed=seed)
 
     scores = pd.DataFrame(
@@ -438,13 +448,11 @@ def annotate(
     for row in definitions.itertuples():
         matched = pd.Series(0.0, index=called.index)
         count = 0
-        total_named = 0
         for column in marker_columns:
             rule = getattr(row, column, "")
             if not isinstance(rule, str) or rule not in ("pos", "neg", "high"):
                 continue
-            total_named += 1
-            if column not in informative:
+            if column in omit:
                 continue
             state = called[column]
             if rule == "pos":
@@ -456,38 +464,43 @@ def annotate(
             matched = matched + met.astype(float)
             count += 1
         named[row.cell_type] = count
-        # A definition that has lost most of its markers is no longer a
-        # definition. Scoring it anyway lets a population survive on one generic
-        # marker and take clusters that belong to something else.
-        if count < 2 or count < min_markers * total_named:
+        if count < 2:
             scores[row.cell_type] = np.nan
             continue
         scores[row.cell_type] = matched / count
 
-    scores = scores.dropna(axis=1, how="all")
-    if scores.shape[1] == 0:
-        raise ValueError(
-            "No definition kept enough markers to be scored. Lower "
-            "min_separation or name more markers per cell type."
-        )
+    if parents is not None and "parent" in definitions.columns:
+        owner = dict(zip(definitions["cell_type"], definitions["parent"]))
+        aligned = parents.reindex(scores.index)
+        for cell_type in scores.columns:
+            wrong_parent = aligned != owner[cell_type]
+            scores.loc[wrong_parent, cell_type] = np.nan
 
-    values = scores.to_numpy()
-    order = np.argsort(-values, axis=1)
+    values = scores.to_numpy(dtype=float)
+    usable = ~np.isnan(values)
+    if not usable.any(axis=1).all():
+        empty = scores.index[~usable.any(axis=1)]
+        raise ValueError(
+            f"No definition can be scored for cluster(s) {list(empty)}. Either "
+            "no cell type belongs to their parent, or every cell type that does "
+            "lost too many markers to `omit`."
+        )
+    filled = np.where(usable, values, -np.inf)
+    order = np.argsort(-filled, axis=1)
     names = np.asarray(scores.columns)
     best = names[order[:, 0]]
-    runner_up = names[order[:, 1]] if values.shape[1] > 1 else best
-    top = values[np.arange(values.shape[0]), order[:, 0]]
-    second = (
-        values[np.arange(values.shape[0]), order[:, 1]]
-        if values.shape[1] > 1
-        else np.zeros(values.shape[0])
-    )
+    top = filled[np.arange(filled.shape[0]), order[:, 0]]
+    second = filled[np.arange(filled.shape[0]), order[:, 1]]
+    runner_up = np.where(np.isfinite(second), names[order[:, 1]], "none")
+    second = np.where(np.isfinite(second), second, 0.0)
     margin = top - second
     labelled = np.where(margin >= min_margin, best, "unlabelled")
 
     return pd.DataFrame(
         {
             "cluster": scores.index,
+            "parent": (parents.reindex(scores.index).to_numpy()
+                       if parents is not None else "all"),
             "cell_type": labelled,
             "score": top,
             "runner_up": runner_up,

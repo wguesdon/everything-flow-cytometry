@@ -13,12 +13,13 @@ from omip58_analysis import (
     annotate,
     binarise_medians,
     cluster_medians,
-    definition_coverage,
+    cluster_parents,
     marker_separation,
     marker_tokens,
     population_frequencies,
     short_marker_names,
     subsample,
+    two_level_threshold,
 )
 
 
@@ -126,23 +127,57 @@ def test_annotate_rejects_tables_sharing_no_marker():
         annotate(medians, build_definitions())
 
 
-def test_annotate_drops_a_definition_whose_markers_stopped_separating():
-    # Every marker but CD3 is made uninformative, so no definition keeps the two
-    # markers it needs and the call has nothing left to score.
-    medians = build_medians()
-    for column in ("CD4", "CD8", "CD56", "CD16"):
-        medians[column] = [1.0, 1.01, 0.99, 1.0]
-    with pytest.raises(ValueError, match="No definition kept enough markers"):
-        annotate(medians, build_definitions(), min_separation=0.3)
+def test_annotate_drops_a_definition_left_with_one_marker():
+    # iNKT is defined here by CD3 and CD56 alone. Omitting CD56 leaves one
+    # marker, which cannot separate it from anything else, so it is not scored.
+    definitions = build_definitions()
+    definitions.loc[len(definitions)] = {
+        "cell_type": "iNKT cells", "CD3": "pos", "CD4": "", "CD8": "",
+        "CD56": "pos", "CD16": "", "note": "",
+    }
+    labels = annotate(build_medians(), definitions, omit=["CD56"])
+    assert "iNKT cells" not in set(labels["cell_type"])
+    assert set(labels["cell_type"]) >= {"CD4 T cells", "CD8 T cells"}
 
 
-def test_definition_coverage_names_the_markers_a_definition_lost():
+def test_annotate_raises_when_omit_empties_every_definition():
+    with pytest.raises(ValueError, match="No definition can be scored"):
+        annotate(build_medians(), build_definitions(),
+                 omit=["CD3", "CD4", "CD8", "CD56", "CD16"])
+
+
+def test_annotate_scores_a_cluster_only_against_its_own_parent():
+    definitions = build_definitions()
+    definitions["parent"] = ["t", "t", "nk", "nk"]
     medians = build_medians()
-    medians["CD16"] = [1.0, 1.01, 0.99, 1.0]
-    coverage = definition_coverage(medians, build_definitions(),
-                                   min_separation=0.3).set_index("cell_type")
-    assert "CD16" in coverage.loc["Mature NK cells", "lost"]
-    assert coverage.loc["CD4 T cells", "scorable"]
+    parents = pd.Series(["t", "t", "nk", "nk"], index=medians.index)
+    labels = annotate(medians, definitions, parents=parents).set_index("cluster")
+    assert labels.loc["0", "cell_type"] in {"CD4 T cells", "CD8 T cells"}
+    assert labels.loc["2", "cell_type"] in {"Early NK cells", "Mature NK cells"}
+    assert labels.loc["3", "cell_type"] in {"Early NK cells", "Mature NK cells"}
+
+
+def test_cluster_parents_splits_on_the_cut_it_is_given():
+    medians = build_medians()
+    parents = cluster_parents(medians, cd3_cut=2.0)
+    assert list(parents) == ["cd3_positive", "cd3_positive",
+                             "cd3_negative", "cd3_negative"]
+
+
+def test_cluster_parents_needs_a_cd3_column():
+    medians = build_medians().drop(columns=["CD3"])
+    with pytest.raises(KeyError, match="no 'CD3' column"):
+        cluster_parents(medians, cd3_cut=2.0)
+
+
+def test_two_level_threshold_never_lets_the_groups_overlap():
+    # A wide low group and a tight high group is the case where a two component
+    # mixture assigns by posterior and the groups cross over.
+    values = np.array([0.0, 0.5, 1.0, 4.0, 9.5, 9.6, 9.7])
+    threshold = two_level_threshold(values)
+    high, low = values[values > threshold], values[values <= threshold]
+    assert high.size > 0 and low.size > 0
+    assert high.min() > low.max()
 
 
 def test_subsample_takes_the_same_count_from_each_donor():

@@ -1,0 +1,6 @@
+marker,percent_selected_donor_112117,percent_selected_donor_43018,expected_percent_of_t_cells,reason
+tetramer,48.63,52.80,under 1,"A fitted cut selects about half of the CD3 positive cells for a population the paper places below 1 percent of lymphocytes. The distribution has one mode, so the cut lands inside the negative population."
+Vd1,62.71,54.09,1 to 5,"A fitted cut selects most CD3 positive cells for a subset that is a few percent of blood T cells."
+Vd2,41.93,38.55,1 to 10,"A fitted cut selects two fifths of the CD3 positive cells for a subset that is a few percent of blood T cells."
+Vg9,60.95,42.13,1 to 10,"A fitted cut selects between two fifths and three fifths of the CD3 positive cells, and the two donors disagree by 19 points on the same panel and instrument."
+CD161,24.06,19.75,1 to 20,"The paper asks for high CD161 rather than positive CD161. A two component cut splits the positive population near its middle, so the level it returns is not the level the definition names."
