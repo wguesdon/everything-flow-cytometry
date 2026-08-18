@@ -213,3 +213,126 @@ FindPhenotype <- function(stats, phenotype) {
     stringsAsFactors = FALSE
   )
 }
+
+# The verdicts a claim can receive. "unresolved" is a real answer and not a
+# failure to answer. A claim whose measure nobody computed has not been
+# contradicted, and recording it as anything else overstates what was checked.
+kClaimVerdicts <- c("supported", "contradicted", "unresolved")
+
+#' Judge a table of claims against a table of measured values
+#'
+#' A claims table is what a paper or a scientist says. A results table is what
+#' the data says. This puts one verdict on each claim and never invents one.
+#'
+#' A claim whose measure is absent from the results is `unresolved`. That is the
+#' honest answer, because nothing was measured, and it is different from a claim
+#' that was checked and failed.
+#'
+#' @param claims A `data.frame` with `claim_id`, `claim`, `measure`, `test` and
+#'   `expected`. The tests are `at_most`, `at_least`, `between`, `equals`,
+#'   `greater_than` and `present`. For `between`, `expected` holds two numbers
+#'   separated by a comma. For `greater_than`, `expected` names another measure.
+#' @param results A `data.frame` with `measure` and `value`.
+#' @param tolerance The fraction by which an `equals` claim may differ.
+#'   Defaults to 0.05, which is five percent of the expected value.
+#' @return A `data.frame` with every claim column, plus `observed`, `verdict`
+#'   and `reason`.
+#' @examples
+#' claims <- data.frame(claim_id = 1, claim = "T cells are common",
+#'                      measure = "t_percent", test = "at_least", expected = "20")
+#' results <- data.frame(measure = "t_percent", value = 34)
+#' JudgeClaims(claims, results)$verdict
+#' @export
+JudgeClaims <- function(claims, results, tolerance = 0.05) {
+  required <- c("claim_id", "claim", "measure", "test", "expected")
+  missing <- setdiff(required, colnames(claims))
+  if (length(missing) > 0) {
+    stop("The claims table is missing the column(s): ",
+         paste(missing, collapse = ", "), ".")
+  }
+  if (!all(c("measure", "value") %in% colnames(results))) {
+    stop("The results table needs the columns measure and value. It carries: ",
+         paste(colnames(results), collapse = ", "), ".")
+  }
+
+  lookup <- stats::setNames(as.numeric(results$value),
+                            as.character(results$measure))
+
+  Numbers. <- function(text) {
+    parts <- trimws(strsplit(as.character(text), ",")[[1]])
+    suppressWarnings(as.numeric(parts))
+  }
+
+  judged <- lapply(seq_len(nrow(claims)), function(index) {
+    claim <- claims[index, , drop = FALSE]
+    measure <- as.character(claim$measure)
+    test <- tolower(trimws(as.character(claim$test)))
+    expected <- as.character(claim$expected)
+    observed <- unname(lookup[measure])
+
+    if (is.na(observed)) {
+      return(data.frame(observed = NA_real_, verdict = "unresolved",
+                        reason = paste0("no result names the measure '",
+                                        measure, "'"),
+                        stringsAsFactors = FALSE))
+    }
+
+    bounds <- Numbers.(expected)
+    Judge. <- function(passes, reason) {
+      data.frame(observed = observed,
+                 verdict = if (passes) "supported" else "contradicted",
+                 reason = reason, stringsAsFactors = FALSE)
+    }
+
+    if (test == "present") {
+      return(Judge.(TRUE, "the measure was computed"))
+    }
+    if (test == "greater_than") {
+      other <- unname(lookup[expected])
+      if (is.na(other)) {
+        return(data.frame(observed = observed, verdict = "unresolved",
+                          reason = paste0("no result names the measure '",
+                                          expected, "' to compare against"),
+                          stringsAsFactors = FALSE))
+      }
+      return(Judge.(observed > other,
+                    sprintf("%.4g against %.4g", observed, other)))
+    }
+    if (anyNA(bounds) || length(bounds) == 0) {
+      return(data.frame(observed = observed, verdict = "unresolved",
+                        reason = paste0("the expected value '", expected,
+                                        "' is not a number"),
+                        stringsAsFactors = FALSE))
+    }
+
+    switch(
+      test,
+      at_most = Judge.(observed <= bounds[1],
+                       sprintf("%.4g against a ceiling of %.4g", observed,
+                               bounds[1])),
+      at_least = Judge.(observed >= bounds[1],
+                        sprintf("%.4g against a floor of %.4g", observed,
+                                bounds[1])),
+      between = if (length(bounds) < 2) {
+        data.frame(observed = observed, verdict = "unresolved",
+                   reason = "between needs two numbers separated by a comma",
+                   stringsAsFactors = FALSE)
+      } else {
+        Judge.(observed >= bounds[1] && observed <= bounds[2],
+               sprintf("%.4g against %.4g to %.4g", observed, bounds[1],
+                       bounds[2]))
+      },
+      equals = Judge.(abs(observed - bounds[1]) <=
+                        tolerance * max(abs(bounds[1]), 1e-9),
+                      sprintf("%.4g against %.4g, within %g percent",
+                              observed, bounds[1], 100 * tolerance)),
+      data.frame(observed = observed, verdict = "unresolved",
+                 reason = paste0("'", test, "' is not a test this reads. It ",
+                                 "reads at_most, at_least, between, equals, ",
+                                 "greater_than and present."),
+                 stringsAsFactors = FALSE)
+    )
+  })
+
+  cbind(claims, do.call(rbind, judged), stringsAsFactors = FALSE)
+}

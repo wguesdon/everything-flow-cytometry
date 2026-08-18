@@ -128,6 +128,16 @@ def main() -> int:
                 problems.append(
                     f"{document} calls {name} {stated[name]} and the CLI calls it {state}"
                 )
+        # A row in a table is a name, not a description. A ready recipe needs a
+        # section that says what it does and what its flags mean.
+        headings = {
+            line[3:].strip().lower()
+            for line in document.read_text().splitlines()
+            if line.startswith("## ")
+        }
+        for name in sorted(ready):
+            if name not in headings:
+                problems.append(f"{document} has no section for the ready recipe {name}")
 
     print(f"routes   {sorted(routes)}")
     print(f"ready    {sorted(ready)}")

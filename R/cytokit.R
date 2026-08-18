@@ -239,7 +239,7 @@ DisplayPath <- function(path) {
   # A table the caller named mounts at /in_<flag>. The CLI records the folder
   # of each one, so a path printed from any of them maps back.
   for (flag in c("template", "definitions", "metadata", "counts",
-                 "proportions", "gates", "clusters")) {
+                 "proportions", "gates", "clusters", "claims", "results")) {
     host <- Sys.getenv(paste0("CYTOKIT_", toupper(flag), "_HOST"), unset = "")
     if (nzchar(host)) {
       path <- sub(paste0("^/in_", flag, "/?"),

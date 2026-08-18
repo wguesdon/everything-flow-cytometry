@@ -37,6 +37,9 @@ Usage:
                                   [--sample-column sample]
   cytokit compare     --proportions BUNDLE --group COL [--population NAME]
                                   [--all-populations] [--out DIR]
+  cytokit claims      --claims FILE --results FILE [--out DIR]
+                                  [--tolerance 0.05]
+  cytokit reproduce   [--analysis NAME] [--out DIR]
   cytokit definitions --data PATH --out FILE [--recursive] [--force]
                                              [--markers "CD3,CD4"]
                                              [--markers "APC-A=CD3,PE-A=CD4"]
@@ -144,7 +147,7 @@ run_recipe() {
             # A table the caller wrote is an input like the data, so it
             # mounts read only. Each flag has its own mount point, so two of
             # them can name files in two different folders.
-            --template|--definitions|--metadata|--counts|--proportions|--gates|--clusters)
+            --template|--definitions|--metadata|--counts|--proportions|--gates|--clusters|--claims|--results)
                     flag="${1#--}"
                     file_host="$(absolute "${2:?needs a path}")"
                     extra_mounts+=("$(dirname "$file_host"):/in_${flag}:ro,z")
@@ -254,7 +257,7 @@ run_recipe() {
 }
 
 case "${1:-help}" in
-    inspect|template|definitions|compensate|gate|cluster|annotate|proportions|compare)
+    inspect|template|definitions|compensate|gate|cluster|annotate|proportions|compare|claims|reproduce)
         recipe="$1"; shift
         run_recipe "$recipe" "$@"
         ;;
@@ -270,8 +273,8 @@ cluster       ready    FlowSOM and UMAP, inside a gate when asked
 annotate      ready    Label each cluster from a definitions table
 proportions   ready    Per sample frequencies joined to a metadata table
 compare       ready    Box plot of proportion by treatment, with the test
-claims        planned  A verdict for every claim in a claims table
-reproduce     planned  Rebuild one of the analyses in this repository
+claims        ready    A verdict for every claim in a claims table
+reproduce     ready    Rebuild one of the analyses in this repository
 
 The plan is in docs/cytokit.md.
 EOF

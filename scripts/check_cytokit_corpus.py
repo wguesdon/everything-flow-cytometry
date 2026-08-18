@@ -572,6 +572,164 @@ def check_gate(work: Path) -> list[Result]:
     return results
 
 
+def check_chain(work: Path) -> list[Result]:
+    """Run the whole chain a scientist asked for, one recipe feeding the next.
+
+    The chain is compensate, gate, cluster, annotate, proportions, compare. Each
+    recipe reads the bundle the one before it wrote. A recipe that runs alone
+    and fails in the chain is the failure this catches, because the handoff is
+    where a name or a column goes missing.
+
+    Args:
+        work: A scratch folder outside the repository.
+
+    Returns:
+        One result per step of the chain.
+    """
+    data = DEPOSIT_ROOT / "FlowRepository_FR-FCM-ZZLV_files"
+    work.mkdir(parents=True, exist_ok=True)
+    results = []
+
+    template = work / "template.csv"
+    status, output, seconds = run_cli(["template", "--data", str(data), "--out", str(template)])
+    if status != 0:
+        return [Result("chain", "template", False, first_error(output), seconds)]
+
+    gate_out = work / "gate"
+    status, output, seconds = run_cli(
+        ["gate", "--data", str(data), "--template", str(template), "--out", str(gate_out)])
+    gate_bundle = newest_bundle(gate_out)
+    saved = gate_bundle is not None and (gate_bundle / "gating_set").is_dir()
+    results.append(
+        Result("chain", "gate saves its hierarchy", status == 0 and saved,
+               "cluster can read it" if saved else first_error(output), seconds)
+    )
+    if not saved:
+        return results
+
+    cluster_out = work / "cluster"
+    status, output, seconds = run_cli(
+        ["cluster", "--gates", str(gate_bundle), "--parent", "singlets",
+         "--metaclusters", "6", "--events", "8000", "--no-umap", "--out", str(cluster_out)])
+    cluster_bundle = newest_bundle(cluster_out)
+    medians = cluster_bundle is not None and (cluster_bundle / "cluster_medians.csv").exists()
+    results.append(
+        Result("chain", "cluster reads the gate bundle", status == 0 and medians,
+               "writes cluster_medians.csv" if medians else first_error(output), seconds)
+    )
+    if not medians:
+        return results
+
+    # The definitions have to be written against the markers the clustering
+    # actually carries, which is what a scientist does with the agent.
+    definitions = work / "definitions.csv"
+    status, output, seconds = run_cli(
+        ["definitions", "--data", str(data), "--out", str(definitions),
+         "--markers", "CD3,CD4,CD8,CD19", "--populations", "T cells,B cells"])
+    rows = definitions.read_text().splitlines()
+    rows[1] = "T cells,pos,,,neg"
+    rows[2] = "B cells,neg,,,pos"
+    definitions.write_text("\n".join(rows) + "\n")
+
+    annotate_out = work / "annotate"
+    status, output, seconds = run_cli(
+        ["annotate", "--clusters", str(cluster_bundle), "--definitions", str(definitions),
+         "--out", str(annotate_out)])
+    annotate_bundle = newest_bundle(annotate_out)
+    labelled = annotate_bundle is not None and (annotate_bundle / "cluster_labels.csv").exists()
+    results.append(
+        Result("chain", "annotate reads the cluster bundle", status == 0 and labelled,
+               "writes one label per cluster" if labelled else first_error(output), seconds)
+    )
+
+    metadata = work / "metadata.csv"
+    metadata.write_text(
+        "sample,treatment\n100715.fcs,control\n109567.fcs,drug\n113548.fcs,drug\n")
+    proportions_out = work / "proportions"
+    status, output, seconds = run_cli(
+        ["proportions", "--counts", str(gate_bundle), "--metadata", str(metadata),
+         "--out", str(proportions_out)])
+    proportions_bundle = newest_bundle(proportions_out)
+    joined = proportions_bundle is not None and (proportions_bundle / "proportions.csv").exists()
+    results.append(
+        Result("chain", "proportions reads the gate bundle", status == 0 and joined,
+               "joins the counts to the metadata" if joined else first_error(output), seconds)
+    )
+    if not joined:
+        return results
+
+    compare_out = work / "compare"
+    status, output, seconds = run_cli(
+        ["compare", "--proportions", str(proportions_bundle), "--group", "treatment",
+         "--all-populations", "--out", str(compare_out)])
+    compare_bundle = newest_bundle(compare_out)
+    tested = compare_bundle is not None and (compare_bundle / "tests.csv").exists()
+    # One sample in the control arm, so no test may run. The figure still has to.
+    refused = "carry no test" in output
+    results.append(
+        Result("chain", "compare reads the proportions bundle", status == 0 and tested and refused,
+               "runs no test on one sample per group, and says so" if refused else first_error(output),
+               seconds)
+    )
+    if compare_bundle:
+        drawn = [name for name in compare_bundle.iterdir() if name.suffix == ".svg"]
+        results.append(
+            Result("chain", "compare draws even with no test", bool(drawn),
+                   f"{len(drawn)} figure(s)" if drawn else "no figure was drawn", 0.0)
+        )
+    return results
+
+
+def check_claims_and_reproduce(work: Path) -> list[Result]:
+    """Assert the two recipes that judge rather than compute.
+
+    Args:
+        work: A scratch folder outside the repository.
+
+    Returns:
+        One result per rule checked.
+    """
+    work.mkdir(parents=True, exist_ok=True)
+    results = []
+
+    claims = work / "claims.csv"
+    claims.write_text(
+        "claim_id,claim,measure,test,expected\n"
+        "1,a is at least ten,a,at_least,10\n"
+        "2,a is at most five,a,at_most,5\n"
+        "3,nobody measured this,missing,at_least,1\n")
+    measured = work / "results.csv"
+    measured.write_text("measure,value\na,12\n")
+
+    out = work / "claims_out"
+    status, output, seconds = run_cli(
+        ["claims", "--claims", str(claims), "--results", str(measured), "--out", str(out)])
+    bundle = newest_bundle(out)
+    verdicts = (bundle / "verdicts.csv").read_text() if bundle and (bundle / "verdicts.csv").exists() else ""
+    # One of each verdict. Unresolved is the one a tool is tempted to skip.
+    all_three = all(word in verdicts for word in ("supported", "contradicted", "unresolved"))
+    results.append(
+        Result("claims", "one verdict per claim", status == 0 and all_three,
+               "supported, contradicted and unresolved all appear" if all_three else first_error(output),
+               seconds)
+    )
+
+    status, output, seconds = run_cli(["reproduce"])
+    lists = "The analyses in this repository" in output and "scripts/01" in output
+    results.append(
+        Result("claims", "reproduce lists the analyses", status == 0 and lists,
+               "names every analysis and its script" if lists else first_error(output), seconds)
+    )
+
+    status, output, seconds = run_cli(["reproduce", "--analysis", "nonsense"])
+    named = "The names are:" in output
+    results.append(
+        Result("claims", "an analysis that is not there", status != 0 and named,
+               "the error lists the names" if named else first_error(output), seconds)
+    )
+    return results
+
+
 def check_refusals(work: Path) -> list[Result]:
     """Assert that the CLI refuses what it has to refuse.
 
@@ -667,7 +825,8 @@ def report(results: list[Result]) -> int:
         print(f"{len(failed)} of {len(results)} checks failed.")
         return 1
     deposits = ({item.what for item in results}
-                - {"refusals", "input shapes", "marker mapping", "compensate", "gate"})
+                - {"refusals", "input shapes", "marker mapping", "compensate", "gate",
+                   "chain", "claims"})
     noun = "deposit" if len(deposits) == 1 else "deposits"
     print(f"All {len(results)} checks passed over {len(deposits)} {noun}.")
     if any(item.what == "compensate" for item in results):
@@ -715,6 +874,8 @@ def main() -> int:
         if not options.skip_compensate:
             results += check_compensate(work_root / "compensate")
             results += check_gate(work_root / "gate")
+            results += check_chain(work_root / "chain")
+        results += check_claims_and_reproduce(work_root / "claims")
         if not options.skip_refusals:
             results += check_refusals(work_root / "refusals")
     finally:

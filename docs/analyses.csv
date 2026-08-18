@@ -1,0 +1,15 @@
+analysis,script,deposit,report,what_it_shows
+automated_gating_pbmc,scripts/01_automated_gating_pbmc.R,HDCytoData,reports/automated_gating_pbmc.qmd,One openCyto template gates every sample and the spread that is left is biological
+omip39_compensation_and_gating,scripts/02_omip39_compensation_and_gating.R,FR-FCM-ZYY6,reports/omip39_automated_gating.qmd,A spillover matrix computed from single stains against the one the file carries
+compensation_method_sweep,scripts/03_compensation_method_sweep.R,FR-FCM-ZYY6,reports/omip39_automated_gating.qmd,How the choice of method moves the matrix
+omip39_reproduce_paper,scripts/04_omip39_reproduce_paper.R,FR-FCM-ZYY6,reports/omip39_automated_gating.qmd,Seven claims of OMIP-039 judged against the authors' own data
+omip39_clustering_umap,scripts/05_omip39_clustering_umap.R,FR-FCM-ZYY6,reports/omip39_automated_gating.qmd,FlowSOM and UMAP inside the NK gate
+omip43_asc_analysis,scripts/06_omip43_asc_analysis.R,FR-FCM-ZYBP,reports/omip43_asc_analysis.qmd,Antibody secreting cells gated and clustered
+omip43_clustering_sweep,scripts/07_omip43_clustering_sweep.R,FR-FCM-ZYBP,reports/omip43_asc_analysis.qmd,How the cluster count changes what is found
+yu2021_spectral_mait,scripts/08_yu2021_spectral_mait.R,FR-FCM-Z3WR,reports/yu2021_spectral_mait.qmd,A spectral panel and the MAIT population inside it
+z282_harmonisation,scripts/09_z282_harmonisation.R,FR-FCM-Z282,reports/z282_harmonisation.qmd,What central analysis removes from the spread that local analysis leaves
+oetjen2018_bone_marrow,scripts/10_oetjen2018_bone_marrow.R,FR-FCM-ZYQ9,reports/oetjen2018_bone_marrow.qmd,Bone marrow against blood on one panel
+vanderbeke2021_covid,scripts/11_vanderbeke2021_covid.R,FR-FCM-Z2KP,reports/vanderbeke2021_covid.qmd,An intracellular cytokine panel across COVID severity
+flowcap2_challenges,scripts/12_flowcap2_challenges.R,FR-FCM-ZZZU,reports/flowcap2_challenges.qmd,The FlowCAP II challenges rerun with today's packages
+omip58_prepare,scripts/13_omip58_prepare.R,FR-FCM-ZYRN,reports/omip58_pytometry.qmd,A 28 colour panel compensated from beads and from cells
+omip51_bcell_dc,scripts/15_omip51_bcell_dc.R,FR-FCM-ZYN4,reports/omip51_bcell_dc.qmd,B cells and dendritic cells gated on OMIP-051
