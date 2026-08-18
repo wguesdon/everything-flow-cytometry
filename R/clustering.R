@@ -465,3 +465,93 @@ SelectByHighestMarker <- function(median_expression, channel, n_clusters = 2) {
   ordered <- order(median_expression[[channel]], decreasing = TRUE)
   median_expression$cluster[ordered[seq_len(n_clusters)]]
 }
+
+#' Pull the events of one gate from every sample, keeping the sample name
+#'
+#' [ExtractGatedEvents()] reads one sample. A clustering that runs on one sample
+#' cannot produce a cell type proportion per treatment, because every other
+#' sample would need its own FlowSOM model and two models do not give comparable
+#' clusters.
+#'
+#' This pools the samples so that one model covers them all, and records which
+#' sample each event came from, so the clusters can be counted per sample
+#' afterwards.
+#'
+#' Each sample is subsampled to `per_sample` events before pooling. Without that
+#' the largest file decides the clusters.
+#'
+#' @param gating_set A gated `GatingSet`.
+#' @param population The gate to read.
+#' @param per_sample The largest number of events to take from each sample.
+#' @param seed The seed for the per sample subsample.
+#' @return A list with `events`, a numeric matrix, and `sample`, one name per
+#'   row of it.
+#' @examples
+#' \dontrun{
+#' ExtractGatedEventsBySample(gating_set, "singlets")
+#' }
+#' @export
+ExtractGatedEventsBySample <- function(gating_set, population,
+                                       per_sample = 20000, seed = 42) {
+  available <- flowWorkspace::gs_get_pop_paths(gating_set, path = "auto")
+  if (!population %in% available) {
+    stop("The population '", population, "' is not in the GatingSet. ",
+         "Available: ", paste(available, collapse = ", "), ".")
+  }
+  names_present <- flowWorkspace::sampleNames(gating_set)
+
+  pieces <- lapply(seq_along(names_present), function(index) {
+    events <- ExtractGatedEvents(gating_set, population, sample = index)
+    if (nrow(events) == 0) {
+      return(NULL)
+    }
+    # The seed moves with the sample, so two samples do not draw the same rows
+    # and a rerun draws the same rows again.
+    kept <- SubsampleEvents(events, n = per_sample, seed = seed + index)
+    list(events = kept,
+         sample = rep(names_present[index], nrow(kept)))
+  })
+  pieces <- Filter(Negate(is.null), pieces)
+  if (length(pieces) == 0) {
+    stop("Every sample holds no event in '", population, "'.")
+  }
+
+  list(
+    events = do.call(rbind, lapply(pieces, `[[`, "events")),
+    sample = unlist(lapply(pieces, `[[`, "sample"), use.names = FALSE)
+  )
+}
+
+#' Count the events of each cluster in each sample
+#'
+#' A cell type proportion per treatment needs a count per sample, and a
+#' clustering gives one label per event. This turns the two into a table that
+#' `PopulationProportions` can join to a metadata table.
+#'
+#' @param clusters The cluster of every event.
+#' @param sample The sample of every event, in the same order.
+#' @return A `data.frame` with `sample`, `population`, `count` and
+#'   `percent_of_parent`, where the parent is every event of that sample.
+#' @examples
+#' ClusterCountsBySample(c(1, 1, 2), c("a.fcs", "a.fcs", "a.fcs"))
+#' @export
+ClusterCountsBySample <- function(clusters, sample) {
+  if (length(clusters) != length(sample)) {
+    stop("clusters has ", length(clusters), " entries and sample has ",
+         length(sample), ". They must match.")
+  }
+  counted <- as.data.frame(table(sample = sample, cluster = clusters),
+                           stringsAsFactors = FALSE)
+  totals <- stats::setNames(
+    as.integer(table(sample)), names(table(sample)))
+
+  result <- data.frame(
+    sample = counted$sample,
+    population = paste0("cluster_", counted$cluster),
+    count = as.integer(counted$Freq),
+    percent_of_parent = 100 * counted$Freq / totals[counted$sample],
+    stringsAsFactors = FALSE
+  )
+  rownames(result) <- NULL
+  result[order(result$sample, result$population), , drop = FALSE]
+}

@@ -29,7 +29,8 @@ arguments <- ParseCytokitArguments(
   allowed = c("data", "gates", "parent", "out", "label", "markers",
               "metaclusters", "grid", "events", "seed", "sample"),
   required = character(0),
-  flags = c("recursive", "no-compensate", "no-transform", "no-umap")
+  flags = c("recursive", "no-compensate", "no-transform", "no-umap",
+            "one-sample")
 )
 
 if (is.null(arguments$data) && is.null(arguments$gates)) {
@@ -71,9 +72,26 @@ if (!is.null(arguments$gates)) {
   }
   label <- if (is.null(arguments$label)) ShortLabel(arguments$gates) else
     arguments$label
-  events <- ExtractGatedEvents(gating_set, parent, sample = sample_index)
+  # One model over every sample, unless the caller asks for one sample. Two
+  # models do not give comparable clusters, so a cell type proportion per
+  # treatment needs the pooled form.
+  if (isTRUE(arguments$`one-sample`)) {
+    events <- ExtractGatedEvents(gating_set, parent, sample = sample_index)
+    event_sample <- rep(
+      flowWorkspace::sampleNames(gating_set)[sample_index], nrow(events))
+    source_note <- paste0("the '", parent, "' gate of ",
+                          flowWorkspace::sampleNames(gating_set)[sample_index])
+  } else {
+    per_sample <- ceiling(max_events /
+                            length(flowWorkspace::sampleNames(gating_set)))
+    pooled <- ExtractGatedEventsBySample(gating_set, parent,
+                                         per_sample = per_sample, seed = seed)
+    events <- pooled$events
+    event_sample <- pooled$sample
+    source_note <- paste0("the '", parent, "' gate of ",
+                          length(unique(event_sample)), " sample(s)")
+  }
   frame <- flowWorkspace::gh_pop_get_data(gating_set[[sample_index]], parent)
-  source_note <- paste0("the '", parent, "' gate of ", basename(gates_path))
   inputs <- gates_path
 } else {
   files <- FcsFilesIn(arguments$data, recursive = isTRUE(arguments$recursive))
@@ -104,6 +122,7 @@ if (!is.null(arguments$gates)) {
   }
   frame <- flow_set[[1]]
   events <- exprs(frame)
+  event_sample <- rep(basename(files[sample_index]), nrow(events))
   parent <- "every event"
   source_note <- paste0("every event of ", basename(files[sample_index]))
   inputs <- files[sample_index]
@@ -142,10 +161,15 @@ if (length(markers) < 2) {
 Say("Clustering on ", length(markers), " marker(s): ",
     paste(markers, collapse = ", "))
 
-subsampled <- SubsampleEvents(events, n = max_events, seed = seed)
-drawn_from <- attr(subsampled, "sampled_from")
-if (!is.null(drawn_from) && drawn_from > nrow(subsampled)) {
-  Say("Subsampled ", nrow(subsampled), " of ", drawn_from, " events.")
+# The pooled form already drew its share from each sample, so a second draw
+# would undo the balance. Only the one sample form needs it.
+if (nrow(events) > max_events) {
+  kept <- withr::with_seed(seed, sample.int(nrow(events), max_events))
+  subsampled <- events[kept, , drop = FALSE]
+  event_sample <- event_sample[kept]
+  Say("Subsampled ", nrow(subsampled), " of ", nrow(events), " events.")
+} else {
+  subsampled <- events
 }
 
 clustering <- CollectNotes(RunFlowSomClustering(
@@ -155,6 +179,11 @@ clusters <- clustering$value$metacluster
 
 medians <- ClusterMedianExpression(subsampled, clusters, markers)
 WriteBundleTable(bundle, medians, "cluster_medians.csv")
+
+# One row per sample and cluster. cytokit proportions reads this shape, so a
+# cluster frequency can be compared between treatments.
+by_sample <- ClusterCountsBySample(clusters, event_sample)
+WriteBundleTable(bundle, by_sample, "cluster_counts_by_sample.csv")
 
 Say("\n", nrow(medians), " cluster(s) from a ", grid_size, " by ", grid_size,
     " grid")
@@ -217,6 +246,15 @@ if (!isTRUE(arguments$`no-umap`)) {
 } else {
   embedding <- list(notes = NULL)
   Say("\nUMAP was skipped, because --no-umap was given.")
+}
+
+if (length(unique(event_sample)) > 1) {
+  Say("\nEvery sample went into one model, so the clusters are comparable")
+  Say("across them. cluster_counts_by_sample.csv holds one row per sample and")
+  Say("cluster. Compare a cluster between treatments with:")
+  Say("  cytokit proportions --counts ", DisplayPath(bundle),
+      " --metadata <file>")
+  Say("  (point --counts at cluster_counts_by_sample.csv inside it)")
 }
 
 Say("\nName these clusters with:")

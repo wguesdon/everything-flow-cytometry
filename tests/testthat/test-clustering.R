@@ -275,3 +275,63 @@ test_that("MetaclusterCodes. gives one label per code", {
   colnames(codes) <- c("CD3", "CD4")
   expect_equal(length(MetaclusterCodes.(codes, 2, 5)), nrow(codes))
 })
+
+test_that("ExtractGatedEventsBySample pools every sample and names each event", {
+  gating_set <- MakeGatedSet()
+  pooled <- ExtractGatedEventsBySample(gating_set, "nonDebris")
+  expect_equal(nrow(pooled$events), length(pooled$sample))
+  expect_equal(unique(pooled$sample), "sample")
+})
+
+test_that("ExtractGatedEventsBySample caps each sample at per_sample", {
+  gating_set <- MakeGatedSet(n_events = 800)
+  pooled <- ExtractGatedEventsBySample(gating_set, "nonDebris",
+                                       per_sample = 25)
+  expect_lte(nrow(pooled$events), 25)
+})
+
+test_that("ExtractGatedEventsBySample draws the same rows twice with one seed", {
+  gating_set <- MakeGatedSet(n_events = 800)
+  first <- ExtractGatedEventsBySample(gating_set, "nonDebris",
+                                      per_sample = 30, seed = 9)
+  second <- ExtractGatedEventsBySample(gating_set, "nonDebris",
+                                       per_sample = 30, seed = 9)
+  expect_equal(first$events, second$events)
+})
+
+test_that("ExtractGatedEventsBySample rejects a population that is not there", {
+  gating_set <- MakeGatedSet()
+  expect_error(ExtractGatedEventsBySample(gating_set, "Monocytes"),
+               "is not in the GatingSet")
+})
+
+test_that("ClusterCountsBySample counts each cluster inside each sample", {
+  counts <- ClusterCountsBySample(c(1, 1, 2, 1, 2, 2),
+                                  c("a", "a", "a", "b", "b", "b"))
+  expect_equal(nrow(counts), 4)
+  in_a <- counts[counts$sample == "a", ]
+  expect_equal(in_a$count[in_a$population == "cluster_1"], 2L)
+  expect_equal(in_a$percent_of_parent[in_a$population == "cluster_1"],
+               100 * 2 / 3)
+})
+
+test_that("ClusterCountsBySample makes each sample sum to one hundred percent", {
+  counts <- ClusterCountsBySample(c(1, 2, 3, 1, 1, 2),
+                                  c("a", "a", "a", "b", "b", "b"))
+  for (name in unique(counts$sample)) {
+    expect_equal(sum(counts$percent_of_parent[counts$sample == name]), 100)
+  }
+})
+
+test_that("ClusterCountsBySample writes a zero for a cluster a sample lacks", {
+  # PopulationProportions joins on the population, so a missing row would drop
+  # that sample from the comparison rather than count it as zero.
+  counts <- ClusterCountsBySample(c(1, 1, 2), c("a", "a", "b"))
+  expect_equal(nrow(counts), 4)
+  absent <- counts[counts$sample == "b" & counts$population == "cluster_1", ]
+  expect_equal(absent$count, 0L)
+})
+
+test_that("ClusterCountsBySample rejects two vectors of different lengths", {
+  expect_error(ClusterCountsBySample(c(1, 2), "a"), "They must match")
+})

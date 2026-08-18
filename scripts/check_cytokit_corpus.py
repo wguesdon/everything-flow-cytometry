@@ -971,6 +971,135 @@ def check_chain(work: Path) -> list[Result]:
     return results
 
 
+def check_pooled_clustering(work: Path) -> list[Result]:
+    """Assert that one model covers every sample, which the chain needs.
+
+    A clustering that runs on one sample cannot give a cell type proportion per
+    treatment, because every other sample would need its own FlowSOM model and
+    two models do not give comparable clusters.
+
+    Args:
+        work: A scratch folder outside the repository.
+
+    Returns:
+        One result per rule checked.
+    """
+    data = DEPOSIT_ROOT / "FlowRepository_FR-FCM-ZZLV_files"
+    work.mkdir(parents=True, exist_ok=True)
+    results = []
+
+    template = work / "template.csv"
+    run_cli(["template", "--data", str(data), "--out", str(template)])
+    gate_out = work / "gate"
+    run_cli(["gate", "--data", str(data), "--template", str(template), "--out", str(gate_out)])
+    gate_bundle = newest_bundle(gate_out)
+    if gate_bundle is None:
+        return [Result("pooled", "gate", False, "no bundle to cluster from", 0.0)]
+
+    cluster_out = work / "cluster"
+    status, output, seconds = run_cli(
+        [
+            "cluster",
+            "--gates",
+            str(gate_bundle),
+            "--parent",
+            "singlets",
+            "--metaclusters",
+            "5",
+            "--events",
+            "6000",
+            "--no-umap",
+            "--out",
+            str(cluster_out),
+        ]
+    )
+    bundle = newest_bundle(cluster_out)
+    counts = bundle / "cluster_counts_by_sample.csv" if bundle else None
+    samples = set()
+    if counts is not None and counts.exists():
+        for row in counts.read_text().splitlines()[1:]:
+            samples.add(row.split(",")[0])
+    results.append(
+        Result(
+            "pooled",
+            "one model over every sample",
+            status == 0 and len(samples) == 3,
+            f"{len(samples)} sample(s) in one clustering"
+            if samples
+            else first_error(output),
+            seconds,
+        )
+    )
+
+    # Every sample has to carry a row for every cluster, or a join to the
+    # metadata drops that sample instead of counting it as zero.
+    if counts is not None and counts.exists():
+        rows = [line.split(",") for line in counts.read_text().splitlines()[1:]]
+        per_sample = {}
+        for row in rows:
+            per_sample.setdefault(row[0], set()).add(row[1])
+        square = len({frozenset(v) for v in per_sample.values()}) == 1
+        results.append(
+            Result(
+                "pooled",
+                "every sample carries every cluster",
+                square,
+                "the table is square" if square else "a sample is missing a cluster",
+                0.0,
+            )
+        )
+
+    # The labels have to reach the per sample counts, or a comparison can only
+    # be made on a cluster number.
+    definitions = work / "definitions.csv"
+    run_cli(
+        [
+            "definitions",
+            "--data",
+            str(data),
+            "--out",
+            str(definitions),
+            "--markers",
+            "CD3,CD4,CD8,CD19",
+            "--populations",
+            "T cells,B cells",
+        ]
+    )
+    filled = definitions.read_text().splitlines()
+    filled[1] = "T cells,pos,,,neg"
+    filled[2] = "B cells,neg,,,pos"
+    definitions.write_text("\n".join(filled) + "\n")
+
+    annotate_out = work / "annotate"
+    status, output, seconds = run_cli(
+        [
+            "annotate",
+            "--clusters",
+            str(bundle),
+            "--definitions",
+            str(definitions),
+            "--out",
+            str(annotate_out),
+        ]
+    )
+    annotated = newest_bundle(annotate_out)
+    labelled = annotated is not None and (
+        annotated / "cell_type_counts_by_sample.csv"
+    ).exists()
+    results.append(
+        Result(
+            "pooled",
+            "the labels reach the per sample counts",
+            status == 0 and labelled,
+            "writes cell_type_counts_by_sample.csv"
+            if labelled
+            else first_error(output),
+            seconds,
+        )
+    )
+    return results
+
+
 def check_claims_and_reproduce(work: Path) -> list[Result]:
     """Assert the two recipes that judge rather than compute.
 
@@ -1219,6 +1348,7 @@ def main() -> int:
             results += check_compensate(work_root / "compensate")
             results += check_gate(work_root / "gate")
             results += check_chain(work_root / "chain")
+            results += check_pooled_clustering(work_root / "pooled")
         results += check_claims_and_reproduce(work_root / "claims")
         if not options.skip_refusals:
             results += check_refusals(work_root / "refusals")

@@ -26,7 +26,7 @@ cytokit gate        --data PATH --template FILE [--out DIR] [--cores N]
 cytokit cluster     --gates BUNDLE [--parent POP] | --data PATH
                                     [--markers "CD3,CD4"] [--metaclusters N]
                                     [--grid N] [--events N] [--no-umap] [--seed N]
-                                    [--out DIR]
+                                    [--one-sample] [--sample N] [--out DIR]
 cytokit annotate    --clusters BUNDLE --definitions FILE [--margin N] [--out DIR]
 cytokit proportions --counts BUNDLE --metadata FILE [--out DIR]
                                     [--sample-column sample]
@@ -98,6 +98,14 @@ N` sets the FlowSOM grid and defaults to `10`. `--events N` caps the subsample
 and defaults to `50000`. `--markers` narrows the channels. `--no-umap` skips
 the embedding. `--seed N` sets the seed.
 
+The recipe pools every sample into one model and records which sample each
+event came from. Two models do not give comparable clusters, so
+`--one-sample` is a flag and not the default. It writes
+`cluster_counts_by_sample.csv` with one row per sample and cluster, which
+`cytokit proportions` reads. `annotate` puts the cell type on those rows and
+writes `cell_type_counts_by_sample.csv`, which is how a cell type proportion
+reaches a comparison between treatments.
+
 The recipe replaces a detector name with the marker name when the file supplies
 one. It names every cluster with fewer than 20 events. A median from that few
 events is noise. The recipe writes `cluster_medians.csv` and
@@ -156,6 +164,8 @@ The recipe writes `cluster_labels.csv`, `cell_type_summary.csv`,
    template with the scientist. Run `cytokit gate`. Read the gates that the
    recipe names before you report a population.
 9. Run `cytokit cluster` inside the gate that holds the events of interest.
+   Leave every sample in one model, which is the default, when the scientist
+   wants a cell type proportion per treatment.
    Read every cluster with fewer than 20 events as noise. Do not name a cluster
    before the scientist supplies a cell type definition.
 10. A cell type definitions table is per panel, and the scientist will not have

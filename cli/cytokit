@@ -37,7 +37,8 @@ Usage:
   cytokit cluster     --gates BUNDLE [--parent POP] | --data PATH
                                   [--markers "CD3,CD4"] [--metaclusters 12]
                                   [--grid 10] [--events 50000] [--no-umap]
-                                  [--seed 42] [--out DIR]
+                                  [--one-sample] [--sample N] [--seed 42]
+                                  [--out DIR]
   cytokit annotate    --clusters BUNDLE --definitions FILE [--out DIR]
                                   [--margin 0.1]
   cytokit proportions --counts BUNDLE --metadata FILE [--out DIR]
@@ -63,6 +64,11 @@ panel's markers in it, for you to fill in with the scientist.
 cluster groups the events with FlowSOM and draws them with UMAP. It does not
 name a cluster, because a name is a claim about an antibody. Point it at the
 bundle that gate wrote, so the clustering runs inside a gate.
+
+cluster pools every sample into one model and records which sample each event
+came from, so a cluster frequency can be compared between treatments. Two
+models do not give comparable clusters, which is why --one-sample is a flag and
+not the default.
 
 gate runs a template you filled in and reports what every gate kept. It names
 the gates that kept every event and the gates that kept almost none, because
@@ -198,6 +204,18 @@ run_recipe() {
     for mount in "${extra_mounts[@]+"${extra_mounts[@]}"}"; do
         mounts+=(--volume "$mount")
     done
+
+    # A recipe with no --out writes into this repository's output/ folder. That
+    # is right for the analyses that live here and wrong for a scientist's own
+    # data, whose results then land in somebody else's checkout. The caller is
+    # told, once, rather than finding it later.
+    if [[ -z "$out_host" && -n "$data_mount" && "$data_mount" != "$REPO_ROOT"/* ]]; then
+        echo "Note: no --out was given, so the bundle goes into" >&2
+        echo "  $REPO_ROOT/output" >&2
+        echo "Your data is outside this repository. Add --out to keep the" >&2
+        echo "result beside it, for example --out \"$(dirname "$data_mount")/results\"." >&2
+        echo >&2
+    fi
 
     # An --out inside the repository already has a mount. One outside needs its
     # own, and its parent has to exist so that podman does not create a folder

@@ -110,6 +110,49 @@ if (nrow(close) > 0) {
   Say("\nEvery label beats its runner up by at least ", close_call, ".")
 }
 
+# The cluster counts per sample carry a cluster number. Putting the label on
+# them is what makes a cell type proportion per treatment possible, which is
+# the question the whole chain exists to answer.
+by_sample_path <- file.path(arguments$clusters, "cluster_counts_by_sample.csv")
+if (file.exists(by_sample_path)) {
+  by_sample <- utils::read.csv(by_sample_path, check.names = FALSE,
+                               stringsAsFactors = FALSE)
+  label_of <- stats::setNames(annotation$cell_type,
+                              paste0("cluster_", annotation$cluster))
+  by_sample$cell_type <- unname(label_of[by_sample$population])
+  named <- by_sample[!is.na(by_sample$cell_type), , drop = FALSE]
+  if (nrow(named) > 0) {
+    totals <- stats::aggregate(count ~ sample + cell_type, data = named,
+                               FUN = sum)
+    per_sample_total <- stats::aggregate(count ~ sample, data = by_sample,
+                                         FUN = sum)
+    totals <- merge(totals, per_sample_total, by = "sample",
+                    suffixes = c("", "_parent"))
+    cell_type_counts <- data.frame(
+      sample = totals$sample,
+      population = totals$cell_type,
+      count = totals$count,
+      percent_of_parent = 100 * totals$count / totals$count_parent,
+      stringsAsFactors = FALSE)
+    cell_type_counts <- cell_type_counts[
+      order(cell_type_counts$sample, cell_type_counts$population), ,
+      drop = FALSE]
+    WriteBundleTable(bundle, cell_type_counts,
+                     "cell_type_counts_by_sample.csv")
+    Say("\nOne row per sample and cell type is in ",
+        "cell_type_counts_by_sample.csv,")
+    Say("over ", length(unique(cell_type_counts$sample)), " sample(s). ",
+        "Compare a cell type between treatments with:")
+    Say("  cytokit proportions --counts ",
+        DisplayPath(file.path(bundle, "cell_type_counts_by_sample.csv")),
+        " --metadata <file>")
+  }
+} else {
+  Say("\nThe cluster bundle holds no per sample count, so a cell type")
+  Say("proportion per treatment is not reachable from it. Run cytokit cluster")
+  Say("without --one-sample to get one.")
+}
+
 summary_table <- SummariseCellTypes(annotation)
 WriteBundleTable(bundle, summary_table, "cell_type_summary.csv")
 Say("\nOne row per cell type")

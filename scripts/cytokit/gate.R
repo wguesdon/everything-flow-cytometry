@@ -115,13 +115,56 @@ if (!isTRUE(arguments$`no-transform`)) {
 
 Say("\nRunning ", template_rows, " template row(s) over ",
     length(files), " file(s)")
+# The gating set is built here rather than inside RunAutomatedGating, so that
+# a failure leaves the rows that did run available to be read.
+partial <- flowWorkspace::GatingSet(transformed)
 gated <- CollectNotes(tryCatch(
-  RunAutomatedGating(transformed, template, n_cores = cores),
+  {
+    openCyto::gt_gating(template, partial, mc.cores = cores,
+                        parallel_type = "none")
+    flowWorkspace::recompute(partial)
+    partial
+  },
   error = function(e) e))
+
 if (inherits(gated$value, "error")) {
-  stop("The template did not run: ", conditionMessage(gated$value),
-       "\nCheck that every dims value in the template names a channel that ",
-       "the panel carries.")
+  # openCyto names neither the row nor the population that stopped it. The rows
+  # that did run are in the set, so the first row whose parent is there and
+  # whose own alias is not is the one that failed. Its parent's event count is
+  # usually the answer, because a gate cannot find a peak in thirteen events.
+  built <- tryCatch(
+    basename(flowWorkspace::gs_get_pop_paths(partial, path = "auto")),
+    error = function(e) "root")
+  culprit <- NULL
+  for (index in seq_len(nrow(template_rows_table))) {
+    row <- template_rows_table[index, ]
+    if (!row$alias %in% built && row$parent %in% built) {
+      culprit <- row
+      break
+    }
+  }
+  detail <- if (is.null(culprit)) {
+    "No row could be identified, so the fault is before the first gate."
+  } else {
+    parent_count <- tryCatch(
+      as.numeric(flowWorkspace::gh_pop_get_count(partial[[1]], culprit$parent)),
+      error = function(e) NA_real_)
+    paste0("The row that stopped it is '", culprit$alias, "', which uses ",
+           culprit$gating_method, " on ", culprit$dims, " inside '",
+           culprit$parent, "'.\nThat parent holds ",
+           if (is.na(parent_count)) "an unknown number of" else
+             format(parent_count, big.mark = ","),
+           " events in ", basename(files[1]), ".",
+           if (!is.na(parent_count) && parent_count < 500) {
+             paste0("\nA gate cannot find a cut in that few events. Widen the ",
+                    "gate above it before you change this row.")
+           } else "")
+  }
+  stop("The template did not run: ", conditionMessage(gated$value), "\n\n",
+       detail,
+       "\n\nThe rows that did run are: ",
+       paste(setdiff(built, "root"), collapse = ", "),
+       "\nCheck also that every dims value names a channel the panel carries.")
 }
 gating_set <- gated$value
 

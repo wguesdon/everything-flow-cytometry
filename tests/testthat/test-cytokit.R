@@ -573,3 +573,36 @@ test_that("MarkerLabels covers every channel of the panel", {
                       kind = c("scatter", "stain"), stringsAsFactors = FALSE)
   expect_equal(names(MarkerLabels(panel)), panel$channel)
 })
+
+test_that("ReportNotes puts a fault above a routine line said more often", {
+  # "Not enough events" said once matters more than "done!" said four times.
+  notes <- data.frame(
+    note = c("done!", "Not enough events to proceed", "Adding population:x"),
+    times = c(4L, 1L, 1L), stringsAsFactors = FALSE)
+  result <- ReportNotes(notes, NULL)
+  expect_equal(result$note[1], "Not enough events to proceed")
+  expect_true(result$is_fault[1])
+  expect_false(result$is_fault[2])
+})
+
+test_that("ReportNotes marks a fault so a reader can find it", {
+  notes <- data.frame(note = "could not open the file", times = 1L,
+                      stringsAsFactors = FALSE)
+  printed <- capture.output(ReportNotes(notes, NULL))
+  expect_true(any(grepl("read this one", printed)))
+})
+
+test_that("ReportNotes shows every fault even past the limit", {
+  notes <- data.frame(
+    note = c(paste("failure", 1:7), paste("done", 1:3)),
+    times = rep(1L, 10), stringsAsFactors = FALSE)
+  printed <- capture.output(ReportNotes(notes, NULL, limit = 3))
+  shown <- sum(grepl("read this one", printed))
+  expect_equal(shown, 7)
+})
+
+test_that("ReportNotes calls a routine line no fault", {
+  notes <- data.frame(note = c("done!", "Adding population:live"),
+                      times = c(2L, 1L), stringsAsFactors = FALSE)
+  expect_false(any(ReportNotes(notes, NULL)$is_fault))
+})

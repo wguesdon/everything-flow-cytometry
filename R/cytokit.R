@@ -721,7 +721,7 @@ ParseMarkerArgument <- function(argument, available, channels) {
 #' @param notes A table with `note` and `times`, from [CollectNotes()].
 #' @param bundle The bundle folder, or `NULL` to print without writing.
 #' @param limit How many distinct lines to print. Defaults to 5.
-#' @return The aggregated table, invisibly.
+#' @return The aggregated table, invisibly, with an `is_fault` column.
 #' @examples
 #' ReportNotes(data.frame(note = "uneven tokens", times = 3L), NULL)
 #' @export
@@ -730,16 +730,29 @@ ReportNotes <- function(notes, bundle, limit = 5) {
     return(invisible(notes))
   }
   notes <- stats::aggregate(times ~ note, data = notes, FUN = sum)
-  notes <- notes[order(-notes$times, notes$note), , drop = FALSE]
+  # A line that reports a fault reads first, whatever its count. "Not enough
+  # events to proceed" said once matters more than "done!" said four times, and
+  # sorting by count alone buries it.
+  notes$is_fault <- grepl(
+    paste("not enough|dummy|fail|error|cannot|could not|invalid|unable",
+          "no such|missing|dropped|uneven|truncat|NaN|Inf", sep = "|"),
+    notes$note, ignore.case = TRUE)
+  notes <- notes[order(-notes$is_fault, -notes$times, notes$note), ,
+                 drop = FALSE]
   cat("\nThe FCS reader raised ", sum(notes$times), " note(s) over ",
       nrow(notes), " distinct line(s):\n", sep = "")
-  shown <- utils::head(notes, limit)
+  faults <- sum(notes$is_fault)
+  # Every fault is shown, however many there are. The limit applies to the
+  # routine lines that sit under them.
+  shown <- utils::head(notes, max(limit, faults))
   for (index in seq_len(nrow(shown))) {
-    cat("  ", shown$times[index], "x  ", shown$note[index], "\n", sep = "")
-  }
-  if (nrow(notes) > limit) {
-    cat("  and ", nrow(notes) - limit, " more, all in reader_notes.csv\n",
+    cat("  ", shown$times[index], "x  ", shown$note[index],
+        if (shown$is_fault[index]) "   <- read this one" else "", "\n",
         sep = "")
+  }
+  if (nrow(notes) > nrow(shown)) {
+    cat("  and ", nrow(notes) - nrow(shown),
+        " more, all in reader_notes.csv\n", sep = "")
   }
   if (!is.null(bundle)) {
     WriteBundleTable(bundle, notes, "reader_notes.csv")

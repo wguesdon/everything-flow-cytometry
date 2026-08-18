@@ -177,6 +177,8 @@ valid empty template.
 | `--template FILE` | The openCyto gating template | Required |
 | `--cores N` | The number of cores | 1 |
 | `--seed N` | The seed | 42 |
+| `--one-sample` | Cluster one sample rather than pooling them | Off |
+| `--sample N` | Which sample `--one-sample` reads | 1 |
 | `--no-compensate` | Skip the stored matrix | False |
 | `--no-transform` | Skip the logicle transform | False |
 | `--no-save-gates` | Do not save the gated hierarchy | False |
@@ -226,6 +228,11 @@ events is noise.
 The recipe writes `cluster_medians.csv` and `cluster_medians.svg`. It writes
 `umap.csv` and `umap.png` unless `--no-umap` is set. The UMAP uses a raster,
 because a vector records every point.
+
+The recipe pools every sample into one model. Two models do not give
+comparable clusters, so a cell type proportion per treatment needs the pooled
+form. It writes `cluster_counts_by_sample.csv` with one row per sample and
+cluster, and `annotate` puts the cell type on those rows.
 
 ## Annotate
 
