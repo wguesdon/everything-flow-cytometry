@@ -48,6 +48,9 @@ AGENTS.md
 # Session working notes, kept local
 SESSION_SUMMARY.md
 
+# Design notes, kept local like SESSION_SUMMARY.md
+docs/cytokit_prd.md
+
 # The rewrite briefs, kept local like CLAUDE.md and AGENTS.md
 prompts/
 
