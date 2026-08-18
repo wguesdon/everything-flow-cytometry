@@ -775,11 +775,11 @@ pipeline on files nobody has looked at.
 
 ### Rarity is what breaks the density method
 
-Density method thresholds separates two explanations that are easy to confuse.
-The first is that CD38 high has no density valley at all. That is not quite
-true. In spleen a single `mindensity` cut lands at 144.2 against the analyst's
-141.8, and it keeps 3.48 percent of events against their 3.59 percent. The
-second explanation is that the population must be abundant enough to leave a
+Two explanations for the failure are easy to confuse, and the thresholds below
+separate them. The first is that CD38 high has no density valley at all. That is
+not quite true. In spleen a single `mindensity` cut lands at 144.2 against the
+analyst's 141.8, and it keeps 3.48 percent of events against their 3.59 percent.
+The second explanation is that the population must be abundant enough to leave a
 feature in the density curve, and that is what the data supports. Spleen holds
 3.3 percent ASC and the method works. Blood, bone marrow and tonsil hold 0.3 to
 0.9 percent, and the cut falls 40 to 60 units too low, so it keeps 14 to 35

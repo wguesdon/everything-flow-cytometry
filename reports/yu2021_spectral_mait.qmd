@@ -552,10 +552,10 @@ on the sequencing in the paper.
 
 The 83 samples come from 45 subjects, and every test treats a sample as
 independent. A subject who contributes five samples counts five times. That
-treatment inflates the precision of every p value in the paper's claims against
-its own data, and it affects the claims about time points most, because those
-windows are built from repeated sampling of the same people. A mixed model with
-a subject random effect is the correct test, and it is not run here.
+treatment inflates the precision of every p value reported above, and it affects
+the claims about time points most, because those windows are built from repeated
+sampling of the same people. A mixed model with a subject random effect is the
+correct test, and it is not run here.
 
 The normal group holds five females and five males. The largest effect in the
 report, a median of 30.1 percent against 6.3 percent, rests on those ten

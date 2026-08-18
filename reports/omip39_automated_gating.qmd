@@ -540,13 +540,13 @@ instead, and the compartment total is intact.
 ### Consequences for the paper's conclusions
 
 None of the above changes the answer to the question that the paper asks. The
-claims in Reproduction of the published analysis are about the ratio between two
-branches of the CD56dim population, and every route that produced those branches
-at all gave the same directions with comparable magnitudes. A cut point that
-moves the boundary between two populations changes both of their frequencies. It
-does not reverse the sign of a difference measured within one of them. That is
-why the six directional claims survive a gating strategy that disagrees with the
-authors by 2.5 percentage points on the NK compartment.
+reproduced claims are about the ratio between two branches of the CD56dim
+population, and every route that produced those branches at all gave the same
+directions with comparable magnitudes. A cut point that moves the boundary
+between two populations changes both of their frequencies. It does not reverse
+the sign of a difference measured within one of them. That is why the six
+directional claims survive a gating strategy that disagrees with the authors by
+2.5 percentage points on the NK compartment.
 
 ### Scope and limitations
 
