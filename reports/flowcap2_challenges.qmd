@@ -253,7 +253,7 @@ The training half reaches an accuracy of 0.875 and the held out half reaches
 of the markers used. This analysis reproduces the pattern and cannot settle that
 question.
 
-## Part 4: every claim, with a verdict
+## Part 4: claim verdicts
 
 ```{r}
 #| label: verdicts

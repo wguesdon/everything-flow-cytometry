@@ -147,7 +147,7 @@ deposit confirms the match.
 
 The analysis runs in R. Every package version is pinned in the container.
 
-## Part 1: what one pipeline has to survive
+## Part 1: channel resolution and gating
 
 A single template channel name cannot cover this deposit. Three makers name the
 same detector three ways. Becton Dickinson writes `PerCP-Cy5-5-A`, one operator
@@ -371,7 +371,7 @@ knitr::include_graphics(OutputImage("distribution_by_arm.png"))
 knitr::include_graphics(OutputImage("intraoperator_cv.png"))
 ```
 
-## Part 4: what the four arms say
+## Part 4: comparison of the four arms
 
 ```{r}
 #| label: dispersion

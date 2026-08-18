@@ -149,13 +149,13 @@ positive events and with 10 metaclusters inside the CD8 gate.
 The analysis used flowCore, openCyto, FlowSOM and ggplot2. Every package version
 is pinned in the container and asserted at build time.
 
-## Part 1: what spectral changes about the pipeline
+## Part 1: the spectral panel and the pipeline
 
 Compensation is not required and the viability channel requires a different
 selection function. The cohort requires a single set of cut points across all
 samples.
 
-## Part 2: the cohort, and where the grouping comes from
+## Part 2: the cohort and its grouping
 
 ```{r}
 #| label: cohort
@@ -174,7 +174,7 @@ included in the flow analysis, so the join is complete in both directions. The
 samples. Every test treats a sample as independent. That treatment inflates the
 apparent precision, and the discussion returns to it.
 
-## Part 3: one cut for the cohort, and the marker where that fails
+## Part 3: cut points across the cohort
 
 Cut points were fitted once on a pooled subsample and applied to every sample.
 
@@ -200,8 +200,7 @@ no events at all.
 
 The same reagent does resolve on CD4 T cells, where the density has a minimum at
 2.54, and that value is used for CD8 T cells as well. The cut is recorded as a
-choice in the source column of the cuts table. Part 5 measures what the choice
-changes.
+choice in the source column of the cuts table.
 
 ```{r}
 #| label: hierarchy
@@ -381,7 +380,7 @@ authors' own.
 None of the three changes the answer, so the remaining gap is between a p of
 0.065 in 24 samples and a p below 0.05 in the authors' own analysis.
 
-## Part 5: what the CD45RA choice changes
+## Part 5: the CD45RA sensitivity sweep
 
 Three of the ten claims are about the memory compartment, and the memory
 compartment rests on the CD45RA cut, which Part 3 established is a choice rather

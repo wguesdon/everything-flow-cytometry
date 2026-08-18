@@ -467,7 +467,7 @@ Four populations keep fewer than two markers and are not scored at all:
 invariant natural killer T cells, both γδ subsets, and terminal natural killer
 cells.
 
-## Part 6: the paper's claims against the measurements
+## Part 6: claim verdicts
 
 ```{r}
 #| label: verdicts

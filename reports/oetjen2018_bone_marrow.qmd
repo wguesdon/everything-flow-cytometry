@@ -121,7 +121,7 @@ are tested by Spearman correlation on the flow data.
 The analysis uses flowCore, ggplot2 and knitr. Every version is pinned in the
 container.
 
-## Part 1: the finding that changes the whole pipeline
+## Part 1: the deposited viability gate
 
 The deposit carries a cytoflow workflow with two polygons. The first is named
 `lymphocytes` and it sits on forward scatter height against side scatter height.
@@ -151,8 +151,8 @@ kable(
 )
 ```
 
-On the V545 detector the `dead_lymphocytes` polygon reaches to about 2,553.
-The pipeline reported CD45 positive cells as 4 percent of live events in a bone
+On the V545 detector the `dead_lymphocytes` polygon reaches to about 2,553, and
+the pipeline reported CD45 positive cells as 4 percent of live events in a bone
 marrow sample.
 
 ```{r}
@@ -196,7 +196,7 @@ The paper reports a median of 196,000 CD45 positive events collected, with a
 25th to 75th percentile of 100,000 to 278,000. The count here is taken before
 the scatter gate.
 
-## Part 3: whether an automated cut can be trusted here
+## Part 3: marker stability under the automated cut
 
 The upstream gates come from the depositors. The automated cut below them uses a
 density minimum with a two component mixture as the fallback.
@@ -233,9 +233,9 @@ knitr::include_graphics(OutputImage("marker_spread.png"))
 ```
 
 Most marker and panel pairs span more than 80 percentage points across samples.
-The two claims that need a reliable lineage frequency from every panel, the order
-of the major populations and which population is largest, are recorded as not
-measurable by this method.
+The two claims that need a reliable lineage frequency from every panel, the
+order of the major populations and which population is largest, are recorded as
+not measurable by this method.
 
 The automated density cut fails here because the marker distribution has no
 reliable second mode. The tissue holds a developmental continuum.
@@ -318,7 +318,7 @@ kable(
 
 The absolute differences between aspirations are small for all measures.
 
-## Part 6: every claim, with a verdict
+## Part 6: claim verdicts
 
 ```{r}
 #| label: verdicts
@@ -330,8 +330,6 @@ kable(
                 "Verdict")
 )
 ```
-
-Each row compares the paper claim against the measured value.
 
 ```{r}
 #| label: verdict-counts

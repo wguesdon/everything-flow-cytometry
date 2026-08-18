@@ -210,7 +210,7 @@ samples, so the seven tonsil files are not independent. They are repeated
 acquisitions from one tube, where the same cells can be sampled more than once
 and the counts are correlated.
 
-## Part 3: automated gating, and why it fails
+## Part 3: automated gating results
 
 The template mirrors the manual hierarchy, with `mindensity` for the viability
 and dump gates and two sequential `mindensity` gates to reach CD38 high.
@@ -255,7 +255,7 @@ announces, and the paper says as much in its own words.
 > On-scale display of CD38high events is critical for ASC identification, and can
 > be difficult for the untrained eye.
 
-## Part 3b: where a density method actually cuts
+## Part 3b: density method thresholds
 
 `mindensity` was run on the CD38 channel of exactly the data the analyst looked
 at, in the workspace's own scale, and its threshold was compared with theirs.
@@ -274,12 +274,12 @@ kable(
 )
 ```
 
-The table corrects the simple story. In spleen the two methods almost agree, at
-144.2 against 141.8, which gives 3.48 percent of events above the cut against
-3.59 percent. A single density gate on CD38 would have been close to right
-there. In the other three tissues `mindensity` cuts far too low, at 80, 73 and
-84 against analyst thresholds of 124, 128 and 142. It keeps 27, 35 and 14
-percent of events where the analyst kept 3.1, 0.8 and 0.9 percent.
+In spleen the two methods almost agree, at 144.2 against 141.8, which gives 3.48
+percent of events above the cut against 3.59 percent. A single density gate on
+CD38 would have been close to right there. In the other three tissues
+`mindensity` cuts far too low, at 80, 73 and 84 against analyst thresholds of
+124, 128 and 142. It keeps 27, 35 and 14 percent of events where the analyst
+kept 3.1, 0.8 and 0.9 percent.
 
 The method is therefore not blind. It succeeds where the target population is
 abundant enough to bend the density curve, which in spleen means 3.3 percent of
@@ -294,9 +294,8 @@ leaves for a density method to find, and this is a rare cell panel.
 knitr::include_graphics(OutputImage("cd38_density.png"))
 ```
 
-The figure shows what the arithmetic says. There is one large mode and a long
-shoulder, and `mindensity` finds the dip between negative and positive rather
-than the start of the bright tail.
+There is one large mode and a long shoulder, and `mindensity` finds the dip
+between negative and positive rather than the start of the bright tail.
 
 ```{r}
 #| label: cd38-biaxial
@@ -309,7 +308,7 @@ The analyst's gate also has an upper bound on both markers. A density threshold
 has no upper bound at all, so the two gates are not the same object even where
 the lower edges agree.
 
-## Part 4: clustering recovers what gating missed
+## Part 4: clustering results
 
 Clustering does not need a valley. It groups events by their position in all
 seven markers at once, and ASC differ from everything around them on several of
@@ -422,12 +421,12 @@ kable(
 The third step scores every cluster against every definition. For each marker
 the definition names, the rule adds the scaled value where it expects `pos`,
 twice the scaled value where it expects `high`, and one minus the scaled value
-where it expects `neg`, then divides by the total weight. The division matters.
-An earlier version summed instead, which rewards a definition for the number of
-markers it names rather than for the fit, and the label with the longest marker
-list then wins clusters it has no business winning. The last step takes the best
-score and records how close the second was. That gap is the margin, and it is
-the part of the output that says how much to trust the label.
+where it expects `neg`, then divides by the total weight. The division matters
+because a sum rewards a definition for the number of markers it names rather
+than for the fit, and the label with the longest marker list then wins clusters
+it has no business winning. An earlier version of this analysis summed. The last
+step takes the best score and records how close the second was. That gap is the
+margin, and it is the part of the output that says how much to trust the label.
 
 ```{r}
 #| label: cluster-annotation
@@ -451,20 +450,19 @@ file, and the final column comes from a gate an analyst drew in FlowJo. Cluster
 4 is labelled antibody secreting cells with a margin of 0.409, and the manual
 gate calls 91.7 percent of its events ASC. Cluster 3 gets the same label with a
 margin of 0.136, and the gate agrees on 60.3 percent. Two independent routes
-reach the same conclusion.
+reach the same conclusion for those two clusters.
 
-Read the scaled table for cluster 4 and the label is obvious without any
-arithmetic. CD38 is at 1.00, CD27 is at 1.00, and CD20 is at 0.02. That is the
-highest CD38 in the panel, CD27 positive, and CD20 switched off, which is the
-paper's definition of an ASC.
+The scaled table for cluster 4 carries the label without arithmetic. CD38 is at
+1.00, CD27 is at 1.00, and CD20 is at 0.02. That is the highest CD38 in the
+panel, CD27 positive, and CD20 switched off, which is the paper's definition of
+an ASC.
 
-Five of the fifteen labels carry a margin below 0.1, and a reader should treat
-those as undecided rather than as answers. Two of the five are informative.
-Cluster 12 has CD19 at 0.93 and CD20 at 0.90, with IgD at 0.06 and CD27 at 0.12,
-so it is a B cell that is neither IgD positive nor CD27 positive. Cluster 14 has
-IgD at 0.78 and CD27 at 0.64, so it is positive for both. Neither state is in
-the definitions file, and the low margins are the method reporting the gap
-rather than hiding it.
+Five of the fifteen labels carry a margin below 0.1 and remain undecided. Two of
+those five are informative. Cluster 12 has CD19 at 0.93 and CD20 at 0.90, with
+IgD at 0.06 and CD27 at 0.12, so it is a B cell that is neither IgD positive nor
+CD27 positive. Cluster 14 has IgD at 0.78 and CD27 at 0.64, so it is positive
+for both. Neither state is in the definitions file, and the low margins are the
+method reporting the gap rather than hiding it.
 
 Cluster 7 is the one clear error. It is labelled antibody secreting cells and
 the manual gate calls 0.7 percent of it ASC. Its margin is 0.045, so the label
@@ -488,8 +486,8 @@ flagged it before anyone looked at the biology.
 
 Set against the manual values, the frequencies the clustering produces are
 close. Spleen gives 4.03 percent against 3.34, tonsil gives 0.77 against 0.86,
-and bone marrow gives 0.43 against 0.45. Those values are within a factor of
-1.2. The template was out by a factor of 18.
+and bone marrow gives 0.43 against 0.45, all within a factor of 1.2. The
+template was out by a factor of 18.
 
 ## Part 5: the phenotype claims
 
@@ -564,7 +562,7 @@ these deposited files carries HLA-DR and not Ki67. The paper describes both as
 options for that channel. The claim is recorded as not measurable rather than as
 failed.
 
-## Part 6: every claim, with a verdict
+## Part 6: claim verdicts
 
 The seven claims live in `gating/omip43_paper_claims.csv`, each with the
 sentence it came from.
