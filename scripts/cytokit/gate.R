@@ -213,8 +213,13 @@ if (!is.null(warnings_table) && nrow(warnings_table) > 0) {
       template_rows_table$alias == warnings_table$population[index], ,
       drop = FALSE]
     if (nrow(row) == 1) {
+      detail <- if (nzchar(row$gating_args)) {
+        paste0(" with ", row$gating_args)
+      } else {
+        ""
+      }
       Say("    ", row$alias, " uses ", row$gating_method, " on ", row$dims,
-          if (nzchar(row$gating_args)) paste0(" with ", row$gating_args) else "")
+          detail)
     }
   }
 } else {

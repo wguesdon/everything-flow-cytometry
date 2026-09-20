@@ -15,7 +15,7 @@ IMAGE="${CYTOKIT_IMAGE:-everything-flow-cytometry:latest}"
 
 # A recipe here writes a timestamped bundle. The others write one file that the
 # caller names, so they take no label and no output root.
-BUNDLE_RECIPES="inspect compensate gate cluster annotate proportions compare claims"
+BUNDLE_RECIPES="inspect compensate gate cluster annotate proportions compare claims reproduce"
 
 usage() {
     cat <<'EOF'
@@ -48,6 +48,12 @@ Usage:
   cytokit claims      --claims FILE --results FILE [--out DIR]
                                   [--tolerance 0.05]
   cytokit reproduce   [--analysis NAME] [--out DIR]
+
+Report provenance options:
+  --llm-provider NAME
+  --llm-model NAME
+  --agent-harness NAME
+  --agent-harness-version VERSION
 
   cytokit list        show the recipes and their state
   cytokit build       build the analysis image
@@ -106,6 +112,20 @@ require_image() {
     fi
 }
 
+require_tracked_report_source() {
+    if ! git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        echo "Report generation requires a Git checkout." >&2
+        exit 1
+    fi
+    local untracked
+    untracked="$(git -C "$REPO_ROOT" ls-files --others --exclude-standard)"
+    if [[ -n "$untracked" ]]; then
+        echo "Report generation stopped because the repository has untracked files:" >&2
+        printf '%s\n' "$untracked" >&2
+        exit 1
+    fi
+}
+
 # The recipe needs the data on a path inside the container. The host path is
 # resolved here so that a relative path, a symlink and ~ all work.
 absolute() {
@@ -132,9 +152,14 @@ absolute() {
 
 run_recipe() {
     local recipe="$1"; shift
+    case " $BUNDLE_RECIPES " in
+        *" $recipe "*) require_tracked_report_source ;;
+    esac
     require_image
 
     local data_host="" out_host="" controls_host="" args=() index=1
+    local llm_provider="none" llm_model="none"
+    local agent_harness="manual" agent_harness_version="not_recorded"
     local -a extra_mounts=() extra_hosts=()
     local -a passthrough=()
 
@@ -173,6 +198,18 @@ run_recipe() {
                         passthrough+=(--controls \
                             "/incontrols/$(basename "$controls_host")")
                     fi
+                    shift 2 ;;
+            --llm-provider)
+                    llm_provider="${2:?--llm-provider needs a value}"
+                    shift 2 ;;
+            --llm-model)
+                    llm_model="${2:?--llm-model needs a value}"
+                    shift 2 ;;
+            --agent-harness)
+                    agent_harness="${2:?--agent-harness needs a value}"
+                    shift 2 ;;
+            --agent-harness-version)
+                    agent_harness_version="${2:?--agent-harness-version needs a value}"
                     shift 2 ;;
             *)      passthrough+=("$1"); shift ;;
         esac
@@ -272,6 +309,12 @@ run_recipe() {
         --env "CYTOKIT_CONTROLS_HOST=${controls_mount:-}" \
         --env "CYTOKIT_OUT_HOST=${out_mount:-}" \
         --env "CYTOKIT_IMAGE_DIGEST=$(podman image inspect --format '{{.Digest}}' "$IMAGE" 2>/dev/null || echo unknown)" \
+        --env "CYTOKIT_GIT_COMMIT=$(git -C "$REPO_ROOT" rev-parse HEAD)" \
+        --env "CYTOKIT_GIT_DIRTY=$([[ -n "$(git -C "$REPO_ROOT" status --porcelain)" ]] && echo true || echo false)" \
+        --env "CYTOKIT_LLM_PROVIDER=$llm_provider" \
+        --env "CYTOKIT_LLM_MODEL=$llm_model" \
+        --env "CYTOKIT_AGENT_HARNESS=$agent_harness" \
+        --env "CYTOKIT_AGENT_HARNESS_VERSION=$agent_harness_version" \
         "${mounts[@]}" \
         --workdir /work \
         "$IMAGE" Rscript "scripts/cytokit/${recipe}.R" "${passthrough[@]}"

@@ -80,7 +80,14 @@ test_that("CloseCytokitBundle records the arguments and the input checksums", {
   CloseCytokitBundle(bundle, "inspect", list(data = "study"), inputs = input,
                      command = "cytokit inspect --data study")
 
-  for (name in c("manifest.json", "session_info.txt", "REPRODUCE.md")) {
+  for (name in c(
+    "manifest.json",
+    "session_info.txt",
+    "REPRODUCE.md",
+    "report.qmd",
+    "report.html",
+    "report_provenance.json"
+  )) {
     expect_true(file.exists(file.path(bundle, name)), info = name)
   }
   manifest <- jsonlite::fromJSON(file.path(bundle, "manifest.json"))
@@ -88,6 +95,9 @@ test_that("CloseCytokitBundle records the arguments and the input checksums", {
   expect_equal(manifest$arguments$data, "study")
   expect_equal(manifest$inputs$sample.txt,
                unname(tools::md5sum(input)))
+  expect_equal(manifest$git_commit, Sys.getenv("CYTOKIT_GIT_COMMIT",
+                                               unset = "not_recorded"))
+  expect_true(any(manifest$outputs$file == "report.html"))
   expect_match(paste(readLines(file.path(bundle, "REPRODUCE.md")),
                      collapse = " "),
                "cytokit inspect --data study")
@@ -485,6 +495,73 @@ test_that("CloseCytokitBundle writes a manifest with no input at all", {
   manifest <- jsonlite::fromJSON(file.path(bundle, "manifest.json"))
   expect_equal(manifest$recipe, "inspect")
   expect_true(file.exists(file.path(bundle, "REPRODUCE.md")))
+})
+
+test_that("CytokitMarkdownTable escapes table values", {
+  frame <- data.frame(name = "a|b", value = 2)
+
+  expect_equal(CytokitMarkdownValue("a|b"), "a\\|b")
+  expect_equal(CytokitMarkdownRow(c("a", "b")), "| a | b |")
+  table <- CytokitMarkdownTable(frame)
+
+  expect_match(table, "a\\\\|b", fixed = TRUE)
+  expect_match(table, "| name | value |", fixed = TRUE)
+  expect_match(CytokitProvenanceText(list(a = 1)), '"a":1')
+})
+
+test_that("the report provenance records the code commit and author", {
+  withr::local_envvar(c(
+    CYTOKIT_GIT_COMMIT = "abc123",
+    CYTOKIT_GIT_DIRTY = "false",
+    CYTOKIT_LLM_PROVIDER = "openai",
+    CYTOKIT_LLM_MODEL = "gpt-test",
+    CYTOKIT_AGENT_HARNESS = "codex",
+    CYTOKIT_AGENT_HARNESS_VERSION = "1"
+  ))
+
+  provenance <- BuildCytokitReportProvenance(
+    "inspect",
+    list(seed = "42"),
+    c(input = "md5"),
+    "cytokit inspect --data study",
+    "2026-09-20T00:00:00+0000"
+  )
+
+  expect_false(CytokitGitDirty())
+  expect_equal(provenance$git_commit, "abc123")
+  expect_equal(provenance$llm_model, "gpt-test")
+  expect_equal(provenance$random_seeds, "42")
+  expect_match(CytokitReportCallout(provenance), "codex")
+})
+
+test_that("the report helpers render bundle tables and figures", {
+  bundle <- withr::local_tempdir()
+  utils::write.csv(data.frame(a = 1), file.path(bundle, "result.csv"),
+                   row.names = FALSE)
+  writeLines(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>',
+    file.path(bundle, "figure.svg")
+  )
+  provenance <- BuildCytokitReportProvenance(
+    "inspect",
+    list(),
+    list(),
+    "cytokit inspect --data study",
+    "2026-09-20T00:00:00+0000"
+  )
+
+  expect_match(paste(CytokitReportTableSections(bundle), collapse = "\n"),
+               "result.csv")
+  expect_match(paste(CytokitReportFigureSections(bundle), collapse = "\n"),
+               "figure.svg")
+  WriteCytokitQuartoReport(bundle, "inspect", provenance)
+  records <- CytokitOutputRecords(bundle)
+  record <- CytokitOutputRecord(file.path(bundle, "report.html"), bundle)
+
+  expect_true(file.exists(file.path(bundle, "report.html")))
+  output_names <- vapply(records, `[[`, character(1), "file")
+  expect_true("report.html" %in% output_names)
+  expect_equal(record$file, "report.html")
 })
 
 test_that("WriteBundleTable writes a CSV with no row names", {

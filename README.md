@@ -48,6 +48,34 @@ Your data path is mounted read only. An FCS file is a measurement that cannot be
 taken again. Each recipe writes one timestamped bundle that records the
 checksum of every input, the image digest and every package version.
 
+### AWS SageMaker notebooks
+
+Use the notebook terminal to run `cytokit`. The container supports `amd64`
+instances and `arm64` Graviton instances.
+
+Run this script if you also want Quarto in the notebook environment:
+
+```bash
+./scripts/install_quarto.sh
+export PATH="$HOME/.local/bin:$PATH"
+quarto --version
+```
+
+The script installs Quarto 1.11.4 under `$HOME/.local`. It verifies the archive,
+and it does not require root access.
+
+Build the image with rootless Podman before you run a recipe:
+
+```bash
+./cli/cytokit build
+./cli/cytokit inspect --data path/to/your/fcs --out path/to/results
+```
+
+Each bundle contains `report.qmd`, `report.html`, and
+`report_provenance.json`. The HTML report contains its images and resources.
+The report records the full Git commit and all output SHA256 checksums.
+The report command stops when the repository contains an untracked file.
+
 ## Reports
 
 Each report runs an analysis on a public dataset and writes down what worked and what did not.

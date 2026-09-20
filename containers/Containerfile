@@ -22,7 +22,8 @@ LABEL org.opencontainers.image.source="https://github.com/wguesdon/everything-fl
 ARG CRAN_SNAPSHOT=2026-08-15
 ARG BIOC_VERSION=3.23
 ARG PYTHON_VERSION=3.12
-ARG QUARTO_VERSION=1.10.18
+ARG QUARTO_VERSION=1.11.4
+ARG TARGETARCH
 
 ENV DEBIAN_FRONTEND=noninteractive \
     CRAN_SNAPSHOT=${CRAN_SNAPSHOT} \
@@ -48,12 +49,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Quarto renders the walkthrough report. Pinned by version, not by "latest".
-RUN curl -fsSL -o /tmp/quarto.deb \
-        "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb" \
-    && dpkg -i /tmp/quarto.deb \
-    && rm /tmp/quarto.deb \
-    && quarto --version
+# Quarto uses the matching Linux archive on Intel and AWS Graviton hosts.
+RUN architecture="${TARGETARCH:-}" \
+    && if [ -z "$architecture" ]; then architecture="$(uname -m)"; fi \
+    && case "$architecture" in \
+         amd64|x86_64) architecture="amd64" ;; \
+         arm64|aarch64) architecture="arm64" ;; \
+         *) echo "Unsupported architecture: $architecture" >&2; exit 1 ;; \
+       esac \
+    && base_url="https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}" \
+    && curl -fsSL -o /tmp/quarto.tar.gz "$base_url/quarto-${QUARTO_VERSION}-linux-${architecture}.tar.gz" \
+    && curl -fsSL -o /tmp/quarto-checksums.txt "$base_url/quarto-${QUARTO_VERSION}-checksums.txt" \
+    && expected="$(awk -v file="quarto-${QUARTO_VERSION}-linux-${architecture}.tar.gz" '$2 == file {print $1}' /tmp/quarto-checksums.txt)" \
+    && actual="$(sha256sum /tmp/quarto.tar.gz | awk '{print $1}')" \
+    && test -n "$expected" \
+    && test "$actual" = "$expected" \
+    && mkdir -p /opt/quarto \
+    && tar -xzf /tmp/quarto.tar.gz -C /opt/quarto --strip-components=1 \
+    && ln -s /opt/quarto/bin/quarto /usr/local/bin/quarto \
+    && quarto --version \
+    && rm -f /tmp/quarto.tar.gz /tmp/quarto-checksums.txt
 
 # Point R at the dated CRAN snapshot. The binary path depends on the Ubuntu
 # codename of the base image, so read it rather than assume it.
@@ -68,7 +83,7 @@ RUN R -q -e "install.packages(c( \
         'ggplot2', 'dplyr', 'tidyr', 'readr', \
         'here', 'patchwork', 'matrixStats', \
         'uwot', 'Rtsne', 'pheatmap', 'ggpubr', 'rstatix', \
-        'ragg', 'systemfonts', 'textshaping', 'jsonlite', \
+        'ragg', 'systemfonts', 'textshaping', 'jsonlite', 'digest', \
         'testthat', 'roxygen2', 'knitr', 'rmarkdown', 'withr' \
     )); if (!all(c('IRkernel','ggplot2','dplyr','testthat') %in% rownames(installed.packages()))) quit(status = 1)"
 

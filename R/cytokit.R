@@ -121,6 +121,217 @@ WriteBundleTable <- function(bundle, frame, name) {
   invisible(path)
 }
 
+CytokitMarkdownValue <- function(value) {
+  value[is.na(value)] <- ""
+  value <- gsub("|", "\\\\|", as.character(value), fixed = TRUE)
+  gsub("[\r\n]+", " ", value)
+}
+
+CytokitMarkdownRow <- function(row) {
+  paste0("| ", paste(row, collapse = " | "), " |")
+}
+
+CytokitMarkdownTable <- function(frame, limit = 100L) {
+  shown <- utils::head(frame, limit)
+  shown[] <- lapply(shown, CytokitMarkdownValue)
+  header <- paste0("| ", paste(names(shown), collapse = " | "), " |")
+  rule <- paste0("| ", paste(rep("---", ncol(shown)), collapse = " | "), " |")
+  rows <- apply(shown, 1L, CytokitMarkdownRow)
+  paste(c(header, rule, rows), collapse = "\n")
+}
+
+CytokitProvenanceText <- function(value) {
+  if (length(value) == 1L) {
+    return(as.character(value))
+  }
+  jsonlite::toJSON(value, auto_unbox = TRUE, null = "null")
+}
+
+CytokitGitDirty <- function() {
+  value <- Sys.getenv("CYTOKIT_GIT_DIRTY", unset = "not_recorded")
+  if (value == "true") {
+    return(TRUE)
+  }
+  if (value == "false") {
+    return(FALSE)
+  }
+  value
+}
+
+BuildCytokitReportProvenance <- function(recipe, arguments, checksums,
+                                         command, written_at) {
+  list(
+    repository = "everything-flow-cytometry",
+    git_commit = Sys.getenv("CYTOKIT_GIT_COMMIT", unset = "not_recorded"),
+    git_dirty = CytokitGitDirty(),
+    llm_provider = Sys.getenv("CYTOKIT_LLM_PROVIDER", unset = "none"),
+    llm_model = Sys.getenv("CYTOKIT_LLM_MODEL", unset = "none"),
+    agent_harness = Sys.getenv("CYTOKIT_AGENT_HARNESS", unset = "manual"),
+    agent_harness_version = Sys.getenv(
+      "CYTOKIT_AGENT_HARNESS_VERSION",
+      unset = "not_recorded"
+    ),
+    container_image = Sys.getenv("CYTOKIT_IMAGE", unset = "unknown"),
+    container_digest = Sys.getenv("CYTOKIT_IMAGE_DIGEST", unset = "unknown"),
+    input_md5 = as.list(checksums),
+    command = if (is.na(command)) paste("cytokit", recipe, "...") else command,
+    analysis_options = arguments,
+    random_seeds = if (!is.null(arguments$seed)) {
+      arguments$seed
+    } else {
+      "not_applicable"
+    },
+    session_record = "session_info.txt",
+    created_utc = written_at,
+    review_state = "not_applicable",
+    reviewer = "none",
+    quarto_version = "1.11.4"
+  )
+}
+
+CytokitReportCallout <- function(provenance) {
+  if (provenance$llm_model == "none") {
+    return("A manual command generated this report without an LLM model.")
+  }
+  paste0(
+    "An LLM generated this report through the `",
+    provenance$agent_harness,
+    "` agent harness."
+  )
+}
+
+CytokitReportTableSections <- function(bundle) {
+  csv_files <- sort(list.files(bundle, pattern = "\\.csv$", full.names = TRUE))
+  lines <- character(0)
+  for (path in csv_files) {
+    frame <- utils::read.csv(
+      path,
+      check.names = FALSE,
+      stringsAsFactors = FALSE
+    )
+    lines <- c(
+      lines,
+      paste("###", basename(path)),
+      "",
+      CytokitMarkdownTable(frame),
+      ""
+    )
+    if (nrow(frame) > 100L) {
+      lines <- c(lines, "The report shows the first 100 rows.", "")
+    }
+  }
+  if (length(lines) == 0L) {
+    return("This recipe did not produce a CSV table.")
+  }
+  lines
+}
+
+CytokitReportFigureSections <- function(bundle) {
+  png_files <- sort(list.files(bundle, pattern = "\\.png$", full.names = TRUE))
+  svg_files <- sort(list.files(bundle, pattern = "\\.svg$", full.names = TRUE))
+  png_stems <- tools::file_path_sans_ext(basename(png_files))
+  svg_files <- svg_files[
+    !tools::file_path_sans_ext(basename(svg_files)) %in% png_stems
+  ]
+  paths <- c(png_files, svg_files)
+  lines <- character(0)
+  for (path in paths) {
+    name <- basename(path)
+    lines <- c(
+      lines,
+      paste("###", name),
+      "",
+      paste0("![", name, "](", utils::URLencode(name), ")"),
+      ""
+    )
+  }
+  if (length(lines) == 0L) {
+    return("This recipe did not produce a figure.")
+  }
+  lines
+}
+
+WriteCytokitQuartoReport <- function(bundle, recipe, provenance) {
+  jsonlite::write_json(
+    provenance,
+    file.path(bundle, "report_provenance.json"),
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    null = "null"
+  )
+  provenance_frame <- data.frame(
+    field = names(provenance),
+    value = vapply(provenance, CytokitProvenanceText, character(1)),
+    stringsAsFactors = FALSE
+  )
+  model <- jsonlite::toJSON(provenance$llm_model, auto_unbox = TRUE)
+  harness <- jsonlite::toJSON(provenance$agent_harness, auto_unbox = TRUE)
+  lines <- c(
+    "---",
+    paste0('title: "cytokit ', recipe, ' report"'),
+    "author:",
+    paste0("  - name: ", model),
+    "    affiliations:",
+    paste0("      - name: ", harness),
+    "format:",
+    "  html:",
+    "    embed-resources: true",
+    "    toc: true",
+    "---",
+    "",
+    "::: {.callout-important}",
+    CytokitReportCallout(provenance),
+    "No separate human scientific review is part of this fixed recipe.",
+    "The report records the selected recipe and does not claim a new method.",
+    ":::",
+    "",
+    "## Figures",
+    "",
+    CytokitReportFigureSections(bundle),
+    "",
+    "## Result tables",
+    "",
+    CytokitReportTableSections(bundle),
+    "",
+    "## Provenance",
+    "",
+    CytokitMarkdownTable(provenance_frame),
+    "",
+    "The report source reads only files in this bundle."
+  )
+  writeLines(lines, file.path(bundle, "report.qmd"), useBytes = TRUE)
+  old_directory <- getwd()
+  on.exit(setwd(old_directory), add = TRUE)
+  setwd(bundle)
+  status <- system2(
+    "quarto",
+    c("render", "report.qmd", "--to", "html", "--output", "report.html")
+  )
+  if (status != 0L || !file.exists("report.html")) {
+    stop("Quarto did not create report.html.", call. = FALSE)
+  }
+  invisible(file.path(bundle, "report.html"))
+}
+
+CytokitOutputRecord <- function(path, bundle) {
+  list(
+    file = substring(path, nchar(bundle) + 2L),
+    bytes = unname(file.info(path)$size),
+    sha256 = digest::digest(path, algo = "sha256", file = TRUE)
+  )
+}
+
+CytokitOutputRecords <- function(bundle) {
+  files <- sort(list.files(bundle, recursive = TRUE, full.names = TRUE))
+  files <- files[file.exists(files) & !dir.exists(files)]
+  files <- files[basename(files) != "manifest.json"]
+  records <- vector("list", length(files))
+  for (index in seq_along(files)) {
+    records[[index]] <- CytokitOutputRecord(files[[index]], bundle)
+  }
+  records
+}
+
 #' Record what produced a bundle
 #'
 #' The manifest is what makes a result answerable later. It carries the recipe,
@@ -163,24 +374,18 @@ CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
     if (is.character(value) && length(value) == 1) DisplayPath(value) else value
   })
 
+  written_at <- format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
   record <- list(
     recipe = recipe,
-    written_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
+    written_at = written_at,
     arguments = arguments,
     inputs = as.list(checksums),
     image = Sys.getenv("CYTOKIT_IMAGE", unset = NA_character_),
     image_digest = Sys.getenv("CYTOKIT_IMAGE_DIGEST", unset = NA_character_),
+    git_commit = Sys.getenv("CYTOKIT_GIT_COMMIT", unset = "not_recorded"),
+    git_dirty = CytokitGitDirty(),
     r_version = paste(R.version$major, R.version$minor, sep = ".")
   )
-
-  path <- file.path(bundle, "manifest.json")
-  if (requireNamespace("jsonlite", quietly = TRUE)) {
-    writeLines(jsonlite::toJSON(record, auto_unbox = TRUE, pretty = TRUE,
-                                null = "null"), path)
-  } else {
-    # A manifest a person can still read is better than none.
-    writeLines(paste0(names(unlist(record)), ": ", unlist(record)), path)
-  }
 
   writeLines(utils::capture.output(utils::sessionInfo()),
              file.path(bundle, "session_info.txt"))
@@ -197,6 +402,27 @@ CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
     "`manifest.json` records every argument and the checksum of every input.",
     "`session_info.txt` records every package version."
   ), file.path(bundle, "REPRODUCE.md"))
+
+  provenance <- BuildCytokitReportProvenance(
+    recipe,
+    arguments,
+    checksums,
+    command,
+    written_at
+  )
+  WriteCytokitQuartoReport(bundle, recipe, provenance)
+  record$outputs <- CytokitOutputRecords(bundle)
+
+  path <- file.path(bundle, "manifest.json")
+  writeLines(
+    jsonlite::toJSON(
+      record,
+      auto_unbox = TRUE,
+      pretty = TRUE,
+      null = "null"
+    ),
+    path
+  )
 
   invisible(bundle)
 }
