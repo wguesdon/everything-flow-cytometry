@@ -73,7 +73,7 @@ Build the image with rootless Podman before you run a recipe:
 
 Each bundle contains `report.qmd`, `report.html`, and
 `report_provenance.json`. The HTML report contains its images and resources.
-The report records the full Git commit and all output SHA256 checksums.
+The report records the full Git commit and all input and output SHA256 checksums.
 The report command stops when the repository contains an untracked file.
 
 ## Reports

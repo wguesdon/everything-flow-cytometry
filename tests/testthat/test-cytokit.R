@@ -95,6 +95,8 @@ test_that("CloseCytokitBundle records the arguments and the input checksums", {
   expect_equal(manifest$arguments$data, "study")
   expect_equal(manifest$inputs$sample.txt,
                unname(tools::md5sum(input)))
+  expect_equal(manifest$input_sha256$sample.txt,
+               digest::digest(input, algo = "sha256", file = TRUE))
   expect_equal(manifest$git_commit, Sys.getenv("CYTOKIT_GIT_COMMIT",
                                                unset = "not_recorded"))
   expect_true(any(manifest$outputs$file == "report.html"))
@@ -523,6 +525,7 @@ test_that("the report provenance records the code commit and author", {
     "inspect",
     list(seed = "42"),
     c(input = "md5"),
+    c(input = "sha256"),
     "cytokit inspect --data study",
     "2026-09-20T00:00:00+0000"
   )
@@ -544,6 +547,7 @@ test_that("the report helpers render bundle tables and figures", {
   )
   provenance <- BuildCytokitReportProvenance(
     "inspect",
+    list(),
     list(),
     list(),
     "cytokit inspect --data study",

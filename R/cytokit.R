@@ -159,7 +159,7 @@ CytokitGitDirty <- function() {
 }
 
 BuildCytokitReportProvenance <- function(recipe, arguments, checksums,
-                                         command, written_at) {
+                                         sha256, command, written_at) {
   list(
     repository = "everything-flow-cytometry",
     git_commit = Sys.getenv("CYTOKIT_GIT_COMMIT", unset = "not_recorded"),
@@ -174,6 +174,7 @@ BuildCytokitReportProvenance <- function(recipe, arguments, checksums,
     container_image = Sys.getenv("CYTOKIT_IMAGE", unset = "unknown"),
     container_digest = Sys.getenv("CYTOKIT_IMAGE_DIGEST", unset = "unknown"),
     input_md5 = as.list(checksums),
+    input_sha256 = as.list(sha256),
     command = if (is.na(command)) paste("cytokit", recipe, "...") else command,
     analysis_options = arguments,
     random_seeds = if (!is.null(arguments$seed)) {
@@ -367,6 +368,19 @@ CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
   } else {
     list()
   }
+  sha256 <- if (length(expanded) > 0) {
+    present <- expanded[file.exists(expanded) & !dir.exists(expanded)]
+    values <- vapply(
+      present,
+      digest::digest,
+      character(1),
+      algo = "sha256",
+      file = TRUE
+    )
+    stats::setNames(values, basename(present))
+  } else {
+    list()
+  }
 
   # An argument that holds a container path says nothing about which study was
   # run. Two studies would otherwise carry the same manifest.
@@ -380,6 +394,7 @@ CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
     written_at = written_at,
     arguments = arguments,
     inputs = as.list(checksums),
+    input_sha256 = as.list(sha256),
     image = Sys.getenv("CYTOKIT_IMAGE", unset = NA_character_),
     image_digest = Sys.getenv("CYTOKIT_IMAGE_DIGEST", unset = NA_character_),
     git_commit = Sys.getenv("CYTOKIT_GIT_COMMIT", unset = "not_recorded"),
@@ -407,6 +422,7 @@ CloseCytokitBundle <- function(bundle, recipe, arguments, inputs = character(0),
     recipe,
     arguments,
     checksums,
+    sha256,
     command,
     written_at
   )
