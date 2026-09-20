@@ -87,7 +87,8 @@ RUN R -q -e "install.packages(c( \
         'testthat', 'roxygen2', 'knitr', 'rmarkdown', 'withr' \
     )); if (!all(c('IRkernel','ggplot2','dplyr','testthat') %in% rownames(installed.packages()))) quit(status = 1)"
 
-# Bioconductor packages, pinned to release 3.23.
+# Bioconductor packages, resolved from release 3.23 on 2026-09-20.
+# verify_versions.R locks the exact package versions from this resolution.
 RUN R -q -e "BiocManager::install(version = Sys.getenv('BIOC_VERSION'), ask = FALSE, update = FALSE); \
     BiocManager::install(c( \
         'flowCore', 'flowWorkspace', 'openCyto', 'CytoML', 'ggcyto', \

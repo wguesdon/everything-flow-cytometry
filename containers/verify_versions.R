@@ -61,7 +61,7 @@ expected <- c(
   flowClust            = "3.50.0",
   flowDensity          = "1.46.0",
   flowStats            = "4.24.0",
-  flowViz              = "1.76.0",
+  flowViz              = "1.76.1",
   FlowSOM              = "2.20.0",
   # R/clustering.R calls this directly at two metaclusters, because FlowSOM's
   # own wrapper fails there.
@@ -70,7 +70,7 @@ expected <- c(
   CATALYST             = "1.36.0",
   SingleCellExperiment = "1.34.0",
   BiocParallel         = "1.46.0",
-  ExperimentHub        = "3.2.0",
+  ExperimentHub        = "3.2.2",
   HDCytoData           = "1.32.1"
 )
 
