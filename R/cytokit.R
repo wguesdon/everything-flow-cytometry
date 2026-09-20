@@ -123,7 +123,7 @@ WriteBundleTable <- function(bundle, frame, name) {
 
 CytokitMarkdownValue <- function(value) {
   value[is.na(value)] <- ""
-  value <- gsub("|", "\\\\|", as.character(value), fixed = TRUE)
+  value <- gsub("|", "\\|", as.character(value), fixed = TRUE)
   gsub("[\r\n]+", " ", value)
 }
 
@@ -141,7 +141,7 @@ CytokitMarkdownTable <- function(frame, limit = 100L) {
 }
 
 CytokitProvenanceText <- function(value) {
-  if (length(value) == 1L) {
+  if (length(value) == 1L && is.atomic(value)) {
     return(as.character(value))
   }
   jsonlite::toJSON(value, auto_unbox = TRUE, null = "null")
