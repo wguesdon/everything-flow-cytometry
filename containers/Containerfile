@@ -66,7 +66,7 @@ RUN architecture="${TARGETARCH:-}" \
     && test "$actual" = "$expected" \
     && mkdir -p /opt/quarto \
     && tar -xzf /tmp/quarto.tar.gz -C /opt/quarto --strip-components=1 \
-    && ln -s /opt/quarto/bin/quarto /usr/local/bin/quarto \
+    && ln -sfn /opt/quarto/bin/quarto /usr/local/bin/quarto \
     && quarto --version \
     && rm -f /tmp/quarto.tar.gz /tmp/quarto-checksums.txt
 
