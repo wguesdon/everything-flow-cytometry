@@ -506,7 +506,7 @@ test_that("CytokitMarkdownTable escapes table values", {
   expect_equal(CytokitMarkdownRow(c("a", "b")), "| a | b |")
   table <- CytokitMarkdownTable(frame)
 
-  expect_match(table, "a\\\\|b", fixed = TRUE)
+  expect_match(table, "a\\|b", fixed = TRUE)
   expect_match(table, "| name | value |", fixed = TRUE)
   expect_match(CytokitProvenanceText(list(a = 1)), '"a":1')
 })
